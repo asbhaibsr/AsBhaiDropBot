@@ -1,6 +1,6 @@
 import os, re, asyncio, logging, time, random, string, threading
 from datetime import datetime, timedelta
-from flask import Flask, Response, render_template_string, abort, stream_with_context, request as flask_request
+from flask import Flask
 import pytz
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, idle
@@ -17,11 +17,18 @@ import aiohttp
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 load_dotenv()
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# LOGGING - Saari cheezein dikhegi
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           CONFIG
+# CONFIG
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 API_ID            = int(os.environ.get("API_ID", "0"))
 API_HASH          = os.environ.get("API_HASH", "")
@@ -41,6 +48,19 @@ IST               = pytz.timezone("Asia/Kolkata")
 UPI_ID            = "arsadsaifi8272@ibl"
 PORT              = int(os.environ.get("PORT", "8080"))
 
+# Config check - log mein dikhega
+logger.info("=" * 50)
+logger.info("🔍 CONFIG CHECK:")
+logger.info(f"  API_ID     : {'✅ Set' if API_ID else '❌ MISSING'}")
+logger.info(f"  API_HASH   : {'✅ Set' if API_HASH else '❌ MISSING'}")
+logger.info(f"  BOT_TOKEN  : {'✅ Set' if BOT_TOKEN else '❌ MISSING'}")
+logger.info(f"  MONGO_URI  : {'✅ Set' if MONGO_URI else '❌ MISSING'}")
+logger.info(f"  OWNER_ID   : {OWNER_ID}")
+logger.info(f"  FILE_CH    : {FILE_CHANNEL}")
+logger.info(f"  LOG_CH     : {LOG_CHANNEL}")
+logger.info(f"  PORT       : {PORT}")
+logger.info("=" * 50)
+
 DEFAULT_SETTINGS = {
     "auto_delete": True,
     "auto_delete_time": 600,
@@ -49,21 +69,64 @@ DEFAULT_SETTINGS = {
     "daily_limit": 10,
     "premium_results": 5,
     "free_results": 1,
-    "welcome_msg": "👋 Welcome {name}! Koi bhi file ka naam type karo. 🗂",
+    "welcome_msg": "👋 Welcome {name}! File ka naam type karo 🗂",
 }
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           DATABASE
+# FLASK - HEALTH CHECK (PEHLE CHALEGA)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-mongo_client = AsyncIOMotorClient(MONGO_URI)
-db           = mongo_client["asbhaivaultbot"]
-users_col    = db["users"]
-groups_col   = db["groups"]
-premium_col  = db["premium"]
-settings_col = db["settings"]
+flask_app = Flask(__name__)
+_bot_status = {"started": False, "username": "", "error": ""}
+
+@flask_app.route("/")
+def home():
+    status = "✅ Running" if _bot_status["started"] else "⏳ Starting..."
+    err = f"<p style='color:red'>Error: {_bot_status['error']}</p>" if _bot_status["error"] else ""
+    return f"""
+    <html><body style='font-family:sans-serif;background:#0a0a0f;color:#e0e0e0;padding:40px'>
+    <h2 style='color:#e94560'>🗂 AsBhai Vault Bot</h2>
+    <p>Bot Status: <b>{status}</b></p>
+    <p>Username: <b>@{_bot_status['username']}</b></p>
+    {err}
+    <hr style='border-color:#333'>
+    <p style='color:#888'>Owner: @asbhaibsr | Channel: @asbhai_bsr</p>
+    </body></html>
+    """
+
+@flask_app.route("/health")
+def health():
+    return {"status": "ok", "bot": _bot_status["started"]}, 200
+
+@flask_app.route("/status")
+def status():
+    return {
+        "bot_started": _bot_status["started"],
+        "username": _bot_status["username"],
+        "error": _bot_status["error"],
+        "time": datetime.now(IST).strftime('%d %b %Y %H:%M IST')
+    }, 200
+
+def start_flask():
+    logger.info(f"🌐 Flask starting on port {PORT}...")
+    import werkzeug.serving
+    werkzeug.serving.make_server("0.0.0.0", PORT, flask_app).serve_forever()
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           PYROGRAM CLIENT
+# DATABASE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+try:
+    mongo_client = AsyncIOMotorClient(MONGO_URI)
+    db           = mongo_client["asbhaivaultbot"]
+    users_col    = db["users"]
+    groups_col   = db["groups"]
+    premium_col  = db["premium"]
+    settings_col = db["settings"]
+    logger.info("✅ MongoDB connected")
+except Exception as e:
+    logger.error(f"❌ MongoDB error: {e}")
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PYROGRAM CLIENT
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app = Client(
     name="asbhai_vault_bot",
@@ -72,145 +135,10 @@ app = Client(
     bot_token=BOT_TOKEN,
     in_memory=True
 )
-
 scheduler = AsyncIOScheduler(timezone=IST)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           FLASK SERVER (health + stream)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-flask_app = Flask(__name__)
-
-STREAM_HTML = """<!DOCTYPE html>
-<html lang="hi">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{ title }} - AsBhai Vault</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#e0e0e0;min-height:100vh}
-header{background:linear-gradient(135deg,#1a1a2e,#0f3460);padding:14px 20px;display:flex;align-items:center;gap:12px;border-bottom:2px solid #e94560}
-header h1{font-size:1.1rem;color:#e94560}header p{font-size:.75rem;color:#aaa}
-.wrap{max-width:900px;margin:28px auto;padding:0 16px}
-.box{background:#111;border-radius:14px;overflow:hidden;box-shadow:0 8px 40px rgba(233,69,96,.2)}
-video{width:100%;max-height:72vh;background:#000;display:block}
-.info{padding:18px;background:linear-gradient(180deg,#1a1a2e,#111)}
-.ftitle{font-size:1.1rem;font-weight:600;color:#e94560;margin-bottom:6px}
-.btns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
-.btn{padding:10px 22px;border-radius:8px;border:none;cursor:pointer;font-size:.9rem;text-decoration:none;font-weight:600;display:inline-block;transition:all .2s}
-.p{background:#e94560;color:#fff}.s{background:#0f3460;color:#e0e0e0;border:1px solid #e94560}
-.btn:hover{opacity:.85}
-footer{text-align:center;padding:18px;font-size:.78rem;color:#444}
-footer a{color:#e94560;text-decoration:none}
-</style>
-</head>
-<body>
-<header><div style="font-size:1.5rem">🗂</div><div><h1>AsBhai Vault</h1><p>@asbhaibsr | @asbhai_bsr</p></div></header>
-<div class="wrap"><div class="box">
-<video controls autoplay playsinline preload="metadata" src="/stream/{{ cid }}/{{ mid }}/raw">Browser support nahi karta.</video>
-<div class="info">
-<div class="ftitle">🗂 {{ title }}</div>
-<div class="btns">
-<a class="btn p" href="/download/{{ cid }}/{{ mid }}">📥 Download</a>
-<a class="btn s" href="https://t.me/asbhai_bsr" target="_blank">📢 Channel</a>
-</div></div></div></div>
-<footer>Powered by <a href="https://t.me/asbhaibsr">@asbhaibsr</a></footer>
-</body></html>"""
-
-@flask_app.route("/")
-def home():
-    return "<h2 style='font-family:sans-serif;color:#e94560;padding:40px'>🗂 AsBhai Vault Bot — Running ✅</h2>"
-
-@flask_app.route("/health")
-def health():
-    return {"status": "ok", "bot": "AsBhai Vault"}, 200
-
-@flask_app.route("/stream/<int:cid>/<int:mid>")
-def stream_page(cid, mid):
-    info = _get_file_info_sync(cid, mid)
-    if not info: abort(404)
-    return render_template_string(STREAM_HTML, title=info["name"], cid=cid, mid=mid)
-
-@flask_app.route("/stream/<int:cid>/<int:mid>/raw")
-def stream_raw(cid, mid):
-    info = _get_file_info_sync(cid, mid)
-    if not info: abort(404)
-    file_size = info["size"]
-    offset = 0
-    status = 200
-    headers = {
-        "Content-Type": info["mime"],
-        "Accept-Ranges": "bytes",
-        "Content-Disposition": f'inline; filename="{info["name"]}"'
-    }
-    rh = flask_request.headers.get("Range")
-    if rh:
-        try:
-            rv = rh.replace("bytes=", "")
-            start, end = rv.split("-")
-            offset = int(start) if start else 0
-            end = int(end) if end else file_size - 1
-            headers["Content-Range"] = f"bytes {offset}-{end}/{file_size}"
-            headers["Content-Length"] = str(end - offset + 1)
-            status = 206
-        except: pass
-    else:
-        headers["Content-Length"] = str(file_size)
-    return Response(stream_with_context(_stream_gen(cid, mid, offset)), status=status, headers=headers, direct_passthrough=True)
-
-@flask_app.route("/download/<int:cid>/<int:mid>")
-def download_file(cid, mid):
-    info = _get_file_info_sync(cid, mid)
-    if not info: abort(404)
-    headers = {
-        "Content-Type": info["mime"],
-        "Content-Disposition": f'attachment; filename="{info["name"]}"',
-        "Content-Length": str(info["size"])
-    }
-    return Response(stream_with_context(_stream_gen(cid, mid, 0)), status=200, headers=headers, direct_passthrough=True)
-
-# stream helpers — run in bot's event loop
-def _get_file_info_sync(cid, mid):
-    try:
-        future = asyncio.run_coroutine_threadsafe(_get_file_info(cid, mid), _bot_loop)
-        return future.result(timeout=15)
-    except Exception as e:
-        logger.error(f"file info sync error: {e}")
-        return None
-
-async def _get_file_info(cid, mid):
-    try:
-        msg = await app.get_messages(cid, mid)
-        if not msg or not msg.document: return None
-        return {
-            "name": msg.document.file_name or f"file_{mid}",
-            "size": msg.document.file_size or 0,
-            "mime": msg.document.mime_type or "application/octet-stream"
-        }
-    except Exception as e:
-        logger.error(f"get_file_info: {e}")
-        return None
-
-def _stream_gen(cid, mid, offset=0):
-    async def _gen():
-        msg = await app.get_messages(cid, mid)
-        async for chunk in app.stream_media(msg, offset=offset):
-            yield chunk
-    gen = _gen()
-    while True:
-        try:
-            future = asyncio.run_coroutine_threadsafe(gen.__anext__(), _bot_loop)
-            yield future.result(timeout=30)
-        except StopIteration:
-            break
-        except Exception:
-            break
-
-def start_flask():
-    logger.info(f"🌐 Flask server starting on port {PORT}")
-    flask_app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True, use_reloader=False)
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           DB HELPERS
+# HELPERS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async def get_settings():
     s = await settings_col.find_one({"_id": "global"})
@@ -249,7 +177,8 @@ async def increment_daily_count(user_id):
 
 async def register_user(user):
     await users_col.update_one({"user_id": user.id},
-        {"$set": {"user_id": user.id, "name": user.first_name, "username": user.username, "joined": datetime.now(IST)}}, upsert=True)
+        {"$set": {"user_id": user.id, "name": user.first_name,
+                  "username": user.username, "joined": datetime.now(IST)}}, upsert=True)
 
 async def register_group(chat):
     await groups_col.update_one({"chat_id": chat.id},
@@ -303,8 +232,14 @@ async def auto_delete_msg(msg, delay):
     try: await msg.delete()
     except: pass
 
+async def log(text):
+    try:
+        await app.send_message(LOG_CHANNEL, text)
+    except Exception as e:
+        logger.error(f"Log send failed: {e}")
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           SEARCH
+# SEARCH
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async def search_files(query, limit=5):
     words = [w.lower() for w in query.split() if len(w) > 1]
@@ -330,7 +265,7 @@ async def search_files(query, limit=5):
         return []
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           FORCE SUB
+# FORCE SUB
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async def force_sub_check(client, message):
     uid = message.from_user.id
@@ -350,18 +285,19 @@ async def force_sub_check(client, message):
             [InlineKeyboardButton("✅ Verify Karo", url=vlink)]
         ])
         await message.reply(
-            f"⚠️ **Pehle Channel Join Karo!**\n\nJoin ke baad Verify dabao.\n\n📢 {FORCE_SUB_CHANNEL}",
+            f"⚠️ **Pehle Channel Join Karo!**\n\nJoin ke baad Verify dabao.\n📢 {FORCE_SUB_CHANNEL}",
             reply_markup=kb
         )
         return False
     return True
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           SEND FILE TO USER
+# SEND FILE
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async def send_file_to_user(client, message, msg_id_str):
     try:
         msg_id = int(msg_id_str)
+        logger.info(f"Fetching file {msg_id} from channel {FILE_CHANNEL}")
         file_msg = await client.get_messages(FILE_CHANNEL, msg_id)
         if not file_msg:
             await message.reply("❌ File nahi mili.")
@@ -379,19 +315,16 @@ async def send_file_to_user(client, message, msg_id_str):
                 )
                 return
         caption = clean_caption(file_msg.caption or "")
-        caption = f"🗂 **{caption}**\n\n📢 {MAIN_CHANNEL}" if caption else f"🗂 **File — AsBhai Vault**\n\n📢 {MAIN_CHANNEL}"
-        me = await client.get_me()
-        stream_url = f"https://{me.username}.koyeb.app/stream/{FILE_CHANNEL}/{msg_id}"
-        download_url = f"https://{me.username}.koyeb.app/download/{FILE_CHANNEL}/{msg_id}"
+        caption = f"🗂 **{caption}**\n\n📢 {MAIN_CHANNEL}" if caption else f"🗂 **AsBhai Vault**\n\n📢 {MAIN_CHANNEL}"
         if prem:
-            buttons = [[
-                InlineKeyboardButton("▶️ Stream", url=stream_url),
-                InlineKeyboardButton("📥 Download", url=download_url)
-            ]]
-        else:
             buttons = [[
                 InlineKeyboardButton("▶️ Stream (Premium)", callback_data="need_premium"),
                 InlineKeyboardButton("📥 Download (Premium)", callback_data="need_premium")
+            ]]
+        else:
+            buttons = [[
+                InlineKeyboardButton("▶️ Stream (Premium Only)", callback_data="need_premium"),
+                InlineKeyboardButton("📥 Download (Premium Only)", callback_data="need_premium")
             ]]
         sent = await file_msg.copy(
             message.chat.id,
@@ -404,26 +337,24 @@ async def send_file_to_user(client, message, msg_id_str):
             del_msg = await message.reply(f"⏳ Yeh file **{t//60} min** mein delete hogi! Abhi save karo.")
             asyncio.create_task(auto_delete_msg(sent, t))
             asyncio.create_task(auto_delete_msg(del_msg, t))
-        # Log to log channel
-        try:
-            await client.send_message(
-                LOG_CHANNEL,
-                f"📥 **File Sent**\n"
-                f"User: {message.from_user.mention} (`{uid}`)\n"
-                f"File ID: `{msg_id}`\n"
-                f"Premium: {'✅' if prem else '❌'}\n"
-                f"Time: {datetime.now(IST).strftime('%d %b %Y %H:%M')} IST"
-            )
-        except: pass
+        await log(
+            f"📥 **File Sent**\n"
+            f"👤 {message.from_user.mention} (`{uid}`)\n"
+            f"📁 File ID: `{msg_id}`\n"
+            f"💎 Premium: {'✅' if prem else '❌'}\n"
+            f"🕐 {datetime.now(IST).strftime('%d %b %H:%M')} IST"
+        )
     except Exception as e:
         logger.error(f"send_file error: {e}")
-        await message.reply("❌ File bhejne mein problem. Baad mein try karo.")
+        _bot_status["error"] = str(e)
+        await message.reply(f"❌ Error: {e}")
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           /START
+# /START
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_message(filters.command("start") & (filters.group | filters.private))
 async def start_cmd(client, message):
+    logger.info(f"/start from {message.from_user.id} in {message.chat.id}")
     await register_user(message.from_user)
     args = message.command[1] if len(message.command) > 1 else ""
 
@@ -433,7 +364,7 @@ async def start_cmd(client, message):
             await db["tokens"].delete_one({"token": token})
             await message.reply("✅ **Verification Ho Gayi!**\n\nAb group mein jaake search karo! 🗂")
         else:
-            await message.reply("❌ Invalid ya expired token. Dubara try karo.")
+            await message.reply("❌ Invalid ya expired token.")
         return
 
     if args.startswith("file_"):
@@ -444,7 +375,7 @@ async def start_cmd(client, message):
     kb = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📢 Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"),
-            InlineKeyboardButton("➕ Group Mein Add Karo", url=f"https://t.me/{me.username}?startgroup=true")
+            InlineKeyboardButton("➕ Group Add", url=f"https://t.me/{me.username}?startgroup=true")
         ],
         [
             InlineKeyboardButton("💎 Premium", callback_data="show_premium"),
@@ -454,22 +385,19 @@ async def start_cmd(client, message):
     await message.reply(
         f"🗂 **AsBhai Vault Bot**\n\n"
         f"Namaste **{message.from_user.mention}**! 👋\n\n"
-        f"Group mein koi bhi file ka naam type karo — main dhundh lunga!\n\n"
-        f"✨ Smart Search\n"
-        f"🔗 Shortlink Protection\n"
-        f"💎 Premium Benefits\n"
-        f"⏳ Auto Delete\n\n"
-        f"💎 Premium ke liye /premium type karo!",
+        f"Group mein file ka naam type karo — main dhundh lunga!\n\n"
+        f"✨ Smart Search | 🔗 Shortlink | 💎 Premium\n\n"
+        f"💎 Premium ke liye /premium",
         reply_markup=kb
     )
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           GROUP SEARCH
+# GROUP SEARCH
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_message(filters.group & filters.text & ~filters.command([
     "start","help","stats","broadcast","setdelete","addpremium",
     "removepremium","forcesub","settings","premium","ping",
-    "shortlink","setlimit","setresults"
+    "shortlink","setlimit","setresults","mystats"
 ]))
 async def group_search(client, message):
     if not message.from_user: return
@@ -490,15 +418,11 @@ async def group_search(client, message):
             )
             return
     searching = await message.reply(f"🔍 Dhundh raha hoon: `{query}`...")
-    limit = s.get("premium_results", 5) if prem else 10
-    results = await search_files(query, limit=limit)
+    results = await search_files(query, limit=s.get("premium_results", 5) if prem else 10)
     if not results:
         await searching.edit(
             f"❌ **'{query}' nahi mila!**\n\n"
-            f"💡 Tips:\n"
-            f"• Spelling check karo\n"
-            f"• Sirf title likhein\n"
-            f"• English mein try karo"
+            f"💡 Spelling check karo ya English mein try karo."
         )
         return
     if not prem:
@@ -516,16 +440,14 @@ async def group_search(client, message):
         link = await generate_shortlink(f"https://t.me/{me.username}?start=file_{file_msg.id}")
         kb = InlineKeyboardMarkup([[InlineKeyboardButton(f"📥 {name[:35]} — Lo", url=link)]])
         sent = await message.reply(
-            f"✅ Mila! {message.from_user.mention}\n\n"
-            f"🗂 **{name}**\n\n"
-            f"👇 Button dabao file lene ke liye:",
+            f"✅ Mila! {message.from_user.mention}\n\n🗂 **{name}**\n\n👇 Button dabao:",
             reply_markup=kb
         )
         if s.get("auto_delete"):
             asyncio.create_task(auto_delete_msg(sent, s.get("auto_delete_time", 600)))
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           CALLBACKS
+# CALLBACKS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_callback_query()
 async def cb_handler(client, query):
@@ -537,82 +459,55 @@ async def cb_handler(client, query):
         prem = await is_premium(uid)
         doc = await premium_col.find_one({"user_id": uid})
         expiry = doc["expiry"].strftime("%d %b %Y") if doc and doc.get("expiry") else "N/A"
-        status = "✅ Active" if prem else "❌ Active Nahi"
         kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💰 Premium Kharidein", callback_data="buy_premium")],
+            [InlineKeyboardButton("💰 Premium Lo", callback_data="buy_premium")],
             [InlineKeyboardButton("🔙 Back", callback_data="back_main")]
         ])
         await query.message.edit(
-            f"💎 **Premium Status**\n\n"
-            f"Status: {status}\nExpiry: {expiry}\n\n"
-            f"**Benefits:**\n"
-            f"• 🔓 No shortlink\n"
-            f"• 📦 5 results/search\n"
-            f"• ∞ Unlimited downloads\n"
-            f"• ▶️ Streaming & Download\n\n"
-            f"**Price:** ₹250/mahina",
+            f"💎 **Premium**\n\nStatus: {'✅ Active' if prem else '❌ Nahi'}\nExpiry: {expiry}\n\n"
+            f"Benefits:\n• No shortlink\n• 5 results\n• Unlimited\n• Streaming\n\n₹250/mahina",
             reply_markup=kb
         )
     elif data == "buy_premium":
-        kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="show_premium")]])
         await query.message.edit(
-            f"💳 **Premium Kharidein**\n\n"
-            f"**Price:** ₹250 / 30 din\n\n"
-            f"**UPI ID:** `{UPI_ID}`\n\n"
-            f"Steps:\n"
-            f"1. UPI se ₹250 bhejo\n"
-            f"2. Screenshot owner ko bhejo\n"
-            f"3. Owner: @asbhaibsr",
-            reply_markup=kb
+            f"💳 **Premium Kharidein**\n\n₹250 / 30 din\n\nUPI: `{UPI_ID}`\n\n"
+            f"Pay karo → Screenshot @asbhaibsr ko bhejo",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="show_premium")]])
         )
     elif data == "help":
         await query.message.edit(
-            "📖 **Help**\n\n"
-            "1. Bot ko group mein add karo\n"
-            "2. File ka naam type karo\n"
-            "3. Button dabao\n"
-            "4. Shortlink solve karo\n"
-            "5. File PM mein milegi!\n\n"
-            "**Commands:**\n"
-            "/premium - Premium info\n"
-            "/mystats - Apni stats dekho\n"
-            "/start - Bot shuru karo",
+            "📖 **Help**\n\n1. Group mein bot add karo\n2. File naam type karo\n"
+            "3. Button dabao\n4. Shortlink solve karo\n5. File milegi!\n\n/premium /mystats",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back_main")]])
         )
     elif data == "back_main":
         me = await client.get_me()
         kb = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("📢 Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"),
-                InlineKeyboardButton("💎 Premium", callback_data="show_premium")
-            ],
+            [InlineKeyboardButton("📢 Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"),
+             InlineKeyboardButton("💎 Premium", callback_data="show_premium")],
             [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
         ])
         await query.message.edit("🗂 **AsBhai Vault Bot**\n\nGroup mein file ka naam type karo!", reply_markup=kb)
     await query.answer()
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           PREMIUM COMMANDS
+# OWNER COMMANDS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_message(filters.command("addpremium") & filters.user(ADMINS))
 async def add_prem_cmd(client, message):
     args = message.command
     if len(args) < 2:
-        await message.reply("Usage: `/addpremium user_id [days]`\nDefault: 30 din")
+        await message.reply("Usage: `/addpremium user_id [days]`")
         return
     try:
         uid = int(args[1])
         days = int(args[2]) if len(args) > 2 else 30
         await add_premium(uid, days)
-        await message.reply(f"✅ User `{uid}` ko **{days} din** ka Premium diya!")
-        try:
-            await client.send_message(uid,
-                f"🎉 **Congratulations!**\n\n"
-                f"Aapko **{days} din** ka Premium mil gaya! 💎\n"
-                f"Ab enjoy karo unlimited features!")
+        await message.reply(f"✅ `{uid}` ko **{days} din** Premium diya!")
+        try: await client.send_message(uid, f"🎉 Aapko **{days} din** ka Premium mila! 💎")
         except: pass
     except ValueError:
-        await message.reply("❌ Invalid user ID.")
+        await message.reply("❌ Invalid ID.")
 
 @app.on_message(filters.command("removepremium") & filters.user(ADMINS))
 async def rem_prem_cmd(client, message):
@@ -623,41 +518,30 @@ async def rem_prem_cmd(client, message):
     try:
         uid = int(args[1])
         await remove_premium(uid)
-        await message.reply(f"✅ User `{uid}` ka Premium hata diya!")
+        await message.reply(f"✅ `{uid}` ka Premium hata diya!")
     except ValueError:
-        await message.reply("❌ Invalid user ID.")
+        await message.reply("❌ Invalid ID.")
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           OWNER SETTINGS
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_message(filters.command("setdelete") & filters.user(ADMINS) & filters.private)
 async def set_del_cmd(client, message):
     args = message.command
     if len(args) < 2:
         s = await get_settings()
-        await message.reply(
-            f"⏱ Auto Delete: **{'ON' if s.get('auto_delete') else 'OFF'}**\n"
-            f"Time: **{s.get('auto_delete_time',600)//60} min**\n\n"
-            f"Usage: `/setdelete <minutes>` ya `/setdelete on/off`"
-        )
+        await message.reply(f"⏱ Auto Delete: **{'ON' if s.get('auto_delete') else 'OFF'}** | {s.get('auto_delete_time',600)//60} min\nUsage: `/setdelete <min>` ya `on/off`")
         return
     val = args[1].lower()
-    if val == "off":
-        await update_setting("auto_delete", False)
-        await message.reply("✅ Auto delete **OFF**!")
-    elif val == "on":
-        await update_setting("auto_delete", True)
-        await message.reply("✅ Auto delete **ON**!")
+    if val in ["on","off"]:
+        await update_setting("auto_delete", val == "on")
+        await message.reply(f"✅ Auto delete **{val.upper()}**!")
     else:
         try:
             mins = int(val)
             await update_setting("auto_delete_time", mins * 60)
-            await message.reply(f"✅ Auto delete: **{mins} minutes**")
-        except:
-            await message.reply("❌ Number likhein.")
+            await message.reply(f"✅ Auto delete: **{mins} min**")
+        except: await message.reply("❌ Number likhein.")
 
 @app.on_message(filters.command("forcesub") & filters.user(ADMINS) & filters.private)
-async def force_sub_cmd(client, message):
+async def fsub_cmd(client, message):
     args = message.command
     if len(args) < 2:
         s = await get_settings()
@@ -668,7 +552,7 @@ async def force_sub_cmd(client, message):
     await message.reply(f"✅ Force Sub **{val.upper()}**!")
 
 @app.on_message(filters.command("shortlink") & filters.user(ADMINS) & filters.private)
-async def shortlink_cmd(client, message):
+async def sl_cmd(client, message):
     args = message.command
     if len(args) < 2:
         s = await get_settings()
@@ -679,110 +563,42 @@ async def shortlink_cmd(client, message):
     await message.reply(f"✅ Shortlink **{val.upper()}**!")
 
 @app.on_message(filters.command("setlimit") & filters.user(ADMINS) & filters.private)
-async def set_limit_cmd(client, message):
+async def sl2_cmd(client, message):
     args = message.command
     if len(args) < 2:
         s = await get_settings()
-        await message.reply(f"📊 Daily Limit: **{s.get('daily_limit',10)}**\nUsage: `/setlimit <number>`")
+        await message.reply(f"📊 Limit: **{s.get('daily_limit',10)}**\nUsage: `/setlimit <n>`")
         return
     try:
         await update_setting("daily_limit", int(args[1]))
-        await message.reply(f"✅ Daily limit: **{args[1]}**")
-    except:
-        await message.reply("❌ Number likhein.")
+        await message.reply(f"✅ Limit: **{args[1]}**")
+    except: await message.reply("❌ Number likhein.")
 
 @app.on_message(filters.command("setresults") & filters.user(ADMINS) & filters.private)
-async def set_results_cmd(client, message):
+async def sr_cmd(client, message):
     args = message.command
     if len(args) < 3:
-        await message.reply("Usage: `/setresults <free> <premium>`\nExample: `/setresults 1 5`")
+        await message.reply("Usage: `/setresults <free> <premium>`")
         return
     try:
         await update_setting("free_results", int(args[1]))
         await update_setting("premium_results", int(args[2]))
         await message.reply(f"✅ Free: **{args[1]}** | Premium: **{args[2]}**")
-    except:
-        await message.reply("❌ Numbers likhein.")
+    except: await message.reply("❌ Numbers likhein.")
 
-@app.on_message(filters.command("settings") & filters.user(ADMINS) & filters.private)
+@app.on_message(filters.command("settings") & filters.user(ADMINS))
 async def settings_cmd(client, message):
     s = await get_settings()
     await message.reply(
-        f"⚙️ **Bot Settings**\n\n"
-        f"🔄 Auto Delete: {'ON' if s.get('auto_delete') else 'OFF'}\n"
-        f"⏱ Delete Time: {s.get('auto_delete_time',600)//60} min\n"
-        f"📢 Force Sub: {'ON' if s.get('force_sub') else 'OFF'}\n"
-        f"🔗 Shortlink: {'ON' if s.get('shortlink_enabled') else 'OFF'}\n"
-        f"📊 Daily Limit: {s.get('daily_limit',10)}\n"
-        f"📦 Free Results: {s.get('free_results',1)}\n"
-        f"💎 Premium Results: {s.get('premium_results',5)}\n\n"
-        f"**Commands:**\n"
-        f"`/setdelete <min>` — delete time\n"
-        f"`/forcesub on/off` — force sub\n"
-        f"`/shortlink on/off` — shortlink\n"
-        f"`/setlimit <n>` — daily limit\n"
-        f"`/setresults <f> <p>` — results count"
+        f"⚙️ **Settings**\n\n"
+        f"Auto Delete: {'ON' if s.get('auto_delete') else 'OFF'} ({s.get('auto_delete_time',600)//60} min)\n"
+        f"Force Sub: {'ON' if s.get('force_sub') else 'OFF'}\n"
+        f"Shortlink: {'ON' if s.get('shortlink_enabled') else 'OFF'}\n"
+        f"Daily Limit: {s.get('daily_limit',10)}\n"
+        f"Free Results: {s.get('free_results',1)}\n"
+        f"Premium Results: {s.get('premium_results',5)}"
     )
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           BROADCAST
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-@app.on_message(filters.command("broadcast") & filters.user(ADMINS) & filters.private)
-async def broadcast_cmd(client, message):
-    args = message.command
-    if len(args) < 3:
-        await message.reply(
-            "Usage:\n"
-            "`/broadcast users <msg>` — Sabhi users ko\n"
-            "`/broadcast groups <msg>` — Sabhi groups ko\n"
-            "`/broadcast all <msg>` — Sabko"
-        )
-        return
-    target = args[1].lower()
-    text = " ".join(args[2:])
-    status_msg = await message.reply("📡 Broadcast shuru...")
-    total = done = failed = blocked = 0
-    if target in ["users", "all"]:
-        async for doc in users_col.find({}):
-            uid = doc.get("user_id")
-            if not uid: continue
-            total += 1
-            try:
-                await client.send_message(uid, text)
-                done += 1
-                await asyncio.sleep(0.05)
-            except (UserIsBlocked, InputUserDeactivated):
-                blocked += 1
-                await users_col.delete_one({"user_id": uid})
-            except FloodWait as e:
-                await asyncio.sleep(e.value)
-            except:
-                failed += 1
-    if target in ["groups", "all"]:
-        async for doc in groups_col.find({}):
-            cid = doc.get("chat_id")
-            if not cid: continue
-            total += 1
-            try:
-                await client.send_message(cid, text)
-                done += 1
-                await asyncio.sleep(0.1)
-            except (ChatWriteForbidden, PeerIdInvalid):
-                failed += 1
-                await groups_col.delete_one({"chat_id": cid})
-            except FloodWait as e:
-                await asyncio.sleep(e.value)
-            except:
-                failed += 1
-    await status_msg.edit(
-        f"📡 **Broadcast Done!**\n\n"
-        f"Total: {total}\n✅ Done: {done}\n"
-        f"❌ Failed: {failed}\n🚫 Blocked: {blocked}"
-    )
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           STATS
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_message(filters.command("stats") & filters.user(ADMINS))
 async def stats_cmd(client, message):
     u = await users_col.count_documents({})
@@ -791,43 +607,62 @@ async def stats_cmd(client, message):
     today = datetime.now(IST).strftime("%Y-%m-%d")
     active = await users_col.count_documents({"date": today, "count": {"$gt": 0}})
     await message.reply(
-        f"📊 **Bot Stats**\n\n"
-        f"👥 Users: **{u}**\n"
-        f"🏘 Groups: **{g}**\n"
-        f"💎 Premium: **{p}**\n"
-        f"📥 Aaj Active: **{active}**\n\n"
-        f"📅 {datetime.now(IST).strftime('%d %b %Y %H:%M')} IST"
+        f"📊 **Stats**\n\n"
+        f"👥 Users: **{u}**\n🏘 Groups: **{g}**\n"
+        f"💎 Premium: **{p}**\n📥 Aaj Active: **{active}**\n\n"
+        f"🕐 {datetime.now(IST).strftime('%d %b %Y %H:%M')} IST"
     )
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           /PREMIUM
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@app.on_message(filters.command("broadcast") & filters.user(ADMINS) & filters.private)
+async def bc_cmd(client, message):
+    args = message.command
+    if len(args) < 3:
+        await message.reply("Usage:\n`/broadcast users <msg>`\n`/broadcast groups <msg>`\n`/broadcast all <msg>`")
+        return
+    target = args[1].lower()
+    text = " ".join(args[2:])
+    sm = await message.reply("📡 Shuru...")
+    total = done = failed = blocked = 0
+    if target in ["users","all"]:
+        async for doc in users_col.find({}):
+            uid = doc.get("user_id")
+            if not uid: continue
+            total += 1
+            try:
+                await client.send_message(uid, text); done += 1
+                await asyncio.sleep(0.05)
+            except (UserIsBlocked, InputUserDeactivated):
+                blocked += 1; await users_col.delete_one({"user_id": uid})
+            except FloodWait as e: await asyncio.sleep(e.value)
+            except: failed += 1
+    if target in ["groups","all"]:
+        async for doc in groups_col.find({}):
+            cid = doc.get("chat_id")
+            if not cid: continue
+            total += 1
+            try:
+                await client.send_message(cid, text); done += 1
+                await asyncio.sleep(0.1)
+            except (ChatWriteForbidden, PeerIdInvalid):
+                failed += 1; await groups_col.delete_one({"chat_id": cid})
+            except FloodWait as e: await asyncio.sleep(e.value)
+            except: failed += 1
+    await sm.edit(f"📡 **Done!**\nTotal:{total} ✅{done} ❌{failed} 🚫{blocked}")
+
 @app.on_message(filters.command("premium"))
 async def premium_cmd(client, message):
     uid = message.from_user.id
     prem = await is_premium(uid)
     doc = await premium_col.find_one({"user_id": uid})
     expiry = doc["expiry"].strftime("%d %b %Y") if doc and doc.get("expiry") else "N/A"
-    status = f"✅ Active (Expires: {expiry})" if prem else "❌ Active Nahi"
-    kb = None if prem else InlineKeyboardMarkup([[InlineKeyboardButton("💰 Premium Lo (₹250/mo)", callback_data="buy_premium")]])
+    kb = None if prem else InlineKeyboardMarkup([[InlineKeyboardButton("💰 Premium Lo (₹250)", callback_data="buy_premium")]])
     await message.reply(
-        f"💎 **Premium**\n\n"
-        f"Status: {status}\n\n"
-        f"**Benefits:**\n"
-        f"• 🔓 Shortlink nahi\n"
-        f"• 📦 5 results/search\n"
-        f"• ∞ Unlimited downloads\n"
-        f"• ▶️ Online Streaming\n"
-        f"• 📥 Direct Download\n\n"
-        f"**Price:** ₹250/30 din\n"
-        f"**UPI:** `{UPI_ID}`\n\n"
-        f"Pay ke baad @asbhaibsr ko screenshot bhejo.",
+        f"💎 **Premium**\n\nStatus: {'✅ Active — ' + expiry if prem else '❌ Nahi'}\n\n"
+        f"Benefits:\n• 🔓 No shortlink\n• 📦 5 results\n• ∞ Unlimited\n• ▶️ Stream\n\n"
+        f"₹250/30 din | UPI: `{UPI_ID}`\n@asbhaibsr ko screenshot bhejo",
         reply_markup=kb
     )
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           /MYSTATS
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_message(filters.command("mystats"))
 async def mystats_cmd(client, message):
     uid = message.from_user.id
@@ -839,16 +674,20 @@ async def mystats_cmd(client, message):
     limit = "∞" if prem else str(s.get("daily_limit", 10))
     await message.reply(
         f"📊 **Aapki Stats**\n\n"
-        f"👤 Name: {message.from_user.mention}\n"
-        f"🆔 ID: `{uid}`\n"
+        f"👤 {message.from_user.mention}\n"
+        f"🆔 `{uid}`\n"
         f"📅 Joined: {joined}\n"
-        f"💎 Premium: {'✅ Active' if prem else '❌ Nahi'}\n"
-        f"📥 Aaj Downloads: {today_count}/{limit}\n"
+        f"💎 Premium: {'✅' if prem else '❌'}\n"
+        f"📥 Aaj: {today_count}/{limit}"
     )
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           NEW MEMBER / BOT ADDED
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@app.on_message(filters.command("ping") & filters.user(ADMINS))
+async def ping_cmd(client, message):
+    s = time.time()
+    m = await message.reply("🏓")
+    ms = round((time.time() - s) * 1000)
+    await m.edit(f"🏓 Pong! `{ms}ms`")
+
 @app.on_chat_member_updated()
 async def member_update(client, update):
     if update.new_chat_member and update.new_chat_member.status == enums.ChatMemberStatus.MEMBER:
@@ -856,9 +695,8 @@ async def member_update(client, update):
         if user.is_bot: return
         await register_user(user)
         s = await get_settings()
-        msg = s.get("welcome_msg", "👋 Welcome {name}! File ka naam type karo! 🗂")
-        msg = msg.replace("{name}", user.mention)
-        try: await client.send_message(update.chat.id, msg)
+        msg = s.get("welcome_msg", "👋 Welcome {name}! File ka naam type karo 🗂")
+        try: await client.send_message(update.chat.id, msg.replace("{name}", user.mention))
         except: pass
 
 @app.on_message(filters.new_chat_members)
@@ -867,15 +705,8 @@ async def bot_added(client, message):
     for member in message.new_chat_members:
         if member.id == me:
             await register_group(message.chat)
-            await message.reply(
-                f"🗂 **AsBhai Vault Bot Aa Gaya!**\n\n"
-                f"File ka naam type karo — main dhundh lunga!\n\n"
-                f"📢 {MAIN_CHANNEL} | 💎 /premium"
-            )
+            await message.reply(f"🗂 **AsBhai Vault Bot Aa Gaya!**\n\nFile naam type karo!\n📢 {MAIN_CHANNEL} | 💎 /premium")
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           INLINE MODE
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_inline_query()
 async def inline_handler(client, query):
     q = query.query.strip()
@@ -885,64 +716,64 @@ async def inline_handler(client, query):
     me = await client.get_me()
     items = []
     for idx, msg in enumerate(results):
-        name = ""
-        if msg.document and msg.document.file_name: name = msg.document.file_name
-        elif msg.caption: name = clean_caption(msg.caption)[:50]
-        else: name = f"File #{idx+1}"
+        name = (msg.document.file_name if msg.document and msg.document.file_name
+                else clean_caption(msg.caption or f"File #{idx+1}")[:50])
         link = f"https://t.me/{me.username}?start=file_{msg.id}"
         items.append(InlineQueryResultArticle(
-            title=name[:60],
-            description="Click karke file lo",
-            input_message_content=InputTextMessageContent(f"🗂 **{name}**\n\n[📥 File Lao]({link})")
+            title=name[:60], description="Click karke file lo",
+            input_message_content=InputTextMessageContent(f"🗂 **{name}**\n\n[📥 Lo]({link})")
         ))
     if not items:
         items = [InlineQueryResultArticle(
-            title=f"'{q}' nahi mila",
-            description="Kuch aur try karo",
+            title=f"'{q}' nahi mila", description="Kuch aur try karo",
             input_message_content=InputTextMessageContent(f"❌ '{q}' nahi mila.")
         )]
     await query.answer(items, cache_time=10)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           PING
+# MAIN - FLASK PEHLE, BOT BAAD MEIN
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-@app.on_message(filters.command("ping") & filters.user(ADMINS))
-async def ping_cmd(client, message):
-    s = time.time()
-    m = await message.reply("Pong!")
-    ms = round((time.time() - s) * 1000)
-    await m.edit(f"🏓 Pong! `{ms}ms`")
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#           MAIN
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-_bot_loop = None
-
 async def main():
-    global _bot_loop
-    _bot_loop = asyncio.get_event_loop()
-
-    # Flask ko alag thread mein chalao
+    # Step 1: Flask pehle start karo alag thread mein
     flask_thread = threading.Thread(target=start_flask, daemon=True)
     flask_thread.start()
-    logger.info("🌐 Flask thread started")
+    logger.info("✅ Flask thread started — health check pass hoga ab")
 
-    scheduler.start()
-    await app.start()
-    me = await app.get_me()
-    logger.info(f"✅ Bot started: @{me.username}")
+    # Step 2: Thoda wait karo flask start hone do
+    await asyncio.sleep(3)
 
+    # Step 3: Bot start karo
+    logger.info("🤖 Bot start ho raha hai...")
     try:
-        await app.send_message(
-            LOG_CHANNEL,
-            f"✅ **Bot Started!**\n"
-            f"@{me.username}\n"
-            f"{datetime.now(IST).strftime('%d %b %Y %H:%M')} IST"
-        )
-    except Exception as e:
-        logger.warning(f"Log channel message failed: {e}")
+        scheduler.start()
+        await app.start()
+        me = await app.get_me()
+        _bot_status["started"] = True
+        _bot_status["username"] = me.username
+        _bot_status["error"] = ""
+        logger.info(f"✅ Bot started: @{me.username}")
 
-    await idle()
+        # Log channel pe message
+        try:
+            await app.send_message(
+                LOG_CHANNEL,
+                f"✅ **Bot Started!**\n"
+                f"@{me.username}\n"
+                f"🕐 {datetime.now(IST).strftime('%d %b %Y %H:%M')} IST\n"
+                f"🌐 Flask: Running on port {PORT}"
+            )
+        except Exception as e:
+            logger.warning(f"Log channel message failed: {e}")
+
+        await idle()
+
+    except Exception as e:
+        _bot_status["error"] = str(e)
+        logger.error(f"❌ Bot start failed: {e}")
+        # Flask chalta rahega health check ke liye
+        while True:
+            await asyncio.sleep(60)
+
     await app.stop()
 
 if __name__ == "__main__":
