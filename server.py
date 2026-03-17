@@ -1,30 +1,37 @@
-# server.py
+
 
 import os, asyncio, logging
-from flask import Flask, Response, render_template_string, abort, redirect, stream_with_context
+from flask import Flask, Response, render_template_string, abort, stream_with_context
 from pyrogram import Client
 from pyrogram.errors import FloodWait
 from dotenv import load_dotenv
 
+# .env load karo (local ke liye), Koyeb pe env vars seedha milte hain
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-API_ID = int(os.getenv("API_ID", "0"))
-API_HASH = os.getenv("API_HASH", "")
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-LOG_CHANNEL = int(os.getenv("LOG_CHANNEL", "-1002463804038"))
+API_ID = int(os.environ.get("API_ID", "0"))
+API_HASH = os.environ.get("API_HASH", "")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+FILE_CHANNEL = int(os.environ.get("FILE_CHANNEL", "-1002283182645"))
+
+# Validate karo
+if not API_ID or not API_HASH or not BOT_TOKEN:
+    logger.error("❌ API_ID, API_HASH ya BOT_TOKEN missing hai .env mein!")
+    raise SystemExit("Environment variables missing!")
 
 app_flask = Flask(__name__)
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
 pyro_client = Client(
-    "stream_worker",
+    name="stream_worker",
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
-    no_updates=True
+    no_updates=True,
+    in_memory=True   # Session file ki zarurat nahi
 )
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
