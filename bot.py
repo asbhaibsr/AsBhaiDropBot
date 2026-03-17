@@ -1,5 +1,3 @@
-# bot.py
-
 import os, re, asyncio, logging, time, random, string
 from datetime import datetime, timedelta
 import pytz
@@ -27,19 +25,32 @@ logger = logging.getLogger(__name__)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #           CONFIGURATION
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-API_ID = int(os.getenv("API_ID", "0"))
-API_HASH = os.getenv("API_HASH", "")
+API_ID = int(os.getenv("API_ID", "29970536"))
+API_HASH = os.getenv("API_HASH", "f4bfdcdd4a5c1b7328a7e4f25f024a09")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 MONGO_URI = os.getenv("MONGO_URI", "")
 OWNER_ID = int(os.getenv("OWNER_ID", "7315805581"))
-LOG_CHANNEL = int(os.getenv("LOG_CHANNEL", "-1002463804038"))  # Private file channel
+
+# ── Jahan se bot files uthata hai (private file storage channel) ──
+FILE_CHANNEL = int(os.getenv("FILE_CHANNEL", "-1002463804038"))
+
+# ── Bot ki activity/log channel ──
+LOG_CHANNEL = int(os.getenv("LOG_CHANNEL", "-1002352329534"))
+
+# ── Main public channel (branding) ──
 MAIN_CHANNEL = os.getenv("MAIN_CHANNEL", "@asbhai_bsr")
 MAIN_CHANNEL_ID = int(os.getenv("MAIN_CHANNEL_ID", "-1002352329534"))
+
+# ── Force Subscribe channel (user join kare tab hi file mile) ──
 FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "@asbhai_bsr")
 FORCE_SUB_ID = int(os.getenv("FORCE_SUB_ID", "-1002352329534"))
+
+# ── Aap aur channels add kar sakte ho yahan ──
+# EXTRA_FILE_CHANNELS = [-100xxxxxxxxxx, -100xxxxxxxxxx]  # future use
+
 SHORTLINK_API = os.getenv("SHORTLINK_API", "")
 SHORTLINK_URL = os.getenv("SHORTLINK_URL", "modijiurl.com")
-FLASK_SERVER = os.getenv("FLASK_SERVER", "http://localhost:5000")
+FLASK_SERVER = os.getenv("FLASK_SERVER", "http://localhost:8080")
 ADMINS = [OWNER_ID]
 IST = pytz.timezone("Asia/Kolkata")
 UPI_ID = "arsadsaifi8272@ibl"
@@ -55,7 +66,7 @@ DEFAULT_SETTINGS = {
     "daily_limit": 10,
     "premium_results": 5,
     "free_results": 1,
-    "welcome_msg": "🎬 Welcome to AsBhai Movie Bot!\nType any movie name to search.",
+    "welcome_msg": "🎬 Welcome to As Bhai Drop Bot!\nType any movie name to search.",
     "broadcast_msg": "",
 }
 
@@ -217,7 +228,7 @@ async def is_member(user_id: int) -> bool:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async def search_files(query: str, limit: int = 5):
-    """Search files in the private channel and return matching messages"""
+    """Search files in FILE_CHANNEL and return matching messages"""
     words = [w.lower() for w in query.split() if len(w) > 1]
     if not words:
         return []
@@ -228,7 +239,7 @@ async def search_files(query: str, limit: int = 5):
     try:
         # Search each keyword and combine results
         for word in words[:4]:  # Max 4 keywords
-            async for msg in app.search_messages(LOG_CHANNEL, word, limit=20):
+            async for msg in app.search_messages(FILE_CHANNEL, word, limit=20):
                 if msg.id in seen_ids:
                     continue
                 seen_ids.add(msg.id)
@@ -349,7 +360,7 @@ async def send_file_to_user(client: Client, message: Message, msg_id_str: str):
     """Send a file from channel to user after verification"""
     try:
         msg_id = int(msg_id_str)
-        file_msg = await client.get_messages(LOG_CHANNEL, msg_id)
+        file_msg = await client.get_messages(FILE_CHANNEL, msg_id)
         if not file_msg:
             await message.reply("❌ File nahi mili. Ho sakta hai delete ho gayi ho.")
             return
@@ -382,8 +393,8 @@ async def send_file_to_user(client: Client, message: Message, msg_id_str: str):
         
         # Streaming buttons (premium only)
         bot_me = await client.get_me()
-        stream_url = f"{FLASK_SERVER}/stream/{LOG_CHANNEL}/{msg_id}"
-        download_url = f"{FLASK_SERVER}/download/{LOG_CHANNEL}/{msg_id}"
+        stream_url = f"{FLASK_SERVER}/stream/{FILE_CHANNEL}/{msg_id}"
+        download_url = f"{FLASK_SERVER}/download/{FILE_CHANNEL}/{msg_id}"
         
         if prem:
             buttons = [[
