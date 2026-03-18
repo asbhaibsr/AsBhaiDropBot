@@ -239,31 +239,53 @@ async def send_log(text):
 #  SEARCH
 # ═══════════════════════════════════════
 async def do_search(query, limit=5):
+    query = query.strip()
     words = [w.lower() for w in query.split() if len(w) > 1]
     if not words:
         return []
+
     results = []
     seen = set()
+
+    # Multiple search strategies
+    search_queries = []
+    if len(words) > 1:
+        search_queries.append(query)       # full query pehle
+    search_queries.extend(words[:4])       # har word alag
+    longest = max(words, key=len)
+    if longest not in search_queries:
+        search_queries.append(longest)     # sabse lamba word bhi
+
     try:
-        for word in words[:4]:
-            async for msg in bot.search_messages(FILE_CHANNEL, word, limit=20):
+        for sq in search_queries:
+            async for msg in bot.search_messages(FILE_CHANNEL, sq, limit=50):
                 if msg.id in seen:
                     continue
                 seen.add(msg.id)
                 txt = ""
                 if msg.caption:
-                    txt += msg.caption.lower()
+                    txt += msg.caption.lower() + " "
                 if msg.document and msg.document.file_name:
-                    txt += " " + msg.document.file_name.lower()
+                    txt += msg.document.file_name.lower() + " "
                 if msg.text:
-                    txt += " " + msg.text.lower()
-                score = sum(1 for w in words if w in txt)
+                    txt += msg.text.lower() + " "
+                if not txt.strip():
+                    continue
+                score = 0
+                for w in words:
+                    if w in txt:
+                        score += 2
+                if query.lower() in txt:
+                    score += 10
                 if score > 0:
                     results.append((score, msg))
+
         results.sort(key=lambda x: x[0], reverse=True)
+        logger.info(f"Search [{query}] -> {len(results)} results | channel={FILE_CHANNEL}")
         return [m for _, m in results[:limit]]
+
     except Exception as e:
-        logger.error(f"search error: {e}")
+        logger.error(f"search error [{query}]: {e}")
         return []
 
 # ═══════════════════════════════════════
@@ -457,8 +479,12 @@ async def search_handler(client, message: Message):
 
     if not found:
         await wait_msg.edit(
-            f"❌ **'{query}' nahi mila!**\n\n"
-            f"💡 Spelling check karo ya English mein try karo."
+            f"🔍 **'{query}' abhi channel mein nahi hai.**\n\n"
+            f"📌 Ho sakta hai:\n"
+            f"• File abhi upload nahi hui\n"
+            f"• Thoda alag naam try karo\n"
+            f"• Sirf movie/show ka naam likhein\n\n"
+            f"📢 Request ke liye: {MAIN_CHANNEL}"
         )
         return
 
