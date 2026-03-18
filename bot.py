@@ -416,13 +416,18 @@ async def force_sub_check(client, message):
 #  DAILY VERIFY CHECK — 5 min cache
 # ═══════════════════════════════════════
 async def verify_check(client, message):
+    """
+    Shortlink SIRF tab aayegi jab 24 ghante baad verify karna ho.
+    Ek baar verify karne ke baad poore din shortlink nahi.
+    """
     uid = message.from_user.id
     if uid in ADMINS: return True
+    # Verified hai aaj — seedha jaane do, koi shortlink nahi
     if await is_verified_today(uid): return True
 
     me = await client.get_me()
 
-    # 5 min cache — same link
+    # 5 min cache — baar baar naya link na bane
     if uid in _verify_cache:
         _, cached_link, cached_expiry = _verify_cache[uid]
         if now() < cached_expiry and cached_link:
@@ -431,19 +436,21 @@ async def verify_check(client, message):
                 [InlineKeyboardButton("💎 Premium — Kabhi Verify Nahi", callback_data="buy_premium")]
             ])
             await message.reply(
-                f"🔐 **Pehle Verify Karo!**\n\n"
-                f"👇 Link click → shortlink solve → verify!\n\n"
-                f"✅ 1 baar/din | 💎 Premium = kabhi nahi!",
+                f"🔐 **24 Ghante Baad Verification Baaki Hai**\n\n"
+                f"Sirf 1 baar karo — **poore din free!** ✅\n\n"
+                f"👇 Link dabao → shortlink solve karo → verify!\n\n"
+                f"💎 Premium = kabhi verify nahi!",
                 reply_markup=kb
             )
             return False
 
-    # Naya token
+    # Naya token banao
     token = await make_token(uid, "shortverify")
     verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
+    # Shortlink lagao — yahi earning ka zariya hai
     short = await make_shortlink(verify_url)
 
-    # Cache 5 min
+    # 5 min cache — same link
     _verify_cache[uid] = (token, short, now() + timedelta(minutes=5))
 
     kb = InlineKeyboardMarkup([
@@ -451,10 +458,10 @@ async def verify_check(client, message):
         [InlineKeyboardButton("💎 Premium — Kabhi Verify Nahi", callback_data="buy_premium")]
     ])
     await message.reply(
-        f"🔐 **Daily Verification Baaki Hai!**\n\n"
-        f"Ek baar karo — **24 ghante free!** ✅\n\n"
-        f"👇 Link click → shortlink solve → verify!\n\n"
-        f"💎 Premium lo — kabhi verify mat karo!",
+        f"🔐 **24 Ghante Baad Verification Baaki Hai**\n\n"
+        f"Sirf **1 baar** karo — **poore din free!** ✅\n\n"
+        f"👇 Link dabao → shortlink solve karo → verify ho jao!\n\n"
+        f"💎 **Premium lo** — kabhi verify nahi karna!",
         reply_markup=kb
     )
     return False
@@ -464,48 +471,88 @@ async def verify_check(client, message):
 #  Group mein sirf result/link dikhega
 #  File PM mein bina caption/channel name
 # ═══════════════════════════════════════
-async def send_file_to_pm(client, user, msg_id, chat_id=None, reply_msg_id=None):
+async def send_file_to_pm(client, user, msg_id):
     """
-    File PM mein bhejo — bina forward tag, bina caption links
-    Group mein sirf notification denge ki PM check karo
+    File BOT ke PM mein bhejta hai.
+    Userbot sirf file_id fetch karta hai — bhejta nahi.
+    Bot send karta hai — channel name nahi aata.
     """
     try:
         s = await get_settings()
-        prem = await is_premium(user.id)
+        t = s.get("auto_delete_time", 300)
+        mins = t // 60
 
-        # File fetch karo userbot se
+        # Step 1: Userbot se message fetch karo (sirf read)
         if userbot:
             file_msg = await userbot.get_messages(FILE_CHANNEL, msg_id)
         else:
             file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
 
-        if not file_msg:
+        if not file_msg or file_msg.empty:
             return False, "File nahi mili"
 
-        # Clean caption banao — koi link, channel name nahi
         fname = get_file_name(file_msg)
-
-        t = s.get("auto_delete_time", 300)
-        mins = t // 60
-
         clean_cap = (
             f"🗂 **{fname}**\n\n"
-            f"⏳ File **{mins} min** mein delete hogi!\n"
-            f"📌 Save kar lo ya forward kar lo!\n\n"
-            f"📢 {MAIN_CHANNEL}"
+            f"⏳ **{mins} min** baad delete hogi!\n"
+            f"📌 Abhi save ya forward kar lo!"
         )
 
-        # PM mein bhejo — copy karo bina forward tag ke
-        # copy() forward tag nahi lagata
-        sent = await file_msg.copy(
-            chat_id=user.id,
-            caption=clean_cap,
-            parse_mode=enums.ParseMode.MARKDOWN
-        )
+        sent = None
+
+        # Step 2: BOT bhejega — userbot nahi
+        # file_id use karo — direct send, channel name nahi aata
+        if file_msg.document:
+            sent = await bot.send_document(
+                chat_id=user.id,
+                document=file_msg.document.file_id,
+                caption=clean_cap,
+                parse_mode=enums.ParseMode.MARKDOWN
+            )
+        elif file_msg.video:
+            sent = await bot.send_video(
+                chat_id=user.id,
+                video=file_msg.video.file_id,
+                caption=clean_cap,
+                parse_mode=enums.ParseMode.MARKDOWN
+            )
+        elif file_msg.audio:
+            sent = await bot.send_audio(
+                chat_id=user.id,
+                audio=file_msg.audio.file_id,
+                caption=clean_cap,
+                parse_mode=enums.ParseMode.MARKDOWN
+            )
+        elif file_msg.photo:
+            sent = await bot.send_photo(
+                chat_id=user.id,
+                photo=file_msg.photo.file_id,
+                caption=clean_cap,
+                parse_mode=enums.ParseMode.MARKDOWN
+            )
+        elif file_msg.animation:
+            sent = await bot.send_animation(
+                chat_id=user.id,
+                animation=file_msg.animation.file_id,
+                caption=clean_cap,
+                parse_mode=enums.ParseMode.MARKDOWN
+            )
+        elif file_msg.voice:
+            sent = await bot.send_voice(
+                chat_id=user.id,
+                voice=file_msg.voice.file_id,
+                caption=clean_cap,
+                parse_mode=enums.ParseMode.MARKDOWN
+            )
+        else:
+            return False, "File type support nahi hai"
+
+        if not sent:
+            return False, "Send fail hua"
 
         await increment_daily(user.id)
 
-        # Auto delete PM se bhi
+        # Auto delete
         if s.get("auto_delete"):
             asyncio.create_task(del_later(sent, t))
 
@@ -612,20 +659,14 @@ async def start_handler(client, message: Message):
                 )
                 return
 
-        wait = await message.reply("📥 File aa rahi hai...")
+        wait = await message.reply("📥 File aa rahi hai... ⏳")
         success, info = await send_file_to_pm(client, message.from_user, msg_id)
         await wait.delete()
 
-        if success:
-            await message.reply(
-                f"✅ **File Mil Gayi!**\n\n"
-                f"🗂 `{info}`\n\n"
-                f"⏳ File thodi der mein delete hogi!\n"
-                f"📌 Save kar lo!"
-            )
-        else:
+        if not success:
             await message.reply(
                 f"❌ File nahi aa payi.\n"
+                f"Error: `{info}`\n\n"
                 f"Dobara try karo ya /request karo."
             )
         return
@@ -733,23 +774,26 @@ async def search_handler(client, message: Message):
     buttons = []
 
     for idx, fmsg in enumerate(found):
-        direct_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
-        # Verified ya premium = seedha link, warna shortlink
-        if verified or prem:
-            final_link = direct_link
-        else:
-            final_link = await make_shortlink(direct_link)
+        fname = get_file_name(fmsg)
+        fname_clean = re.sub(r'[@#]\w+', '', fname)
+        fname_clean = re.sub(r'_+', ' ', fname_clean).strip()
+        fname_show = fname_clean[:40] if fname_clean else f"File {idx+1}"
+
+        # Direct link — verified ya premium ko shortlink KABHI NAHI
+        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+
         buttons.append([
-            InlineKeyboardButton(f"📥 File {idx+1}", url=final_link)
+            InlineKeyboardButton(f"📥 {fname_show}", url=final_link)
         ])
 
     kb = InlineKeyboardMarkup(buttons)
     count = len(found)
+
     result_text = (
-        f"✨ {message.from_user.mention}\n\n"
-        f"**{count} file{'s' if count > 1 else ''} mili {'hai' if count == 1 else 'hain'}** "
-        f"aapki search ke liye! 🎯\n\n"
-        f"👇 Neeche button dabao — file seedha aapke PM mein aa jayegi!"
+        f"🔍 {message.from_user.mention}\n\n"
+        f"╔══ 🎯 **{count} Result{'s' if count > 1 else ''}** ══╗\n\n"
+        f"👇 File ka button dabao\n"
+        f"📥 Bot ke PM mein file aa jayegi!"
     )
 
     result_msg = await message.reply(result_text, reply_markup=kb)
