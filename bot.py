@@ -473,20 +473,18 @@ async def verify_check(client, message):
 # ═══════════════════════════════════════
 async def send_file_to_pm(client, user, msg_id):
     """
-    File BOT ke PM mein bhejta hai.
-    Userbot sirf file_id fetch karta hai — bhejta nahi.
-    Bot send karta hai — channel name nahi aata.
+    Bot FILE_CHANNEL se seedha user ke PM mein copy karta hai.
+    copy() = forward tag nahi aata, channel name nahi aata.
+    Bot ko FILE_CHANNEL mein admin hona chahiye.
     """
     try:
         s = await get_settings()
         t = s.get("auto_delete_time", 300)
         mins = t // 60
 
-        # Step 1: Userbot se message fetch karo (sirf read)
-        if userbot:
-            file_msg = await userbot.get_messages(FILE_CHANNEL, msg_id)
-        else:
-            file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
+        # Bot seedha FILE_CHANNEL se message copy karta hai
+        # Bot ko FILE_CHANNEL mein admin/member hona chahiye
+        file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
 
         if not file_msg or file_msg.empty:
             return False, "File nahi mili"
@@ -498,61 +496,18 @@ async def send_file_to_pm(client, user, msg_id):
             f"📌 Abhi save ya forward kar lo!"
         )
 
-        sent = None
-
-        # Step 2: BOT bhejega — userbot nahi
-        # file_id use karo — direct send, channel name nahi aata
-        if file_msg.document:
-            sent = await bot.send_document(
-                chat_id=user.id,
-                document=file_msg.document.file_id,
-                caption=clean_cap,
-                parse_mode=enums.ParseMode.MARKDOWN
-            )
-        elif file_msg.video:
-            sent = await bot.send_video(
-                chat_id=user.id,
-                video=file_msg.video.file_id,
-                caption=clean_cap,
-                parse_mode=enums.ParseMode.MARKDOWN
-            )
-        elif file_msg.audio:
-            sent = await bot.send_audio(
-                chat_id=user.id,
-                audio=file_msg.audio.file_id,
-                caption=clean_cap,
-                parse_mode=enums.ParseMode.MARKDOWN
-            )
-        elif file_msg.photo:
-            sent = await bot.send_photo(
-                chat_id=user.id,
-                photo=file_msg.photo.file_id,
-                caption=clean_cap,
-                parse_mode=enums.ParseMode.MARKDOWN
-            )
-        elif file_msg.animation:
-            sent = await bot.send_animation(
-                chat_id=user.id,
-                animation=file_msg.animation.file_id,
-                caption=clean_cap,
-                parse_mode=enums.ParseMode.MARKDOWN
-            )
-        elif file_msg.voice:
-            sent = await bot.send_voice(
-                chat_id=user.id,
-                voice=file_msg.voice.file_id,
-                caption=clean_cap,
-                parse_mode=enums.ParseMode.MARKDOWN
-            )
-        else:
-            return False, "File type support nahi hai"
+        # copy() = channel name nahi aata, forward tag nahi
+        sent = await file_msg.copy(
+            chat_id=user.id,
+            caption=clean_cap,
+            parse_mode=enums.ParseMode.MARKDOWN
+        )
 
         if not sent:
             return False, "Send fail hua"
 
         await increment_daily(user.id)
 
-        # Auto delete
         if s.get("auto_delete"):
             asyncio.create_task(del_later(sent, t))
 
