@@ -294,16 +294,24 @@ def clean_caption(text):
     return text.strip()
 
 def get_file_name(msg):
-    """Message se clean file name nikalo"""
+    """Message se clean file name nikalo — @mentions, links remove"""
+    name = ""
     if msg.document and msg.document.file_name:
-        return msg.document.file_name
-    if msg.video and msg.video.file_name:
-        return msg.video.file_name
-    if msg.audio and msg.audio.file_name:
-        return msg.audio.file_name
-    if msg.caption:
-        return clean_caption(msg.caption)[:60]
-    return "File"
+        name = msg.document.file_name
+    elif msg.video and msg.video.file_name:
+        name = msg.video.file_name
+    elif msg.audio and msg.audio.file_name:
+        name = msg.audio.file_name
+    elif msg.caption:
+        name = clean_caption(msg.caption)[:80]
+    else:
+        return "File"
+    # Clean karo
+    name = re.sub(r'@\w+', '', name)      # @mentions hatao
+    name = re.sub(r'http\S+', '', name)   # links hatao
+    name = re.sub(r't\.me/\S+', '', name)
+    name = name.strip()
+    return name if name else "File"
 
 async def make_shortlink(url):
     s = await get_settings()
@@ -721,26 +729,27 @@ async def search_handler(client, message: Message):
     me = await client.get_me()
 
     # Group mein sirf buttons — file nahi
-    # Ek message mein saare results
-    lines = []
+    verified = await is_verified_today(uid)
     buttons = []
+
     for idx, fmsg in enumerate(found):
-        fname = get_file_name(fmsg)
-        # Button link — PM mein file bhejega
-        link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
-        short_link = await make_shortlink(link)
-        lines.append(f"{idx+1}. 🗂 `{fname[:50]}`")
+        direct_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+        # Verified ya premium = seedha link, warna shortlink
+        if verified or prem:
+            final_link = direct_link
+        else:
+            final_link = await make_shortlink(direct_link)
         buttons.append([
-            InlineKeyboardButton(f"📥 {idx+1}. {fname[:35]}", url=short_link)
+            InlineKeyboardButton(f"📥 File {idx+1}", url=final_link)
         ])
 
     kb = InlineKeyboardMarkup(buttons)
-
+    count = len(found)
     result_text = (
-        f"✅ **{message.from_user.mention}** yeh mila:\n\n"
-        + "\n".join(lines) +
-        f"\n\n👇 Button dabao → **PM mein file aayegi!**\n"
-        f"_(Pehle bot se baat karo: @{me.username})_"
+        f"✨ {message.from_user.mention}\n\n"
+        f"**{count} file{'s' if count > 1 else ''} mili {'hai' if count == 1 else 'hain'}** "
+        f"aapki search ke liye! 🎯\n\n"
+        f"👇 Neeche button dabao — file seedha aapke PM mein aa jayegi!"
     )
 
     result_msg = await message.reply(result_text, reply_markup=kb)
