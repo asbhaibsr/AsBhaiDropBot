@@ -137,7 +137,7 @@ def submit_payment():
             f"📦 Plan: **{plan_id}** ({days} din)\n"
             f"💵 Amount: ₹{amount}\n"
             f"🔖 TXN ID: `{txn_id}`\n"
-            f"🕐 {now_ist().strftime("%d %b %H:%M")} IST"
+            f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
         )
         kb = InlineKeyboardMarkup([
             [
