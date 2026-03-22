@@ -6,7 +6,8 @@ import pytz, aiohttp
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums
 from pyrogram.types import (
-    Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+    Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery,
+    WebAppInfo
 )
 from pyrogram.errors import (
     FloodWait, UserIsBlocked, InputUserDeactivated,
@@ -97,6 +98,10 @@ def plans():
             {"id": "150days", "name": "150 Din", "days": 150, "price": 500, "desc": "Super Saver"},
             {"id": "365days", "name": "1 Saal",  "days": 365, "price": 800, "desc": "Best Deal"},
         ],
+        "group_plans": [
+            {"id": "group_1m",  "name": "1 Mahina",  "days": 30,  "price": 300, "desc": "Group Premium — Apni shortlink lagao"},
+            {"id": "group_2m",  "name": "2 Mahine",  "days": 60,  "price": 550, "desc": "Group Premium — Best Value"},
+        ],
         "upi": UPI_ID,
         "qr_url": "https://envs.sh/GdE.jpg",
         "contact": "@asbhaibsr"
@@ -113,30 +118,42 @@ def submit_payment():
     txn_id    = data.get("txn_id", "").strip()
     screenshot = data.get("screenshot", "")
 
+    group_id   = data.get("group_id")       # Group premium ke liye
+    group_link = data.get("group_link", "")  # Group link
+
     if not all([user_id, plan_id, txn_id]):
         return jsonify({"ok": False, "error": "Saari details bharo!"}), 400
 
-    plan_days_map = {"10days":10,"30days":30,"60days":60,"150days":150,"365days":365}
+    plan_days_map = {"10days":10,"30days":30,"60days":60,"150days":150,"365days":365,"group_1m":30,"group_2m":60}
     days = plan_days_map.get(plan_id, 30)
 
     async def _process():
         existing = await payments_col.find_one({"txn_id": txn_id})
         if existing:
             return False, "Ye Transaction ID pehle se submit ho chuka hai!"
+        is_group_plan = str(plan_id).startswith("group_")
         pay_doc = {
             "user_id": user_id, "name": name, "plan_id": plan_id,
             "days": days, "amount": amount, "txn_id": txn_id,
             "screenshot": screenshot[:200] if screenshot else "",
-            "status": "pending", "submitted_at": now()
+            "status": "pending", "submitted_at": now(),
+            "is_group": is_group_plan,
+            "group_id": str(group_id) if group_id else None,
+            "group_link": group_link or ""
         }
         result = await payments_col.insert_one(pay_doc)
         pay_id = str(result.inserted_id)
+        group_info = ""
+        if is_group_plan and group_id:
+            group_info = f"\n🏘 Group ID: `{group_id}`\n🔗 Link: {group_link}"
+        pay_type = "🏘 GROUP PREMIUM" if is_group_plan else "💎 USER PREMIUM"
         msg_text = (
-            f"💰 **Naya Payment Request**\n\n"
+            f"💰 **Naya Payment — {pay_type}**\n\n"
             f"👤 {name} (`{user_id}`)\n"
             f"📦 Plan: **{plan_id}** ({days} din)\n"
             f"💵 Amount: ₹{amount}\n"
-            f"🔖 TXN ID: `{txn_id}`\n"
+            f"🔖 TXN ID: `{txn_id}`"
+            f"{group_info}\n"
             f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
         )
         kb = InlineKeyboardMarkup([
@@ -367,6 +384,8 @@ help_msgs_col  = db["help_msgs"]    # Mini app help messages
 payments_col   = db["payments"]     # {user_id, plan_id, txn_id, status, ...}
 shortlinks_col = db["shortlinks"]   # {api_key, url, hours, label, active, order}
 verify_log_col = db["verify_logs"]  # {user_id, shortlink_id, verified_at, count}
+group_prem_col = db["group_premium"] # {chat_id, owner_id, txn_id, status, expiry, days}
+group_sl_col   = db["group_shortlinks"] # {chat_id, api_key, url, hours, label, order}
 
 # Group-level settings: {chat_id, free_results, premium_results, force_sub, shortlink_enabled, ...}
 group_settings_col = db["group_settings"]
@@ -744,14 +763,20 @@ async def force_sub_check(client, message, prem=False):
 #  MULTI-SHORTLINK SYSTEM
 # ═══════════════════════════════════════
 
-async def get_active_shortlinks():
+async def get_active_shortlinks(chat_id=None):
     """
     Active shortlinks sorted by order.
+    Group shortlinks bhi include karo agar chat_id diya.
     Returns list of {api_key, url, hours, label, _id}
     """
     links = []
     async for doc in shortlinks_col.find({"active": True}).sort("order", 1):
         links.append(doc)
+    # Group-specific shortlinks
+    if chat_id:
+        async for doc in group_sl_col.find({"chat_id": chat_id, "active": True}).sort("order", 1):
+            doc["_group_sl"] = True
+            links.append(doc)
     return links
 
 async def make_shortlink_with(url, api_key, api_url):
@@ -1202,7 +1227,7 @@ async def start_handler(client, message: Message):
         ]
     ]
     if miniapp_url:
-        buttons.append([InlineKeyboardButton("🌐 Mini App Kholo", web_app={"url": miniapp_url})])
+        buttons.append([InlineKeyboardButton("🌐 Mini App Kholo", web_app=WebAppInfo(url=miniapp_url))])
 
     await message.reply(
         f"🗂 **AsBhai Drop Bot**\n\n"
@@ -1214,7 +1239,8 @@ async def start_handler(client, message: Message):
         f"3️⃣ Group mein naam type karo\n"
         f"4️⃣ PM mein file aayegi! 🎉\n\n"
         f"💎 **Premium** = No verify + 10 results + stream!\n"
-        f"🔗 **10 Refer** = 15 din FREE Premium!\n\n"
+        f"🔗 **10 Refer** = 15 din FREE Premium!\n"
+        f"💰 **Earn Money** = Group mein shortlink lagao!\n\n"
         f"/premium | /mystats | /referlink",
         reply_markup=InlineKeyboardMarkup(buttons)
     )
@@ -1959,7 +1985,7 @@ async def cb_handler(client, query: CallbackQuery):
             [InlineKeyboardButton("🔙 Back", callback_data="show_premium")]
         ]
         if miniapp_url:
-            buttons.insert(0, [InlineKeyboardButton("🌐 Mini App mein Buy Karo", web_app={"url": miniapp_url})])
+            buttons.insert(0, [InlineKeyboardButton("🌐 Mini App mein Buy Karo", web_app=WebAppInfo(url=miniapp_url))])
         await query.message.edit(
             f"💳 **Premium Kharidein**\n\n"
             f"**UPI ID:** `{UPI_ID}`\n\n"
@@ -2030,7 +2056,7 @@ async def cb_handler(client, query: CallbackQuery):
             [InlineKeyboardButton("🔗 Refer & Earn", callback_data="refer_info")]
         ]
         if miniapp_url:
-            buttons.append([InlineKeyboardButton("🌐 Mini App", web_app={"url": miniapp_url})])
+            buttons.append([InlineKeyboardButton("🌐 Mini App", web_app=WebAppInfo(url=miniapp_url))])
         await query.message.edit(
             "🗂 **AsBhai Drop Bot**\n\nGroup mein file naam type karo!",
             reply_markup=InlineKeyboardMarkup(buttons)
@@ -2051,10 +2077,43 @@ async def pay_approve(client, query: CallbackQuery):
     user_id = int(parts[3])
     days = int(parts[4])
     from bson import ObjectId
+    pay_doc = await payments_col.find_one({"_id": ObjectId(pay_id)})
     await payments_col.update_one(
         {"_id": ObjectId(pay_id)},
         {"$set": {"status": "approved", "approved_at": now(), "approved_by": query.from_user.id}}
     )
+    # Group premium check
+    if pay_doc and pay_doc.get("group_id"):
+        g_id = int(pay_doc["group_id"])
+        expiry = now() + timedelta(days=days)
+        await group_prem_col.update_one(
+            {"chat_id": g_id},
+            {"$set": {"chat_id": g_id, "owner_id": user_id, "status": "approved",
+                      "expiry": expiry, "days": days, "approved_at": now()}},
+            upsert=True
+        )
+        me = await client.get_me()
+        try:
+            await client.send_message(
+                user_id,
+                f"🎉 **Group Premium Approved!** 🏆\n\n"
+                f"🏘 Group ID: `{g_id}`\n"
+                f"📅 **{days} din** ke liye active!\n"
+                f"⏰ Expiry: {expiry.astimezone(IST).strftime('%d %b %Y')}\n\n"
+                f"**Ab kya karein:**\n"
+                f"1️⃣ Apne group mein @{me.username} add karo\n"
+                f"2️⃣ Group mein apni shortlink lagao:\n"
+                f"   `/gshortlink YOUR_API_KEY modijiurl.com 6 ModiJi`\n"
+                f"3️⃣ Users search karenge to aapki shortlink aayegi\n"
+                f"4️⃣ Shortlink earnings aapke account mein! 💸\n\n"
+                f"Help ke liye: @asbhaibsr"
+            )
+        except: pass
+        await query.message.edit_reply_markup(None)
+        await query.message.reply(f"✅ Group `{g_id}` ko **{days} din** Group Premium diya!")
+        await query.answer("✅ Group Premium Approved!", show_alert=False)
+        return
+    # Normal user premium
     await add_premium(user_id, days)
     exp = await get_premium_expiry(user_id)
     exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else "N/A"
@@ -2084,17 +2143,25 @@ async def pay_reject(client, query: CallbackQuery):
         {"_id": ObjectId(pay_id)},
         {"$set": {"status": "rejected", "rejected_at": now()}}
     )
+    pay_doc_r = await payments_col.find_one({"_id": ObjectId(pay_id)})
+    is_grp = pay_doc_r and pay_doc_r.get("is_group")
+    g_id_r = pay_doc_r.get("group_id") if pay_doc_r else None
     try:
-        await client.send_message(
-            user_id,
+        rej_msg = (
+            f"❌ **Group Premium Rejected**\n\n"
+            f"Group ID: `{g_id_r}`\n"
+            f"Sahi details ke saath dobara submit karo."
+        ) if is_grp else (
             f"❌ **Payment Rejected**\n\n"
             f"Aapki payment reject ho gayi.\n"
             f"Sahi transaction ID ke saath dobara submit karo\n"
             f"ya @asbhaibsr se contact karo."
         )
+        await client.send_message(user_id, rej_msg)
     except: pass
     await query.message.edit_reply_markup(None)
-    await query.message.reply(f"❌ `{user_id}` ki payment reject ki.")
+    label = f"Group `{g_id_r}`" if is_grp else f"`{user_id}`"
+    await query.message.reply(f"❌ {label} ki payment reject ki.")
     await query.answer("❌ Rejected!", show_alert=False)
 
 # ═══════════════════════════════════════
@@ -2587,7 +2654,7 @@ async def premium_info(client, message: Message):
     buttons = []
     if not prem:
         if miniapp_url:
-            buttons.append([InlineKeyboardButton("🌐 Mini App mein Buy Karo", web_app={"url": miniapp_url})])
+            buttons.append([InlineKeyboardButton("🌐 Mini App mein Buy Karo", web_app=WebAppInfo(url=miniapp_url))])
         buttons.append([InlineKeyboardButton("💰 Buy Premium", callback_data="buy_premium")])
     buttons.append([InlineKeyboardButton("🔗 Refer & Earn (Free)", callback_data="refer_info")])
     await message.reply(
@@ -2635,6 +2702,170 @@ async def ping(client, message: Message):
     m = await message.reply("🏓")
     ms = round((time.time() - t) * 1000)
     await m.edit(f"🏓 Pong! `{ms}ms`")
+
+# ═══════════════════════════════════════
+#  /SETCOMMANDS — Auto set bot commands
+# ═══════════════════════════════════════
+@bot.on_message(filters.command("setcommands") & filters.user(ADMINS))
+async def set_commands(client, message: Message):
+    from pyrogram.types import BotCommand
+    commands = [
+        BotCommand("start",       "Bot shuru karo"),
+        BotCommand("premium",     "Premium info aur plans dekho"),
+        BotCommand("mystats",     "Apni stats dekho"),
+        BotCommand("referlink",   "Refer link lo — 10 refer = 15 din free premium"),
+        BotCommand("request",     "File request karo"),
+        BotCommand("help",        "Help aur guide dekho"),
+    ]
+    await client.set_bot_commands(commands)
+    cmds_text = "\n".join(f"/{c.command} — {c.description}" for c in commands)
+    await message.reply(f"✅ **Bot Commands Set Ho Gayi!**\n\n{cmds_text}")
+
+# ═══════════════════════════════════════
+#  GROUP PREMIUM — Group owner commands
+# ═══════════════════════════════════════
+async def is_group_premium(chat_id):
+    """Group ka premium active hai?"""
+    doc = await group_prem_col.find_one({"chat_id": chat_id, "status": "approved"})
+    if not doc: return False
+    expiry = make_aware(doc.get("expiry"))
+    if expiry and now() > expiry:
+        await group_prem_col.update_one({"chat_id": chat_id}, {"$set": {"status": "expired"}})
+        return False
+    return True
+
+@bot.on_message(filters.command("gshortlink"))
+async def group_shortlink_add(client, message: Message):
+    """
+    Group premium users apni shortlink laga sakte hain.
+    Usage: /gshortlink <api_key> <website_url> [hours] [label]
+    """
+    if not message.chat or message.chat.type == enums.ChatType.PRIVATE:
+        await message.reply("❌ Ye command group mein use karo!")
+        return
+    uid = message.from_user.id
+    chat_id = message.chat.id
+
+    # Admin check
+    try:
+        member = await client.get_chat_member(chat_id, uid)
+        is_admin = member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or uid in ADMINS
+    except:
+        is_admin = uid in ADMINS
+    if not is_admin:
+        await message.reply("❌ Sirf group admins ye command use kar sakte hain!")
+        return
+
+    # Group premium check
+    if not await is_group_premium(chat_id) and uid not in ADMINS:
+        miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else "https://t.me/AsBhaiDropBot"
+        await message.reply(
+            "❌ **Group Premium Nahi Hai!**\n"
+            "Apni shortlink lagane ke liye **Group Premium** chahiye.\n"
+            "💰 **₹300 / 1 Mahina** — Group Premium\n"
+            f"👉 Mini App par buy karo: {miniapp_url}",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💰 Group Premium Buy Karo", url=miniapp_url if miniapp_url.startswith("http") else f"https://t.me/AsBhaiDropBot")]
+            ])
+        )
+        return
+
+    args = message.command
+    if len(args) < 3:
+        await message.reply(
+            "📌 **Group Shortlink Add Karo**\n"
+            "Usage:\n`/gshortlink <api_key> <website_url> [hours] [label]`\n"
+            "Example:\n`/gshortlink abc123 modijiurl.com 6 ModiJi`\n"
+            "List dekhne ke liye: /gshortlinks"
+        )
+        return
+
+    api_key = args[1]
+    api_url = args[2].strip("/").replace("https://","").replace("http://","")
+    try:
+        hours = int(args[3]) if len(args) > 3 else 24
+    except:
+        hours = 24
+    label = " ".join(args[4:]) if len(args) > 4 else api_url
+
+    count = await group_sl_col.count_documents({"chat_id": chat_id})
+    await group_sl_col.insert_one({
+        "chat_id": chat_id, "api_key": api_key, "url": api_url,
+        "hours": hours, "label": label, "active": True,
+        "order": count + 1, "added_by": uid, "added_at": now()
+    })
+    # Test
+    test = await make_shortlink_with("https://t.me/test", api_key, api_url)
+    test_ok = test != "https://t.me/test"
+    await message.reply(
+        f"✅ **Shortlink Add Ho Gayi!**\n"
+        f"🏷 Label: **{label}**\n"
+        f"🌐 URL: `{api_url}`\n"
+        f"⏰ Interval: **{hours} ghante**\n"
+        f"🧪 Test: {'✅ OK' if test_ok else '⚠️ Fail — API check karo'}"
+    )
+
+@bot.on_message(filters.command("gshortlinkremove"))
+async def group_shortlink_remove(client, message: Message):
+    """Usage: /gshortlinkremove <number>"""
+    if not message.chat or message.chat.type == enums.ChatType.PRIVATE:
+        await message.reply("❌ Ye command group mein use karo!"); return
+    uid = message.from_user.id
+    chat_id = message.chat.id
+    try:
+        member = await client.get_chat_member(chat_id, uid)
+        is_admin = member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or uid in ADMINS
+    except:
+        is_admin = uid in ADMINS
+    if not is_admin:
+        await message.reply("❌ Sirf admins use kar sakte hain!"); return
+
+    args = message.command
+    if len(args) < 2:
+        # List dikho with remove buttons
+        links = []
+        async for doc in group_sl_col.find({"chat_id": chat_id}).sort("order", 1):
+            links.append(doc)
+        if not links:
+            await message.reply("📭 Koi shortlink nahi hai. `/gshortlink` se add karo."); return
+        text = "🔗 **Group Shortlinks:**\n"
+        for i, sl in enumerate(links):
+            text += f"{i+1}. **{sl.get('label')}** — ⏰ {sl.get('hours',24)}h\n"
+        text += "\nHatane ke liye: `/gshortlinkremove <number>`"
+        await message.reply(text)
+        return
+
+    try:
+        num = int(args[1])
+    except:
+        await message.reply("❌ Valid number do."); return
+
+    links = []
+    async for doc in group_sl_col.find({"chat_id": chat_id}).sort("order", 1):
+        links.append(doc)
+    if num < 1 or num > len(links):
+        await message.reply(f"❌ {num} nahi mila. Total: {len(links)}"); return
+    sl = links[num-1]
+    await group_sl_col.delete_one({"_id": sl["_id"]})
+    await message.reply(f"✅ **{sl.get('label')}** remove ho gayi!")
+
+@bot.on_message(filters.command("gshortlinks"))
+async def group_shortlinks_list(client, message: Message):
+    """Group shortlinks list"""
+    if not message.chat or message.chat.type == enums.ChatType.PRIVATE:
+        await message.reply("❌ Ye command group mein use karo!"); return
+    chat_id = message.chat.id
+    links = []
+    async for doc in group_sl_col.find({"chat_id": chat_id}).sort("order", 1):
+        links.append(doc)
+    if not links:
+        await message.reply("📭 Koi shortlink nahi.\n`/gshortlink api url hours label` se add karo.")
+        return
+    text = f"🔗 **Group Shortlinks ({len(links)})**\n"
+    for i, sl in enumerate(links):
+        active = "✅" if sl.get("active") else "❌"
+        text += f"{active} {i+1}. **{sl.get('label')}** | `{sl.get('url')}` | ⏰ {sl.get('hours',24)}h\n"
+    await message.reply(text)
 
 # ═══════════════════════════════════════
 #  GROUP EVENTS
