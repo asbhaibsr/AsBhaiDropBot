@@ -2727,6 +2727,15 @@ async def cleanup():
 # ═══════════════════════════════════════
 #  START
 # ═══════════════════════════════════════
+async def on_startup():
+    """Bot start hone ke baad scheduler start karo — event loop ke andar"""
+    scheduler.add_job(
+        lambda: asyncio.create_task(cleanup()),
+        'interval', hours=1
+    )
+    scheduler.start()
+    logger.info("✅ Scheduler started")
+
 def start_bot():
     Thread(target=run_flask, daemon=True).start()
     logger.info("✅ Flask started")
@@ -2737,14 +2746,10 @@ def start_bot():
     else:
         logger.warning("⚠️ STRING_SESSION missing!")
 
-    scheduler.add_job(
-        lambda: asyncio.create_task(cleanup()),
-        'interval', hours=1
-    )
-    scheduler.start()
-
     logger.info("🚀 AsBhai Drop Bot starting...")
-    bot.run()
+
+    # bot.run() ke saath on_startup register karo
+    bot.run(on_startup())
 
 if __name__ == "__main__":
     start_bot()
