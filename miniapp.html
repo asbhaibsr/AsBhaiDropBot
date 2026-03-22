@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>AsBhai Premium</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:#07071a;--c1:#0d0d22;--c2:#121230;--c3:#181840;
+  --p:#7c3aed;--p2:#a855f7;--p3:#c084fc;
+  --g:#f59e0b;--g2:#fbbf24;--g3:#fde68a;
+  --gr:#10b981;--gr2:#34d399;
+  --r:#ef4444;--t:#f1f5f9;--m:#64748b;--m2:#94a3b8;
+  --bd:rgba(124,58,237,0.18);--bd2:rgba(124,58,237,0.38);
+  --sh:0 0 32px rgba(124,58,237,0.25);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--t);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:76px}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 600px 400px at 15% 8%,rgba(124,58,237,0.1) 0%,transparent 70%),radial-gradient(ellipse 400px 300px at 85% 85%,rgba(168,85,247,0.07) 0%,transparent 70%);pointer-events:none;z-index:0}
+.pg{display:none;padding:14px 14px 10px;position:relative;z-index:1}
+.pg.on{display:block;animation:fu .22s ease}
+@keyframes fu{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(7,7,26,0.97);backdrop-filter:blur(28px);border-top:1px solid var(--bd2);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom)}
+.nb{flex:1;padding:9px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;border:none;background:none;color:var(--m);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;cursor:pointer;transition:color .2s;position:relative}
+.nb .i{font-size:20px;transition:transform .25s}
+.nb.on{color:var(--p2)}
+.nb.on .i{transform:scale(1.18) translateY(-1px)}
+.nbar{position:absolute;top:0;left:22%;right:22%;height:2px;background:linear-gradient(90deg,var(--p),var(--p2));border-radius:0 0 3px 3px;opacity:0;transition:opacity .2s}
+.nb.on .nbar{opacity:1}
+.st{font-size:10.5px;font-weight:900;color:var(--m2);text-transform:uppercase;letter-spacing:2px;margin:18px 0 10px;display:flex;align-items:center;gap:8px}
+.st::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bd2),transparent)}
+.hero{background:linear-gradient(135deg,#130a38 0%,#1e1060 50%,#100830 100%);border:1px solid var(--bd2);border-radius:22px;padding:24px 18px 20px;text-align:center;position:relative;overflow:hidden;margin-bottom:14px;box-shadow:var(--sh)}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,rgba(168,85,247,0.18),transparent 65%);pointer-events:none}
+.hem{font-size:38px;display:block;margin-bottom:8px}
+.hero h1{font-size:23px;font-weight:900;letter-spacing:-.5px}
+.hero h1 b{background:linear-gradient(90deg,var(--g),var(--p2),var(--g2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{color:var(--m2);font-size:12px;margin-top:5px;line-height:1.5}
+.hbadge{display:inline-flex;align-items:center;gap:5px;background:rgba(124,58,237,0.14);border:1px solid var(--bd2);border-radius:100px;padding:5px 14px;font-size:11px;color:var(--p3);margin-top:11px;font-weight:700}
+.scard{border-radius:18px;padding:15px 16px;margin-bottom:12px;display:flex;align-items:center;gap:13px;border:1px solid}
+.scard.gold{background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(251,191,36,.05));border-color:rgba(245,158,11,.35)}
+.scard.grey{background:var(--c1);border-color:var(--bd)}
+.sci{font-size:30px;flex-shrink:0}
+.scinfo h3{font-size:13.5px;font-weight:800}
+.scinfo p{font-size:11px;color:var(--m2);margin-top:2px;line-height:1.4}
+.exptag{background:rgba(245,158,11,.14);color:var(--g);border:1px solid rgba(245,158,11,.3);border-radius:100px;font-size:10px;font-weight:800;padding:3px 10px;margin-top:6px;display:inline-block}
+.trial{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(52,211,153,.05));border:1px solid rgba(16,185,129,.28);border-radius:18px;padding:15px 16px;display:flex;align-items:center;gap:13px;margin-bottom:13px;cursor:pointer;transition:transform .18s;position:relative;overflow:hidden}
+.trial::after{content:'1 BAAR ONLY';position:absolute;top:8px;right:-16px;background:var(--gr);color:#000;font-size:7px;font-weight:900;padding:3px 22px;transform:rotate(35deg);letter-spacing:.5px}
+.trial:active{transform:scale(.97)}
+.trial.used{opacity:.5;cursor:not-allowed}
+.trial.used::after{content:'KHATAM';background:var(--r)}
+.tco{font-size:32px}
+.ttxt h3{font-size:13.5px;font-weight:800;color:var(--gr2)}
+.ttxt p{font-size:11.5px;color:rgba(255,255,255,.6);margin-top:2px}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}
+.plan{background:var(--c1);border:1px solid var(--bd);border-radius:18px;padding:15px 13px;cursor:pointer;transition:transform .18s,box-shadow .18s;position:relative;overflow:hidden}
+.plan:active{transform:scale(.96);box-shadow:var(--sh)}
+.plan.hot{background:linear-gradient(135deg,#190d44,#221060);border-color:rgba(245,158,11,.5);box-shadow:0 0 18px rgba(245,158,11,.1)}
+.plan.hot::after{content:'🔥 BEST';position:absolute;top:7px;right:-17px;background:linear-gradient(135deg,var(--g),var(--g2));color:#000;font-size:7.5px;font-weight:900;padding:3px 22px;transform:rotate(35deg)}
+.pname{font-size:11px;font-weight:700;color:var(--m2);margin-bottom:3px}
+.pprice{font-size:25px;font-weight:900;line-height:1}
+.pprice sup{font-size:13px;vertical-align:super}
+.pdesc{font-size:10.5px;color:var(--p3);font-weight:700;margin-top:3px}
+.pdays{font-size:10px;color:var(--m);margin-top:1px}
+.flist{display:flex;flex-direction:column;gap:8px}
+.fi{background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:11px}
+.fic{font-size:20px;width:33px;text-align:center;flex-shrink:0}
+.ftx h4{font-size:12.5px;font-weight:800}
+.ftx p{font-size:10.5px;color:var(--m2);margin-top:2px}
+.fbdg{background:rgba(124,58,237,.18);color:var(--p3);font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:100px;border:1px solid var(--bd2);flex-shrink:0}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:300;align-items:flex-end;backdrop-filter:blur(7px)}
+.overlay.on{display:flex}
+.modal{background:var(--c2);border-radius:24px 24px 0 0;padding:20px 18px 44px;width:100%;border:1px solid var(--bd2);border-bottom:none;animation:su .26s ease;max-height:92vh;overflow-y:auto}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhd{width:38px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 18px}
+.mtit{font-size:17px;font-weight:900;text-align:center;margin-bottom:3px}
+.msub{font-size:12px;color:var(--m2);text-align:center;margin-bottom:16px}
+.ptop{display:flex;gap:11px;margin-bottom:14px;align-items:stretch}
+.qrbox{background:white;border-radius:13px;padding:7px;width:96px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.qrbox img{width:82px;height:82px;object-fit:contain}
+.ubox{flex:1;background:var(--c3);border:1.5px dashed var(--p2);border-radius:13px;padding:12px 13px;display:flex;flex-direction:column;justify-content:center}
+.ulbl{font-size:10px;color:var(--m2);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.uval{font-size:14px;font-weight:800;color:var(--p3);word-break:break-all;line-height:1.4}
+.ucpy{margin-top:8px;background:rgba(124,58,237,.2);border:1px solid var(--bd2);color:var(--p3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;display:inline-block}
+.infobox{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:11.5px;line-height:1.7;color:var(--g3)}
+.frow{margin-bottom:12px}
+.frow label{font-size:10.5px;font-weight:800;color:var(--m2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+input[type=text]{width:100%;background:var(--c3);border:1px solid var(--bd2);border-radius:12px;color:var(--t);font-size:13.5px;padding:12px 14px;font-family:inherit;outline:none;transition:border-color .2s}
+input[type=text]:focus{border-color:var(--p2)}
+input::placeholder{color:var(--m)}
+.flbl{width:100%;background:var(--c3);border:1.5px dashed var(--bd2);border-radius:12px;color:var(--m2);font-size:12.5px;padding:14px;text-align:center;cursor:pointer;display:block;transition:border-color .2s}
+.flbl:hover{border-color:var(--p2)}
+.fprev{margin-top:8px;border-radius:10px;overflow:hidden;display:none}
+.fprev img{width:100%;max-height:150px;object-fit:cover;border-radius:10px}
+.btn{width:100%;border:none;border-radius:14px;padding:14px;font-size:14.5px;font-weight:900;cursor:pointer;transition:transform .15s,opacity .15s;letter-spacing:.3px}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btnp{background:linear-gradient(135deg,var(--p),var(--p2));color:white}
+.btno{background:var(--c2);border:1px solid var(--bd2);color:var(--t)}
+.refer-hero{background:linear-gradient(135deg,#160e48,#1e1060);border:1px solid rgba(168,85,247,.3);border-radius:20px;padding:22px 18px;text-align:center;margin-bottom:14px}
+.rcount{font-size:52px;font-weight:900;color:var(--p2);line-height:1}
+.rlbl{font-size:12px;color:var(--m2);margin-top:4px}
+.pbar{background:rgba(255,255,255,.06);border-radius:100px;height:9px;margin:12px 0 6px;overflow:hidden}
+.pfill{height:100%;background:linear-gradient(90deg,var(--p),var(--p2));border-radius:100px;transition:width .6s ease}
+.ptxt{font-size:10.5px;color:var(--m2);text-align:center}
+.lbox{background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:13px 14px;margin:12px 0;display:flex;align-items:center;gap:10px}
+.lurl{flex:1;font-size:11.5px;color:var(--m2);word-break:break-all}
+.cpybtn{background:var(--p);color:white;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.pw{background:#000;border-radius:16px;overflow:hidden;aspect-ratio:16/9;position:relative;margin-bottom:12px;border:1px solid var(--bd)}
+#vp{width:100%;height:100%;display:none}
+.ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;background:#05050f}
+.phi{font-size:50px;opacity:.22}
+.ph p{font-size:12px;color:var(--m)}
+.ctrls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.cb{flex:1;min-width:68px;background:var(--c2);border:1px solid var(--bd);color:var(--t);border-radius:10px;padding:10px;font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
+.cb:active{background:var(--p);transform:scale(.96)}
+.faq{background:var(--c1);border:1px solid var(--bd);border-radius:14px;margin-bottom:8px;overflow:hidden}
+.fq{padding:13px 15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;gap:10px}
+.fa{display:none;padding:0 15px 13px;font-size:11.5px;color:var(--m2);line-height:1.7}
+.faq.open .fa{display:block}
+.arr{transition:transform .2s;font-size:11px;flex-shrink:0}
+.faq.open .arr{transform:rotate(180deg)}
+textarea{width:100%;background:var(--c3);border:1px solid var(--bd2);border-radius:12px;color:var(--t);font-size:13.5px;padding:12px 14px;font-family:inherit;outline:none;resize:none;height:100px;transition:border-color .2s}
+textarea:focus{border-color:var(--p2)}
+textarea::placeholder{color:var(--m)}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(12px);background:rgba(18,18,46,.97);backdrop-filter:blur(14px);border:1px solid var(--bd2);border-radius:100px;padding:10px 22px;font-size:12.5px;font-weight:700;opacity:0;transition:all .26s;z-index:400;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.2);border-top-color:white;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-on{background:var(--gr2);box-shadow:0 0 7px var(--gr2)}
+.dot-off{background:var(--m)}
+.dot-g{background:var(--g);box-shadow:0 0 7px var(--g)}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div class="pg on" id="pg-home">
+  <div class="hero">
+    <span class="hem">🎬</span>
+    <h1>AsBhai <b>Premium</b></h1>
+    <p>Movies • Web Series • Downloads • Stream</p>
+    <div id="heroStatus" class="hbadge"><span class="dot dot-off"></span><span>Loading...</span></div>
+  </div>
+
+  <div id="statusCard" class="scard grey">
+    <div class="sci">👤</div>
+    <div class="scinfo">
+      <h3 id="stTitle">Free User</h3>
+      <p id="stDesc">Premium lo — no force join, stream karo!</p>
+    </div>
+  </div>
+
+  <div class="trial" id="trialCard" onclick="claimTrial()">
+    <div class="tco">🆓</div>
+    <div class="ttxt">
+      <h3>Free Trial — 5 Minute</h3>
+      <p>Sirf 1 baar milega — koi payment nahi!</p>
+    </div>
+  </div>
+
+  <div class="st">💎 Premium Plans</div>
+  <div class="pgrid" id="pgrid"></div>
+
+  <div class="st">✨ Premium Benefits</div>
+  <div class="flist">
+    <div class="fi"><div class="fic">🚫</div><div class="ftx"><h4>Force Join Nahi</h4><p>Koi channel join karne ki zaroorat nahi</p></div></div>
+    <div class="fi"><div class="fic">🔗</div><div class="ftx"><h4>Shortlink Nahi</h4><p>Direct file — zero ads, zero wait</p></div></div>
+    <div class="fi"><div class="fic">📦</div><div class="ftx"><h4>10 Results Per Search</h4><p>5 ki jagah 10 results milenge</p></div><div class="fbdg">2x</div></div>
+    <div class="fi"><div class="fic">▶️</div><div class="ftx"><h4>Browser mein Stream</h4><p>Download bhi karo seedha</p></div><div class="fbdg">NEW</div></div>
+    <div class="fi"><div class="fic">💬</div><div class="ftx"><h4>PM mein Search</h4><p>Bot PM mein seedha search karo</p></div></div>
+    <div class="fi"><div class="fic">⚡</div><div class="ftx"><h4>Priority Request</h4><p>Aapki request pehle process hogi</p></div></div>
+    <div class="fi"><div class="fic">🎛️</div><div class="ftx"><h4>Results Customize</h4><p>5 / 7 / 10 aap khud choose karo</p></div></div>
+  </div>
+  <div style="height:8px"></div>
+</div>
+
+<!-- STREAM -->
+<div class="pg" id="pg-stream">
+  <div class="hero" style="padding:20px 18px 16px">
+    <span class="hem" style="font-size:30px">▶️</span>
+    <h1 style="font-size:19px">Stream <b>Player</b></h1>
+    <p>Browser mein seedha dekho — Premium only</p>
+  </div>
+  <div class="pw">
+    <video id="vp" controls playsinline></video>
+    <div class="ph" id="ph">
+      <div class="phi">🎬</div>
+      <p>Koi file select nahi hui</p>
+      <p style="font-size:10.5px;color:rgba(148,163,184,.35)">Group mein search karo, stream button dabao</p>
+    </div>
+  </div>
+  <div class="ctrls">
+    <button class="cb" onclick="doFull()">⛶ Full</button>
+    <button class="cb" onclick="doSpd()">⚡ <span id="spv">1x</span></button>
+    <button class="cb" onclick="doPip()">📺 PiP</button>
+    <button class="cb" style="background:var(--p);border-color:var(--p2)" onclick="doDl()">⬇️ Save</button>
+  </div>
+  <div id="sguard" style="display:none;text-align:center;padding:28px 20px">
+    <div style="font-size:44px">🔒</div>
+    <h3 style="margin:10px 0 6px;font-size:17px">Premium Feature</h3>
+    <p style="font-size:12px;color:var(--m2);margin-bottom:16px">Stream ke liye Premium chahiye</p>
+    <button class="btn btnp" onclick="showPage('pg-home')">💎 Plans Dekho</button>
+  </div>
+</div>
+
+<!-- REFER -->
+<div class="pg" id="pg-refer">
+  <div class="refer-hero">
+    <div style="font-size:11px;color:var(--m2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px">Aapke Refers</div>
+    <div class="rcount" id="rc">—</div>
+    <div class="rlbl">Har 10 refer = 15 din FREE Premium 💎</div>
+    <div class="pbar"><div class="pfill" id="pf" style="width:0"></div></div>
+    <div class="ptxt" id="pt">Loading...</div>
+  </div>
+  <div class="st">🔗 Aapka Refer Link</div>
+  <div class="lbox">
+    <div class="lurl" id="rl">—</div>
+    <button class="cpybtn" onclick="cpyRL()">📋 Copy</button>
+  </div>
+  <button class="btn btnp" style="margin-bottom:13px" onclick="shareRL()">📤 Share Karo</button>
+  <div class="st">🎁 Rewards</div>
+  <div class="flist">
+    <div class="fi"><div class="fic">🎯</div><div class="ftx"><h4>10 Refer Complete</h4><p>15 din ka FREE Premium auto-milega</p></div><div class="fbdg">15 din</div></div>
+    <div class="fi"><div class="fic">🔄</div><div class="ftx"><h4>Unlimited Baar</h4><p>Har 10 par reward milta rahega!</p></div></div>
+    <div class="fi"><div class="fic">⚠️</div><div class="ftx"><h4>Note</h4><p>Sirf new users count honge — pehle se join kiye hue nahi</p></div></div>
+  </div>
+</div>
+
+<!-- HELP -->
+<div class="pg" id="pg-help">
+  <div class="hero" style="padding:20px 18px 16px;margin-bottom:14px">
+    <span class="hem" style="font-size:30px">🆘</span>
+    <h1 style="font-size:19px">Help <b>Center</b></h1>
+    <p>Problem hai? Hum fix karenge!</p>
+  </div>
+  <div class="st">💬 Owner Ko Message Bhejo</div>
+  <div style="display:flex;flex-direction:column;gap:11px">
+    <textarea id="hm" placeholder="Apni problem detail mein likhein...&#10;&#10;Jaise: Bot kaam nahi, Premium activate nahi, file nahi aa rahi..."></textarea>
+    <button class="btn btnp" onclick="sendHelp()" id="hbtn">📤 Message Bhejo</button>
+  </div>
+  <div class="st">❓ Aksar Puche Sawaal</div>
+  <div class="faq"><div class="fq" onclick="ft(this)"><span>Bot search nahi kar raha?</span><span class="arr">▾</span></div><div class="fa">Pehle @asfilter_group join karo, phir daily shortlink se verify karo. Uske baad group mein search karo.</div></div>
+  <div class="faq"><div class="fq" onclick="ft(this)"><span>Premium activate nahi hua?</span><span class="arr">▾</span></div><div class="fa">Payment ke baad TXN ID aur screenshot ke saath form submit karo. 1-2 ghante mein activate hoga.</div></div>
+  <div class="faq"><div class="fq" onclick="ft(this)"><span>File PM mein delete ho gayi?</span><span class="arr">▾</span></div><div class="fa">Files auto-delete hoti hain kuch minute baad. Milte hi save ya forward karo. Dobara search karke download kar sakte ho.</div></div>
+  <div class="faq"><div class="fq" onclick="ft(this)"><span>Refer credit nahi aaya?</span><span class="arr">▾</span></div><div class="fa">Sirf new users count hote hain. Pehle se join kiye ya bot block karne par credit nahi milta.</div></div>
+  <div class="faq"><div class="fq" onclick="ft(this)"><span>Movie nahi mil rahi?</span><span class="arr">▾</span></div><div class="fa">/request command se request karo. Premium users ki request pehle process hoti hai (1-6 ghante).</div></div>
+  <div style="margin-top:14px">
+    <a href="https://t.me/asbhaibsr" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--c1);border:1px solid var(--bd2);border-radius:13px;padding:13px;color:var(--t);text-decoration:none;font-size:13px;font-weight:700">💬 Direct Contact: @asbhaibsr</a>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="overlay" id="pm" onclick="pmOut(event)">
+  <div class="modal">
+    <div class="mhd"></div>
+    <div class="mtit" id="mT">💎 Premium Kharidein</div>
+    <div class="msub" id="mS">Aaj hi activate karo</div>
+    <div class="ptop">
+      <div class="qrbox">
+        <img src="https://envs.sh/GdE.jpg" alt="QR" onerror="this.parentElement.innerHTML='<div style=\'padding:10px;font-size:10px;color:#888;text-align:center\'>QR<br>Unavailable</div>'">
+      </div>
+      <div class="ubox">
+        <div class="ulbl">UPI ID par bhejo</div>
+        <div class="uval" id="uv">arsadsaifi8272@ibl</div>
+        <div class="ucpy" onclick="cpyUpi()">📋 Copy UPI</div>
+      </div>
+    </div>
+    <div class="infobox">
+      1️⃣ QR scan karo ya UPI ID par <b id="mAmt">₹—</b> bhejo<br>
+      2️⃣ Transaction ID note karo<br>
+      3️⃣ Niche form fill kar ke Submit karo<br>
+      4️⃣ 1-2 ghante mein Premium activate! ⚡
+    </div>
+    <div class="frow">
+      <label>Transaction ID *</label>
+      <input type="text" id="txn" placeholder="Jaise: 4231xxxxxx ya UPI Ref No.">
+    </div>
+    <div class="frow">
+      <label>Screenshot (optional)</label>
+      <label class="flbl" for="ssf" id="ssl">📷 Screenshot attach karo</label>
+      <input type="file" id="ssf" accept="image/*" style="display:none" onchange="prevSS(this)">
+      <div class="fprev" id="fpr"><img id="fpi" src="" alt=""></div>
+    </div>
+    <button class="btn btnp" id="subBtn" onclick="submitPay()">✅ Submit Payment Request</button>
+    <div style="height:8px"></div>
+    <button class="btn btno" style="font-size:13px;padding:11px" onclick="openContact()">💬 Direct Contact @asbhaibsr</button>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nb on" id="nb-home" onclick="showPage('pg-home')"><div class="nbar"></div><span class="i">🏠</span><span>Home</span></button>
+  <button class="nb" id="nb-stream" onclick="showPage('pg-stream')"><div class="nbar"></div><span class="i">▶️</span><span>Stream</span></button>
+  <button class="nb" id="nb-refer" onclick="showPage('pg-refer')"><div class="nbar"></div><span class="i">🔗</span><span>Refer</span></button>
+  <button class="nb" id="nb-help" onclick="showPage('pg-help')"><div class="nbar"></div><span class="i">🆘</span><span>Help</span></button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── INLINE PLANS DATA — no fetch, no JSON error ──
+const PLANS=[
+  {id:"10days", name:"10 Din", days:10, price:50,  desc:"Best Starter",hot:false},
+  {id:"30days", name:"30 Din", days:30, price:150, desc:"Most Popular",hot:true},
+  {id:"60days", name:"60 Din", days:60, price:200, desc:"Great Value", hot:false},
+  {id:"150days",name:"150 Din",days:150,price:500, desc:"Super Saver",hot:false},
+  {id:"365days",name:"1 Saal", days:365,price:800, desc:"Best Deal 🔥",hot:false},
+];
+const UPI="arsadsaifi8272@ibl";
+const BASE=window.location.origin;
+
+const tg=window.Telegram?.WebApp;
+if(tg){tg.ready();tg.expand();tg.setHeaderColor('#07071a');tg.setBackgroundColor('#07071a');}
+const UID=tg?.initDataUnsafe?.user?.id||null;
+const FNAME=tg?.initDataUnsafe?.user?.first_name||'User';
+
+let isPrem=false,trialUsed=false,selPlan=null;
+let spds=[0.5,0.75,1,1.25,1.5,2],spIdx=2,curVid=null;
+
+async function init(){
+  renderPlans();
+  if(!UID){setStatus(false,false,null);loadRef(0);return;}
+  try{
+    const r=await fetch(`${BASE}/api/user_status/${UID}`);
+    if(!r.ok)throw new Error();
+    const d=await r.json();
+    isPrem=d.is_premium||false;
+    trialUsed=d.trial_used||false;
+    setStatus(isPrem,d.is_trial||false,d.expiry||null,d.pending_payments||0);
+    loadRef(d.refer_count||0);
+    if(trialUsed)markTrial();
+  }catch{
+    setStatus(false,false,null);
+    loadRef(0);
+  }
+  checkStream();
+}
+
+function setStatus(prem,isTrial,expiry,pending=0){
+  const hb=document.getElementById('heroStatus');
+  const sc=document.getElementById('statusCard');
+  const st=document.getElementById('stTitle');
+  const sd=document.getElementById('stDesc');
+  if(prem&&!isTrial){
+    hb.innerHTML=`<span class="dot dot-g"></span> Premium Active ✨`;
+    Object.assign(hb.style,{background:'rgba(245,158,11,.13)',borderColor:'rgba(245,158,11,.4)',color:'var(--g)'});
+    sc.className='scard gold';
+    sc.querySelector('.sci').textContent='💎';
+    st.textContent='Premium User 💎';
+    sd.innerHTML=expiry?`Expiry: <b>${expiry}</b>`:'Active';
+    if(expiry){const e=document.createElement('div');e.className='exptag';e.textContent='⏰ Expiry: '+expiry;sd.after(e);}
+    document.getElementById('trialCard').style.display='none';
+  }else if(isTrial){
+    hb.innerHTML=`<span class="dot dot-on"></span> Trial Active (5 min)`;
+    hb.style.color='var(--gr2)';
+    sc.querySelector('.sci').textContent='🆓';
+    st.textContent='Free Trial Active!';
+    sd.textContent='5 minute ke liye Premium. Abhi group mein search karo!';
+    markTrial();
+  }else{
+    hb.innerHTML=`<span class="dot dot-off"></span> Free User`;
+    sc.querySelector('.sci').textContent='👤';
+    st.textContent='Free User';
+    sd.textContent=pending>0?`⏳ ${pending} payment pending — jaldi approve hoga!`:'Premium lo — no force join, stream karo!';
+  }
+}
+
+function markTrial(){
+  const tc=document.getElementById('trialCard');
+  tc.classList.add('used');
+  tc.querySelector('h3').textContent='Trial Khatam ✓';
+  tc.querySelector('p').textContent='Premium lo — unlimited use karo';
+  tc.onclick=()=>toast('❌ Trial khatam! Premium lo.');
+}
+
+function renderPlans(){
+  const g=document.getElementById('pgrid');
+  PLANS.forEach(p=>{
+    const d=document.createElement('div');
+    d.className='plan'+(p.hot?' hot':'');
+    d.innerHTML=`<div class="pname">${p.name}</div><div class="pprice"><sup>₹</sup>${p.price}</div><div class="pdesc">${p.desc}</div><div class="pdays">${p.days} din</div>`;
+    d.onclick=()=>openPM(p);
+    g.appendChild(d);
+  });
+}
+
+function loadRef(count){
+  document.getElementById('rc').textContent=count;
+  const pct=(count%10)*10;
+  document.getElementById('pf').style.width=pct+'%';
+  const done=count%10===0&&count>0?10:count%10;
+  const need=10-(count%10===0?10:count%10);
+  document.getElementById('pt').textContent=`${done}/10 — ${need===10?'10 aur chahiye':need+' aur chahiye premium ke liye'}`;
+  const lnk=UID?`https://t.me/AsBhaiDropBot?start=ref_${UID}`:'Telegram se kholo pehle';
+  document.getElementById('rl').textContent=lnk;
+}
+
+function cpyRL(){
+  const t=document.getElementById('rl').textContent;
+  if(!UID){toast('❌ Telegram se kholo');return;}
+  cpy(t,'✅ Link copy ho gaya!');
+}
+function shareRL(){
+  if(!UID){toast('❌ Telegram se kholo');return;}
+  const l=document.getElementById('rl').textContent;
+  const u=`https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent('🎬 Is bot se free movies download karo!')}`;
+  tg?tg.openTelegramLink(u):window.open(u,'_blank');
+}
+
+async function claimTrial(){
+  if(trialUsed){toast('❌ Trial pehle le chuke ho!');return;}
+  if(!UID){toast('❌ Telegram se kholo');return;}
+  const tc=document.getElementById('trialCard');
+  tc.style.opacity='.55';tc.style.pointerEvents='none';
+  try{
+    const r=await fetch(`${BASE}/api/claim_trial`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:UID})
+    });
+    const d=await r.json();
+    if(d.ok){trialUsed=true;markTrial();toast('🆓 Trial shuru! Bot PM check karo!');}
+    else{toast('❌ '+(d.error||d.message||'Error'));tc.style.opacity='';tc.style.pointerEvents='';}
+  }catch{
+    toast('❌ Server se connect nahi hua!');
+    tc.style.opacity='';tc.style.pointerEvents='';
+  }
+}
+
+function openPM(plan){
+  selPlan=plan;
+  document.getElementById('mT').textContent=`💎 ${plan.name} — ₹${plan.price}`;
+  document.getElementById('mS').textContent=`${plan.days} din ka Premium`;
+  document.getElementById('mAmt').textContent=`₹${plan.price}`;
+  document.getElementById('txn').value='';
+  document.getElementById('fpr').style.display='none';
+  document.getElementById('ssl').textContent='📷 Screenshot attach karo';
+  const sb=document.getElementById('subBtn');sb.disabled=false;sb.textContent='✅ Submit Payment Request';
+  document.getElementById('pm').classList.add('on');
+}
+function pmOut(e){if(e.target.id==='pm')document.getElementById('pm').classList.remove('on');}
+function cpyUpi(){cpy(UPI,'✅ UPI ID copy ho gaya!');}
+
+function prevSS(inp){
+  if(!inp.files||!inp.files[0])return;
+  const r=new FileReader();
+  r.onload=e=>{
+    document.getElementById('fpi').src=e.target.result;
+    document.getElementById('fpr').style.display='block';
+    document.getElementById('ssl').textContent='✅ Screenshot: '+inp.files[0].name.slice(0,22);
+  };
+  r.readAsDataURL(inp.files[0]);
+}
+
+async function submitPay(){
+  if(!selPlan)return;
+  if(!UID){toast('❌ Telegram se kholo');return;}
+  const txn=document.getElementById('txn').value.trim();
+  if(!txn){toast('❌ Transaction ID bharo!');document.getElementById('txn').focus();return;}
+  const sb=document.getElementById('subBtn');
+  sb.disabled=true;sb.innerHTML='<span class="spin"></span>Submit ho raha hai...';
+  let ss='';
+  const sf=document.getElementById('ssf');
+  if(sf.files&&sf.files[0]){
+    try{ss=await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(sf.files[0]);});}catch{}
+  }
+  try{
+    const res=await fetch(`${BASE}/api/submit_payment`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:UID,name:FNAME,plan_id:selPlan.id,amount:selPlan.price,txn_id:txn,screenshot:ss})
+    });
+    const d=await res.json();
+    if(d.ok){
+      document.getElementById('pm').classList.remove('on');
+      toast('✅ Request submit ho gayi! 1-2 ghante mein activate hoga.');
+      setStatus(false,false,null,1);
+    }else{
+      toast('❌ '+(d.error||'Submit fail!'));
+      sb.disabled=false;sb.textContent='✅ Submit Payment Request';
+    }
+  }catch{
+    toast('❌ Server se connect nahi hua!');
+    sb.disabled=false;sb.textContent='✅ Submit Payment Request';
+  }
+}
+
+function openContact(){
+  document.getElementById('pm').classList.remove('on');
+  const u='https://t.me/asbhaibsr';
+  tg?tg.openTelegramLink(u):window.open(u,'_blank');
+}
+
+async function sendHelp(){
+  const msg=document.getElementById('hm').value.trim();
+  if(!msg||msg.length<8){toast('❌ Thoda detail mein likhein!');return;}
+  const btn=document.getElementById('hbtn');
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span>Bhej raha hoon...';
+  try{
+    const r=await fetch(`${BASE}/api/help`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:UID,name:FNAME,message:msg})});
+    const d=await r.json();
+    document.getElementById('hm').value='';
+    toast(d.ok?'✅ Message bhej diya! Jaldi reply aayega.':'✅ Bheja gaya!');
+  }catch{
+    const u=`https://t.me/asbhaibsr?text=${encodeURIComponent('Help: '+msg)}`;
+    tg?tg.openTelegramLink(u):window.open(u,'_blank');
+    toast('✅ Telegram khul raha hai...');
+  }finally{btn.disabled=false;btn.textContent='📤 Message Bhejo';}
+}
+
+function checkStream(){
+  const p=new URLSearchParams(window.location.search);
+  const uid=p.get('uid'),mid=p.get('mid');
+  if(!uid||!mid)return;
+  if(!isPrem){showPage('pg-stream');document.getElementById('sguard').style.display='block';return;}
+  loadVid(`${BASE}/stream_file/${mid}`);
+  showPage('pg-stream');
+}
+function loadVid(url){
+  curVid=url;
+  const vp=document.getElementById('vp'),ph=document.getElementById('ph');
+  vp.src=url;vp.style.display='block';ph.style.display='none';
+  vp.play().catch(()=>toast('▶️ Play button dabao'));
+}
+function doFull(){
+  const v=document.getElementById('vp');
+  if(!v.src){toast('❌ Koi video nahi');return;}
+  (v.requestFullscreen||v.webkitRequestFullscreen||v.mozRequestFullScreen).call(v);
+}
+function doSpd(){
+  spIdx=(spIdx+1)%spds.length;
+  document.getElementById('vp').playbackRate=spds[spIdx];
+  document.getElementById('spv').textContent=spds[spIdx]+'x';
+}
+function doPip(){
+  const v=document.getElementById('vp');
+  if(!v.src){toast('❌ Koi video nahi');return;}
+  if(document.pictureInPictureEnabled)v.requestPictureInPicture?.().catch(()=>toast('PiP unsupported'));
+}
+function doDl(){
+  if(!curVid){toast('❌ Koi video nahi');return;}
+  const a=document.createElement('a');a.href=curVid;a.download='';a.click();
+  toast('⬇️ Download shuru...');
+}
+
+function showPage(id){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  const nb=document.getElementById('nb-'+id.replace('pg-',''));
+  if(nb)nb.classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function ft(el){el.parentElement.classList.toggle('open');}
+
+let tt;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2900);
+}
+function cpy(text,msg){
+  navigator.clipboard?.writeText(text).then(()=>toast(msg)).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');
+    document.body.removeChild(ta);toast(msg);
+  });
+}
+
+init();
+</script>
+</body>
+  </html>
