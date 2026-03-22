@@ -2727,39 +2727,52 @@ async def cleanup():
 # ═══════════════════════════════════════
 #  START
 # ═══════════════════════════════════════
-async def main():
-    """
-    Sab kuch ek hi async loop mein chalao:
-    Flask → Thread, Userbot → start, Scheduler → start, Bot → idle
-    """
-    # Flask thread mein
+def start_bot():
+    # Flask alag thread mein
     Thread(target=run_flask, daemon=True).start()
     logger.info("✅ Flask started")
 
-    # Userbot start
+    # Userbot sync start
     if userbot:
-        await userbot.start()
+        userbot.start()
         logger.info("✅ Userbot started")
     else:
         logger.warning("⚠️ STRING_SESSION missing!")
 
-    # Scheduler — ab event loop chal raha hai
-    scheduler.add_job(
-        lambda: asyncio.create_task(cleanup()),
-        'interval', hours=1
-    )
-    scheduler.start()
-    logger.info("✅ Scheduler started")
+    logger.info("🚀 AsBhai Drop Bot starting...")
 
-    # Bot start
-    await bot.start()
-    logger.info("🚀 AsBhai Drop Bot started! Idle ho raha hoon...")
+    # bot.run() — Pyrogram ka sahi tarika
+    # Yeh internally event loop banata hai, handlers register karta hai
+    # aur hamesha idle rehta hai jab tak Ctrl+C na dabaao
+    # Scheduler bot ke on_start se start hoga
+    # Scheduler ko bot ke start hone ke baad thread se start karo
+    def _start_scheduler_thread():
+        import time
+        time.sleep(3)  # Bot ko start hone do
+        try:
+            loop = bot.loop
+            if loop and loop.is_running():
+                loop.call_soon_threadsafe(
+                    lambda: asyncio.ensure_future(
+                        _do_scheduler_start(), loop=loop
+                    )
+                )
+        except Exception as e:
+            logger.error(f"Scheduler thread error: {e}")
 
-    # Hamesha chalta rahe — bot band na ho
-    await asyncio.Event().wait()
+    async def _do_scheduler_start():
+        try:
+            scheduler.add_job(
+                lambda: asyncio.create_task(cleanup()),
+                'interval', hours=1
+            )
+            scheduler.start()
+            logger.info("✅ Scheduler started")
+        except Exception as e:
+            logger.error(f"Scheduler start error: {e}")
 
-def start_bot():
-    asyncio.run(main())
+    Thread(target=_start_scheduler_thread, daemon=True).start()
+    bot.run()
 
 if __name__ == "__main__":
     start_bot()
