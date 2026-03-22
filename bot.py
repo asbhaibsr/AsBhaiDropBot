@@ -2727,8 +2727,23 @@ async def cleanup():
 # ═══════════════════════════════════════
 #  START
 # ═══════════════════════════════════════
-async def on_startup():
-    """Bot start hone ke baad scheduler start karo — event loop ke andar"""
+async def main():
+    """
+    Sab kuch ek hi async loop mein chalao:
+    Flask → Thread, Userbot → start, Scheduler → start, Bot → idle
+    """
+    # Flask thread mein
+    Thread(target=run_flask, daemon=True).start()
+    logger.info("✅ Flask started")
+
+    # Userbot start
+    if userbot:
+        await userbot.start()
+        logger.info("✅ Userbot started")
+    else:
+        logger.warning("⚠️ STRING_SESSION missing!")
+
+    # Scheduler — ab event loop chal raha hai
     scheduler.add_job(
         lambda: asyncio.create_task(cleanup()),
         'interval', hours=1
@@ -2736,20 +2751,15 @@ async def on_startup():
     scheduler.start()
     logger.info("✅ Scheduler started")
 
+    # Bot start
+    await bot.start()
+    logger.info("🚀 AsBhai Drop Bot started! Idle ho raha hoon...")
+
+    # Hamesha chalta rahe — bot band na ho
+    await asyncio.Event().wait()
+
 def start_bot():
-    Thread(target=run_flask, daemon=True).start()
-    logger.info("✅ Flask started")
-
-    if userbot:
-        userbot.start()
-        logger.info("✅ Userbot started")
-    else:
-        logger.warning("⚠️ STRING_SESSION missing!")
-
-    logger.info("🚀 AsBhai Drop Bot starting...")
-
-    # bot.run() ke saath on_startup register karo
-    bot.run(on_startup())
+    asyncio.run(main())
 
 if __name__ == "__main__":
     start_bot()
