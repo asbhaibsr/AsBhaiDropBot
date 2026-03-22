@@ -187,8 +187,12 @@ textarea::placeholder{color:var(--m)}
     <video id="vp" controls playsinline></video>
     <div class="ph" id="ph">
       <div class="phi">🎬</div>
-      <p>Koi file select nahi hui</p>
-      <p style="font-size:10.5px;color:rgba(148,163,184,.35)">Group mein search karo, stream button dabao</p>
+      <p>Koi video nahi</p>
+      <p style="font-size:10.5px;color:rgba(148,163,184,.35)">Group mein movie search karo → Stream button dabao</p>
+      <div style="margin-top:14px;display:flex;gap:8px;justify-content:center">
+        <div style="background:var(--p);border-radius:9px;padding:8px 16px;font-size:12px;font-weight:700;opacity:.5">▶️ Stream</div>
+        <div style="background:var(--c2);border:1px solid var(--bd);border-radius:9px;padding:8px 16px;font-size:12px;font-weight:700;opacity:.5">⬇️ Download</div>
+      </div>
     </div>
   </div>
   <div class="ctrls">
@@ -289,9 +293,70 @@ textarea::placeholder{color:var(--m)}
   </div>
 </div>
 
+<!-- EARN MONEY PAGE -->
+<div class="pg" id="pg-earn">
+  <div class="hero" style="padding:22px 18px 18px;margin-bottom:14px">
+    <span class="hem" style="font-size:34px">💰</span>
+    <h1 style="font-size:20px">Earn <b>Money</b></h1>
+    <p>Apne group mein shortlink lagao aur paise kamao!</p>
+  </div>
+
+  <div style="background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.06));border:1px solid rgba(16,185,129,.28);border-radius:18px;padding:16px 18px;margin-bottom:14px">
+    <h3 style="font-size:14px;font-weight:800;color:var(--gr2);margin-bottom:8px">🎯 Kaise Kamaye?</h3>
+    <p style="font-size:12px;color:rgba(255,255,255,.75);line-height:1.8">
+      1️⃣ Apne Telegram group mein <b>AsBhai Bot</b> add karo<br>
+      2️⃣ <b>Group Premium</b> lo (₹300/mahina)<br>
+      3️⃣ Apni shortlink add karo: <code>/gshortlink api url hours</code><br>
+      4️⃣ Group mein har search pe users aapki shortlink se verify karenge<br>
+      5️⃣ <b>Shortlink earnings</b> seedha aapke account mein! 💸
+    </p>
+  </div>
+
+  <div class="st">💎 Group Premium Plans</div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+    <div class="plan" style="background:linear-gradient(135deg,#1a0d44,#221060);border-color:rgba(245,158,11,.5);cursor:pointer" onclick="openGroupPay({id:'group_1m',name:'1 Mahina',days:30,price:300})">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="pname">Group Premium</div>
+          <div class="pprice"><sup>₹</sup>300</div>
+          <div class="pdesc">1 Mahina — Apni shortlink lagao</div>
+        </div>
+        <div style="font-size:32px">🏆</div>
+      </div>
+    </div>
+    <div class="plan" style="background:linear-gradient(135deg,#0c1a2e,#162845);border-color:rgba(59,130,246,.4);cursor:pointer" onclick="openGroupPay({id:'group_2m',name:'2 Mahine',days:60,price:550})">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="pname">Group Premium</div>
+          <div class="pprice"><sup>₹</sup>550</div>
+          <div class="pdesc">2 Mahine — Best Value 💰</div>
+        </div>
+        <div style="font-size:32px">🔥</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="st">✅ Group Premium Benefits</div>
+  <div class="flist" style="margin-bottom:14px">
+    <div class="fi"><div class="fic">🔗</div><div class="ftx"><h4>Apni Shortlink Lagao</h4><p>/gshortlink command se koi bhi shortlink add karo</p></div></div>
+    <div class="fi"><div class="fic">💸</div><div class="ftx"><h4>Unlimited Earnings</h4><p>Har user verification se aapki shortlink hit hogi</p></div></div>
+    <div class="fi"><div class="fic">🎛️</div><div class="ftx"><h4>Full Control</h4><p>Add/remove shortlinks, hours set karo</p></div></div>
+    <div class="fi"><div class="fic">👥</div><div class="ftx"><h4>Group ke liye</h4><p>Aap khud use karo ya doosron ke group mein lagao</p></div></div>
+  </div>
+
+  <div class="st">📋 Commands</div>
+  <div style="background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;font-size:12px;line-height:2;color:var(--m2)">
+    <code style="color:var(--p3)">/gshortlink api_key url hours label</code> — Shortlink add karo<br>
+    <code style="color:var(--p3)">/gshortlinks</code> — Apni shortlinks dekho<br>
+    <code style="color:var(--p3)">/gshortlinkremove 1</code> — Shortlink #1 hataao<br>
+    <code style="color:var(--p3)">/gsettings</code> — Group settings manage karo
+  </div>
+</div>
+
 <nav class="nav">
   <button class="nb on" id="nb-home" onclick="showPage('pg-home')"><div class="nbar"></div><span class="i">🏠</span><span>Home</span></button>
   <button class="nb" id="nb-stream" onclick="showPage('pg-stream')"><div class="nbar"></div><span class="i">▶️</span><span>Stream</span></button>
+  <button class="nb" id="nb-earn" onclick="showPage('pg-earn')"><div class="nbar"></div><span class="i">💰</span><span>Earn</span></button>
   <button class="nb" id="nb-refer" onclick="showPage('pg-refer')"><div class="nbar"></div><span class="i">🔗</span><span>Refer</span></button>
   <button class="nb" id="nb-help" onclick="showPage('pg-help')"><div class="nbar"></div><span class="i">🆘</span><span>Help</span></button>
 </nav>
@@ -428,7 +493,7 @@ async function claimTrial(){
 }
 
 function openPM(plan){
-  selPlan=plan;
+  selPlan={...plan, isGroup:false};
   document.getElementById('mT').textContent=`💎 ${plan.name} — ₹${plan.price}`;
   document.getElementById('mS').textContent=`${plan.days} din ka Premium`;
   document.getElementById('mAmt').textContent=`₹${plan.price}`;
@@ -436,6 +501,14 @@ function openPM(plan){
   document.getElementById('fpr').style.display='none';
   document.getElementById('ssl').textContent='📷 Screenshot attach karo';
   const sb=document.getElementById('subBtn');sb.disabled=false;sb.textContent='✅ Submit Payment Request';
+  // Hide group field for normal plans
+  const gf=document.getElementById('groupIdField');
+  if(gf) gf.style.display='none';
+  // Reset infobox
+  const infoEl=document.querySelector('.infobox');
+  if(infoEl){
+    infoEl.innerHTML=`1️⃣ QR scan karo ya UPI ID par <b id="mAmt">${plan.price ? '₹'+plan.price : '₹—'}</b> bhejo<br>2️⃣ Transaction ID note karo<br>3️⃣ Niche form fill kar ke Submit karo<br>4️⃣ 1-2 ghante mein Premium activate! ⚡`;
+  }
   document.getElementById('pm').classList.add('on');
 }
 function pmOut(e){if(e.target.id==='pm')document.getElementById('pm').classList.remove('on');}
@@ -452,11 +525,61 @@ function prevSS(inp){
   r.readAsDataURL(inp.files[0]);
 }
 
+function openGroupPay(plan){
+  selPlan={...plan, isGroup:true};
+  document.getElementById('mT').textContent=`🏘 Group Premium — ${plan.name}`;
+  document.getElementById('mS').textContent=`Apni shortlink lagao — ${plan.days} din`;
+  document.getElementById('mAmt').textContent=`₹${plan.price}`;
+  document.getElementById('txn').value='';
+  document.getElementById('fpr').style.display='none';
+  document.getElementById('ssl').textContent='📷 Screenshot attach karo (optional)';
+  const sb=document.getElementById('subBtn');
+  sb.disabled=false;
+  sb.textContent='✅ Submit Group Premium Request';
+
+  // Group ID field add/show
+  let gf=document.getElementById('groupIdField');
+  if(!gf){
+    const frow=document.createElement('div');
+    frow.className='frow'; frow.id='groupIdField';
+    frow.innerHTML=`
+      <label>Group ID ya Group Link *</label>
+      <input type="text" id="groupIdInp" placeholder="@groupusername ya group invite link">
+      <div style="font-size:10.5px;color:var(--m2);margin-top:5px;line-height:1.6">
+        💡 Group username (@yourgroup) ya invite link do<br>
+        Owner approve hone ke baad bot us group pe kaam karega
+      </div>`;
+    // Insert before screenshot field
+    document.getElementById('subBtn').before(frow);
+  } else {
+    gf.style.display='block';
+    document.getElementById('groupIdInp').value='';
+  }
+
+  // Info box update
+  const infoEl=document.querySelector('.infobox');
+  if(infoEl){
+    infoEl.innerHTML=`
+      1️⃣ UPI ID par <b id="mAmt2">₹${plan.price}</b> bhejo<br>
+      2️⃣ Transaction ID note karo<br>
+      3️⃣ Apna <b>Group ID / Link</b> dalo<br>
+      4️⃣ Submit karo → Owner approve karega<br>
+      5️⃣ Approve hone ke baad group mein bot add karo aur shortlink lagao! 💸`;
+  }
+
+  document.getElementById('pm').classList.add('on');
+}
+
 async function submitPay(){
   if(!selPlan)return;
   if(!UID){toast('❌ Telegram se kholo');return;}
   const txn=document.getElementById('txn').value.trim();
   if(!txn){toast('❌ Transaction ID bharo!');document.getElementById('txn').focus();return;}
+  // Group plan validation
+  if(selPlan.isGroup){
+    const gInp=document.getElementById('groupIdInp');
+    if(!gInp||!gInp.value.trim()){toast('❌ Group ID ya Link bharo!');gInp?.focus();return;}
+  }
   const sb=document.getElementById('subBtn');
   sb.disabled=true;sb.innerHTML='<span class="spin"></span>Submit ho raha hai...';
   let ss='';
@@ -467,13 +590,22 @@ async function submitPay(){
   try{
     const res=await fetch(`${BASE}/api/submit_payment`,{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({user_id:UID,name:FNAME,plan_id:selPlan.id,amount:selPlan.price,txn_id:txn,screenshot:ss})
+      body:JSON.stringify({
+        user_id:UID, name:FNAME,
+        plan_id:selPlan.id, amount:selPlan.price,
+        txn_id:txn, screenshot:ss,
+        group_id: selPlan.isGroup ? (document.getElementById('groupIdInp')?.value||'') : null,
+        group_link: selPlan.isGroup ? (document.getElementById('groupIdInp')?.value||'') : null
+      })
     });
     const d=await res.json();
     if(d.ok){
       document.getElementById('pm').classList.remove('on');
-      toast('✅ Request submit ho gayi! 1-2 ghante mein activate hoga.');
-      setStatus(false,false,null,1);
+      const successMsg = selPlan.isGroup
+        ? '✅ Group Premium request submit! Owner approve karega phir group mein bot add karo.'
+        : '✅ Request submit ho gayi! 1-2 ghante mein activate hoga.';
+      toast(successMsg);
+      if(!selPlan.isGroup) setStatus(false,false,null,1);
     }else{
       toast('❌ '+(d.error||'Submit fail!'));
       sb.disabled=false;sb.textContent='✅ Submit Payment Request';
@@ -571,4 +703,197 @@ function cpy(text,msg){
 init();
 </script>
 </body>
-  </html>
+  </html>Instance created. Preparing to start...
+Starting download for registry01.prod.koyeb.com/k-192684ca-24ba-4165-afa9-7016dcade1a0/74c1af17-f22b-4f0c-a89d-697106892af5:1aa95f96-b8a7-4939-b307-275493533ab9
+Download progress: 100% |[32m++++++++[0m| (16.8 MiB/s)
+Download complete for registry01.prod.koyeb.com/k-192684ca-24ba-4165-afa9-7016dcade1a0/74c1af17-f22b-4f0c-a89d-697106892af5:1aa95f96-b8a7-4939-b307-275493533ab9
+Instance is starting... Waiting for health checks to pass.
+ * Serving Flask app 'bot'
+ * Debug mode: off
+2026-03-22 20:11:06,163 - __main__ - INFO - ✅ Flask started
+2026-03-22 20:11:06,173 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://10.2.32.44:8080
+2026-03-22 20:11:06,173 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-03-22 20:11:06,352 - pyrogram.connection.connection - INFO - Connecting...
+2026-03-22 20:11:06,507 - pyrogram.connection.connection - INFO - Connected! Production DC5 - IPv4
+2026-03-22 20:11:06,508 - pyrogram.session.session - INFO - NetworkTask started
+2026-03-22 20:11:06,988 - pyrogram.session.session - INFO - Session initialized: Layer 187
+2026-03-22 20:11:06,988 - pyrogram.session.session - INFO - Device: CPython 3.11.13 - Pyrogram 2.3.45
+2026-03-22 20:11:06,988 - pyrogram.session.session - INFO - System: Linux 6.1.62 (en)
+2026-03-22 20:11:06,988 - pyrogram.session.session - INFO - Session started
+2026-03-22 20:11:06,991 - pyrogram.session.session - INFO - PingTask started
+2026-03-22 20:11:07,339 - pyrogram.dispatcher - INFO - Started 5 HandlerTasks
+2026-03-22 20:11:07,339 - __main__ - INFO - ✅ Userbot started
+2026-03-22 20:11:07,339 - __main__ - INFO - 🚀 AsBhai Drop Bot starting...
+2026-03-22 20:11:07,353 - pyrogram.session.auth - INFO - Start creating a new auth key on DC2
+2026-03-22 20:11:07,354 - pyrogram.connection.connection - INFO - Connecting...
+2026-03-22 20:11:07,365 - pyrogram.connection.connection - INFO - Connected! Production DC2 - IPv4
+2026-03-22 20:11:08,627 - pyrogram.session.auth - INFO - Done auth key exchange: DhGenOk
+2026-03-22 20:11:08,627 - pyrogram.connection.connection - INFO - Disconnected
+2026-03-22 20:11:08,637 - pyrogram.connection.connection - INFO - Connecting...
+2026-03-22 20:11:08,652 - pyrogram.connection.connection - INFO - Connected! Production DC2 - IPv4
+2026-03-22 20:11:08,653 - pyrogram.session.session - INFO - NetworkTask started
+2026-03-22 20:11:08,710 - pyrogram.session.session - INFO - Session initialized: Layer 187
+2026-03-22 20:11:08,710 - pyrogram.session.session - INFO - Device: CPython 3.11.13 - Pyrogram 2.3.45
+2026-03-22 20:11:08,710 - pyrogram.session.session - INFO - System: Linux 6.1.62 (en)
+2026-03-22 20:11:08,710 - pyrogram.session.session - INFO - Session started
+2026-03-22 20:11:08,712 - pyrogram.session.session - INFO - PingTask started
+2026-03-22 20:11:08,738 - pyrogram.session.session - INFO - PingTask stopped
+2026-03-22 20:11:08,739 - pyrogram.connection.connection - INFO - Disconnected
+2026-03-22 20:11:08,739 - pyrogram.session.session - INFO - NetworkTask stopped
+2026-03-22 20:11:08,739 - pyrogram.session.session - INFO - Session stopped
+2026-03-22 20:11:08,743 - pyrogram.session.auth - INFO - Start creating a new auth key on DC5
+2026-03-22 20:11:08,743 - pyrogram.connection.connection - INFO - Connecting...
+2026-03-22 20:11:08,901 - pyrogram.connection.connection - INFO - Connected! Production DC5 - IPv4
+Instance is healthy. All health checks are passing.
+2026-03-22 20:11:10,342 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-03-22 20:11:10,343 - apscheduler.scheduler - INFO - Added job "start_bot.<locals>._do_scheduler_start.<locals>.<lambda>" to job store "default"
+2026-03-22 20:11:10,343 - apscheduler.scheduler - INFO - Scheduler started
+2026-03-22 20:11:10,343 - __main__ - INFO - ✅ Scheduler started
+2026-03-22 20:11:10,564 - pyrogram.session.auth - INFO - Done auth key exchange: DhGenOk
+2026-03-22 20:11:10,564 - pyrogram.connection.connection - INFO - Disconnected
+2026-03-22 20:11:10,569 - pyrogram.connection.connection - INFO - Connecting...
+2026-03-22 20:11:10,728 - pyrogram.connection.connection - INFO - Connected! Production DC5 - IPv4
+2026-03-22 20:11:10,728 - pyrogram.session.session - INFO - NetworkTask started
+2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - Session initialized: Layer 187
+2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - Device: CPython 3.11.13 - Pyrogram 2.3.45
+2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - System: Linux 6.1.62 (en)
+2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - Session started
+2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - PingTask started
+2026-03-22 20:11:11,742 - pyrogram.dispatcher - INFO - Started 5 HandlerTasks
+2026-03-22 20:11:49,309 - werkzeug - INFO - 10.250.0.22 - - [22/Mar/2026 20:11:49] "HEAD / HTTP/1.1" 200 -
+2026-03-22 20:11:58,404 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
+Traceback (most recent call last):
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
+    await handler.callback(self.client, *args)
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
+    await self.original_callback(client, message, *args)
+  File "/workspace/bot.py", line 1207, in start_handler
+    await message.reply(
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
+    return await self._client.send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
+    reply_markup=await reply_markup.write(self) if reply_markup else None,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
+    buttons.append(await b.write(client))
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
+    url=self.web_app.url
+        ^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'url'
+2026-03-22 20:12:01,079 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
+Traceback (most recent call last):
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
+    await handler.callback(self.client, *args)
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
+    await self.original_callback(client, message, *args)
+  File "/workspace/bot.py", line 1207, in start_handler
+    await message.reply(
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
+    return await self._client.send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
+    reply_markup=await reply_markup.write(self) if reply_markup else None,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
+    buttons.append(await b.write(client))
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
+    url=self.web_app.url
+        ^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'url'
+2026-03-22 20:12:08,149 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
+Traceback (most recent call last):
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
+    await handler.callback(self.client, *args)
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
+    await self.original_callback(client, message, *args)
+  File "/workspace/bot.py", line 1207, in start_handler
+    await message.reply(
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
+    return await self._client.send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
+    reply_markup=await reply_markup.write(self) if reply_markup else None,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
+    buttons.append(await b.write(client))
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
+    url=self.web_app.url
+        ^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'url'
+2026-03-22 20:12:23,591 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
+Traceback (most recent call last):
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
+    await handler.callback(self.client, *args)
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
+    await self.original_callback(client, message, *args)
+  File "/workspace/bot.py", line 1207, in start_handler
+    await message.reply(
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
+    return await self._client.send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
+    reply_markup=await reply_markup.write(self) if reply_markup else None,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
+    buttons.append(await b.write(client))
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
+    url=self.web_app.url
+        ^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'url'
+2026-03-22 20:12:36,507 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
+Traceback (most recent call last):
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
+    await handler.callback(self.client, *args)
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
+    await self.original_callback(client, message, *args)
+  File "/workspace/bot.py", line 1207, in start_handler
+    await message.reply(
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
+    return await self._client.send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
+    reply_markup=await reply_markup.write(self) if reply_markup else None,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
+    buttons.append(await b.write(client))
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
+    url=self.web_app.url
+        ^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'url'
+2026-03-22 20:12:53,043 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:12:53] "GET / HTTP/1.1" 200 -
+2026-03-22 20:13:00,041 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:13:00] "GET / HTTP/1.1" 200 -
+2026-03-22 20:13:01,091 - werkzeug - INFO - 10.250.0.21 - - [22/Mar/2026 20:13:01] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-03-22 20:13:36,693 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:13:36] "GET /stream?uid=7315805581&mid=127467 HTTP/1.1" 200 -
+2026-03-22 20:13:37,122 - werkzeug - INFO - 10.250.0.21 - - [22/Mar/2026 20:13:37] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-03-22 20:13:49,832 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:13:49] "[36mGET /stream?uid=7315805581&mid=127467 HTTP/1.1[0m" 304 -
+2026-03-22 20:15:59,061 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
+Traceback (most recent call last):
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
+    await handler.callback(self.client, *args)
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
+    await self.original_callback(client, message, *args)
+  File "/workspace/bot.py", line 1207, in start_handler
+    await message.reply(
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
+    return await self._client.send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
+    reply_markup=await reply_markup.write(self) if reply_markup else None,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
+    buttons.append(await b.write(client))
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
+    url=self.web_app.url
+        ^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'url'
+2026-03-22 20:16:53,783 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:16:53] "HEAD / HTTP/1.1" 200 -
