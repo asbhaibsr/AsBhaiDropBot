@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -230,10 +231,14 @@ textarea::placeholder{color:var(--m)}
     <div class="back-title">▶️ Stream & Download</div>
   </div>
   <div class="stream-player">
-    <video id="vp" controls playsinline></video>
+    <video id="vp" controls playsinline webkit-playsinline></video>
     <div class="ph" id="ph">
       <div class="ph-ico">🎬</div>
-      <p>Group mein movie search karo<br>phir Stream ya Download button dabao</p>
+      <p>Group mein movie search karo<br>Stream/Download button dabao</p>
+    </div>
+    <div id="streamLoading" style="display:none;position:absolute;inset:0;background:#000;align-items:center;justify-content:center;flex-direction:column;gap:10px">
+      <div style="width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:white;border-radius:50%;animation:sp .8s linear infinite"></div>
+      <p style="font-size:12px;color:rgba(255,255,255,.6)">File load ho rahi hai...</p>
     </div>
   </div>
   <div class="stream-ctrls">
@@ -242,14 +247,25 @@ textarea::placeholder{color:var(--m)}
     <button class="sc-btn" onclick="doPip()">📺 PiP</button>
     <button class="sc-btn dl" onclick="doDl()">⬇️ Download</button>
   </div>
-  <div class="stream-info">
+  <!-- Premium required message -->
+  <div id="streamPremMsg" style="display:none;padding:16px">
     <div class="sinfo-card">
-      <h3>🔒 Premium Feature</h3>
-      <p>Stream aur download karne ke liye Premium chahiye.<br>
-      Group mein movie search karo → file milne par Stream/Download button aayega → yahan video chalegi.</p>
+      <h3 style="color:var(--g2)">🔒 Premium Feature</h3>
+      <p>Stream aur download ke liye Premium chahiye.<br>
+      Group mein search karo → file ke niche Stream/Download button aayega.</p>
     </div>
-    <div style="margin-top:10px">
-      <button class="btn btnp" onclick="goPage('pg-premium')">💎 Premium Lo — Stream Activate Karo</button>
+    <button class="btn btnp" style="margin-top:10px" onclick="goPage('pg-premium')">💎 Premium Lo</button>
+  </div>
+  <!-- How to use -->
+  <div id="streamHowTo" class="stream-info">
+    <div class="sinfo-card">
+      <h3>📱 Kaise Use Karein</h3>
+      <p>
+        1️⃣ Bot ke group mein movie naam type karo<br>
+        2️⃣ File milne par bot PM mein bhejega<br>
+        3️⃣ File ke niche <b>▶️ Stream</b> ya <b>⬇️ Download</b> button dabao<br>
+        4️⃣ Mini App mein video play hogi!
+      </p>
     </div>
   </div>
 </div>
@@ -695,15 +711,47 @@ function checkStream(){
   const p=new URLSearchParams(window.location.search);
   const uid=p.get('uid'),mid=p.get('mid');
   if(!uid||!mid)return;
-  if(!isPrem){goPage('pg-stream');return;}
-  loadVid(`${BASE}/stream_file/${mid}`);
   goPage('pg-stream');
+  if(!isPrem){
+    document.getElementById('streamPremMsg').style.display='block';
+    return;
+  }
+  // Stream file load karo
+  const streamUrl=`${BASE}/stream_file/${mid}`;
+  loadVid(streamUrl, mid);
 }
-function loadVid(url){
-  curVid=url;
-  const vp=document.getElementById('vp'),ph=document.getElementById('ph');
-  vp.src=url;vp.style.display='block';ph.style.display='none';
-  vp.play().catch(()=>toast('▶️ Play button dabao'));
+
+async function loadVid(streamUrl, mid){
+  curVid=streamUrl;
+  const vp=document.getElementById('vp');
+  const ph=document.getElementById('ph');
+  const loadingEl=document.getElementById('streamLoading');
+
+  // Loading dikho
+  ph.style.display='none';
+  if(loadingEl) loadingEl.style.display='flex';
+
+  try{
+    // Pehle URL resolve karo — redirect follow karo
+    vp.src=streamUrl;
+    vp.style.display='block';
+    if(loadingEl) loadingEl.style.display='none';
+
+    vp.oncanplay=()=>{
+      vp.play().catch(()=>toast('▶️ Play button dabao'));
+    };
+    vp.onerror=()=>{
+      vp.style.display='none';
+      ph.style.display='flex';
+      ph.querySelector('p').textContent='File stream nahi ho sakti — Download try karo';
+      if(loadingEl) loadingEl.style.display='none';
+      toast('⬇️ Download button use karo');
+    };
+  }catch(e){
+    ph.style.display='flex';
+    if(loadingEl) loadingEl.style.display='none';
+    toast('❌ '+e.message);
+  }
 }
 function doFull(){
   const v=document.getElementById('vp');
@@ -722,8 +770,9 @@ function doPip(){
 }
 function doDl(){
   if(!curVid){toast('❌ Koi video nahi — group mein search karo');return;}
-  const a=document.createElement('a');a.href=curVid;a.download='';a.click();
-  toast('⬇️ Download shuru...');
+  // Download link — new tab mein kholo download ke liye
+  window.open(curVid, '_blank');
+  toast('⬇️ File link new tab mein khul rahi hai...');
 }
 
 // ── NAV ──
