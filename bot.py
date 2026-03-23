@@ -307,58 +307,40 @@ def stream_page():
 
 @flask_app.route("/stream_file/<int:msg_id>")
 def stream_file(msg_id):
-    """
-    Telegram file ko proxy karke stream karo.
-    Note: Yeh basic version hai — production mein
-    alag streaming server use karo.
-    """
-    from flask import Response, stream_with_context
-    import requests as req_lib
-
-    async def _get_url():
-        try:
-            file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
-            if file_msg and not file_msg.empty:
-                # Get download URL via bot
-                if file_msg.document:
-                    path = await bot.download_media(file_msg, in_memory=True)
-                    return path
-        except Exception as e:
-            logger.error(f"stream_file error: {e}")
-        return None
-
-    # Basic: file bot token se access karo
+    """Telegram file URL get karke redirect karo — proper implementation"""
+    from flask import redirect as fl_redirect
     try:
-        token = BOT_TOKEN
-        # Telegram Bot API file URL
-        async def _get_file_path():
+        async def _get_file_url():
             try:
                 file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
-                if file_msg and not file_msg.empty:
-                    fid = None
-                    if file_msg.video: fid = file_msg.video.file_id
-                    elif file_msg.document: fid = file_msg.document.file_id
-                    if fid:
-                        import aiohttp as _aio
-                        async with _aio.ClientSession() as s:
-                            async with s.get(f"https://api.telegram.org/bot{token}/getFile?file_id={fid}") as r:
-                                d = await r.json()
-                                if d.get("ok"):
-                                    fp = d["result"]["file_path"]
-                                    return f"https://api.telegram.org/file/bot{token}/{fp}"
+                if not file_msg or file_msg.empty:
+                    return None
+                fid = None
+                if file_msg.video: fid = file_msg.video.file_id
+                elif file_msg.document: fid = file_msg.document.file_id
+                elif file_msg.audio: fid = file_msg.audio.file_id
+                if not fid:
+                    return None
+                async with aiohttp.ClientSession() as sess:
+                    async with sess.get(
+                        f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={fid}",
+                        timeout=aiohttp.ClientTimeout(total=15)
+                    ) as r:
+                        d = await r.json()
+                        if d.get("ok"):
+                            fp = d["result"]["file_path"]
+                            return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{fp}"
+                return None
             except Exception as e:
-                logger.error(f"get_file_path error: {e}")
-            return None
+                logger.error(f"stream_file error: {e}")
+                return None
 
-        file_url = run_async(_get_file_path())
-
+        file_url = run_async(_get_file_url())
         if file_url:
-            # Redirect to Telegram CDN
-            from flask import redirect
-            return redirect(file_url)
-        else:
-            return jsonify({"error": "File not found"}), 404
+            return fl_redirect(file_url)
+        return jsonify({"error": "File not found or size > 20MB"}), 404
     except Exception as e:
+        logger.error(f"stream_file route error: {e}")
         return jsonify({"error": str(e)}), 500
 
 def run_flask():
@@ -626,33 +608,10 @@ async def increment_daily(user_id):
 #  VERIFICATION (Shortlink)
 # ═══════════════════════════════════════
 async def is_verified_today(user_id):
-    """All shortlinks verify ho chuki hain check karo"""
+    """get_user_verify_state se consistent check"""
     if await is_premium(user_id): return True
-    # Shortlinks exist karte hain?
-    count = await shortlinks_col.count_documents({"active": True})
-    if count == 0:
-        # Koi shortlink DB mein nahi — env SHORTLINK_API check karo
-        if not SHORTLINK_API:
-            return True  # Shortlink configured hi nahi — skip
-        # Env shortlink hai — legacy date check
-        today = now_ist().strftime("%Y-%m-%d")
-        doc = await users_col.find_one({"user_id": user_id})
-        return bool(doc and doc.get("verified_date") == today)
-    # Multi-shortlink check
-    async for sl in shortlinks_col.find({"active": True}).sort("order", 1):
-        sl_id = str(sl["_id"])
-        hours = sl.get("hours", 24)
-        log = await verify_log_col.find_one(
-            {"user_id": user_id, "shortlink_id": sl_id},
-            sort=[("verified_at", -1)]
-        )
-        if not log:
-            return False
-        last_verify = make_aware(log["verified_at"])
-        time_passed = (now() - last_verify).total_seconds() / 3600
-        if time_passed >= hours:
-            return False
-    return True
+    all_done, _, _ = await get_user_verify_state(user_id)
+    return all_done
 
 async def mark_verified(user_id):
     today = now_ist().strftime("%Y-%m-%d")
@@ -821,14 +780,27 @@ async def make_shortlink(url):
 
 async def get_user_verify_state(user_id):
     """
-    User ka current verify state:
-    - kitni shortlinks verify ho chuki hain
-    - agle shortlink ka time kab aayega
+    User ka current verify state.
+    DB shortlinks + env shortlink dono check karta hai.
     Returns: (all_verified: bool, next_sl: dict|None, wait_hours: float)
+    next_sl = None means env-based shortlink use karo
     """
     links = await get_active_shortlinks()
-    if not links: return True, None, 0
 
+    if not links:
+        # DB mein koi shortlink nahi — env check karo
+        if not SHORTLINK_API:
+            return True, None, 0  # Koi shortlink configured nahi — bypass
+        # Env shortlink hai — legacy date-based verify check
+        today = now_ist().strftime("%Y-%m-%d")
+        doc = await users_col.find_one({"user_id": user_id})
+        verified = bool(doc and doc.get("verified_date") == today)
+        if verified:
+            return True, None, 0
+        else:
+            return False, None, 0  # None = env shortlink use karo
+
+    # DB shortlinks hain — unhe check karo
     for sl in links:
         sl_id = str(sl["_id"])
         hours = sl.get("hours", 24)
@@ -837,12 +809,12 @@ async def get_user_verify_state(user_id):
             sort=[("verified_at", -1)]
         )
         if not log:
-            return False, sl, 0  # Ye verify nahi hua — abhi karo
+            return False, sl, 0
         last_verify = make_aware(log["verified_at"])
         time_passed = (now() - last_verify).total_seconds() / 3600
         if time_passed >= hours:
-            return False, sl, 0  # Time expire — dobara verify karo
-    return True, None, 0  # Sab verify hain
+            return False, sl, 0
+    return True, None, 0
 
 async def mark_sl_verified(user_id, shortlink_id, sl_label=""):
     """Shortlink verify ka log save karo"""
@@ -887,6 +859,13 @@ async def verify_check(client, message, prem=False):
     s = await get_settings()
     # Global shortlink enabled check
     if not s.get("shortlink_enabled", True): return True
+
+    # Group-level shortlink check
+    if hasattr(message, 'chat') and message.chat:
+        try:
+            gs = await get_group_settings(message.chat.id)
+            if not gs.get("shortlink_enabled", True): return True
+        except: pass
 
     all_done, next_sl, _ = await get_user_verify_state(uid)
     if all_done: return True
@@ -1080,15 +1059,16 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
             f"📌 Abhi save ya forward kar lo!"
         )
 
-        # Premium users ke liye stream button add karo
+        # Premium users ke liye stream + download buttons
         kb = None
         if prem and KOYEB_URL:
-            me = await client.get_me()
             stream_url = f"{KOYEB_URL}/stream?uid={user.id}&mid={msg_id}"
+            # Download = Telegram file direct URL via bot token
+            # Ya stream URL same use karo — mini app mein download button hai
             kb = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("▶️ Stream", url=stream_url),
-                    InlineKeyboardButton("⬇️ Download", callback_data=f"dl_{msg_id}")
+                    InlineKeyboardButton("▶️ Stream Karo", web_app=WebAppInfo(url=stream_url)),
+                    InlineKeyboardButton("⬇️ Download", web_app=WebAppInfo(url=stream_url))
                 ]
             ])
 
@@ -1174,24 +1154,22 @@ async def start_handler(client, message: Message):
                         sl_label = sl_doc.get("label", "Shortlink")
                         hours = sl_doc.get("hours", 24)
                         await mark_sl_verified(uid, sl_id, sl_label)
-                        # LOG channel — verify log
                         verify_count = await verify_log_col.count_documents({"user_id": uid, "shortlink_id": sl_id})
                         await send_log(
                             f"✅ **Shortlink Verified**\n\n"
                             f"👤 {message.from_user.mention} (`{uid}`)\n"
-                            f"🔗 Shortlink: **{sl_label}**\n"
-                            f"🔢 Verify #{verify_count} (total)\n"
-                            f"⏰ Next verify: {hours} ghante baad\n"
+                            f"🔗 {sl_label}\n"
+                            f"🔢 #{verify_count}\n"
                             f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
                         )
                 except Exception as e:
                     logger.error(f"sl verify log error: {e}")
                     await mark_sl_verified(uid, sl_id or "default", sl_label)
             else:
-                # Legacy — koi sl_id nahi
+                # env_default ya legacy — date-based mark karo
                 await mark_verified(uid)
                 await send_log(
-                    f"✅ **Verified (Legacy)**\n\n"
+                    f"✅ **Verified**\n\n"
                     f"👤 {message.from_user.mention} (`{uid}`)\n"
                     f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
                 )
@@ -1326,12 +1304,16 @@ async def refer_link_cmd(client, message: Message):
 # ═══════════════════════════════════════
 @bot.on_message(
     filters.private & filters.text &
+    filters.incoming &
+    ~filters.bot &
     ~filters.command([
         "start","help","stats","broadcast","setdelete",
         "addpremium","removepremium","forcesub","settings",
         "premium","ping","shortlink","setlimit","setresults",
         "mystats","ban","unban","maintenance","request","referlink",
-        "fsub","groupsettings","gsettings","gset","referlink"
+        "fsub","groupsettings","gsettings","gset",
+        "addshortlink","removeshortlink","shortlinks","setcommands",
+        "gshortlink","gshortlinkremove","gshortlinks","requests"
     ])
 )
 async def pm_search_handler(client, message: Message):
@@ -1413,7 +1395,10 @@ _search_cooldown = {}  # {uid_query: expire_time}
         "mystats","ban","unban","maintenance","request","referlink",
         "fsub","groupsettings","gsettings","gset",
         "addshortlink","removeshortlink","shortlinks",
-        "setcommands","gshortlink","gshortlinkremove","gshortlinks"
+        "setcommands","gshortlink","gshortlinkremove","gshortlinks",
+        "requests","ping","ban","unban","stats","broadcast",
+        "addpremium","removepremium","setdelete","setlimit",
+        "setresults","maintenance","settings","shortlink"
     ])
 )
 async def search_handler(client, message: Message):
@@ -1431,8 +1416,14 @@ async def search_handler(client, message: Message):
 
     query = (message.text or "").strip()
 
-    # MOST IMPORTANT: "/" se shuru = command = ignore karo
+    # ─── ABSOLUTE FIRST CHECK: command hai to bilkul ignore ───
     if query.startswith("/"): return
+
+    # Message entities mein bhi check — bot commands
+    if message.entities:
+        from pyrogram.enums import MessageEntityType
+        for ent in message.entities:
+            if ent.type == MessageEntityType.BOT_COMMAND: return
 
     # Minimum length aur maximum length
     if len(query) < 2 or len(query) > 80: return
@@ -2776,6 +2767,26 @@ async def broadcast(client, message: Message):
             except: failed += 1
     await sm.edit(f"📡 **Done!**\nTotal:{total} ✅{done} ❌{failed} 🚫{blocked}")
 
+@bot.on_message(filters.command("help"))
+async def help_cmd(client, message: Message):
+    miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+    buttons = [[InlineKeyboardButton("🔙 Back", callback_data="back_main")]]
+    if miniapp_url:
+        buttons.insert(0, [InlineKeyboardButton("🌐 Mini App", web_app=WebAppInfo(url=miniapp_url))])
+    await message.reply(
+        "📖 **Bot Guide**\n\n"
+        "**Kaise use karein:**\n"
+        "1️⃣ Channel join karo\n"
+        "2️⃣ Daily 1 baar verify karo (shortlink)\n"
+        "3️⃣ Group mein naam type karo\n"
+        "4️⃣ Button milega → click → PM mein file! 📥\n\n"
+        "⚠️ File kuch der baad delete hogi — save kar lo!\n\n"
+        "💎 **Premium** = No verify + 10 results + stream!\n"
+        "🔗 **10 Refer** = 15 din free premium!\n\n"
+        "/premium | /mystats | /referlink | /request <naam>",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
 @bot.on_message(filters.command("premium"))
 async def premium_info(client, message: Message):
     uid = message.from_user.id
@@ -2843,11 +2854,11 @@ async def set_commands(client, message: Message):
     from pyrogram.types import BotCommand
     commands = [
         BotCommand("start",       "Bot shuru karo"),
-        BotCommand("premium",     "Premium info aur plans dekho"),
-        BotCommand("mystats",     "Apni stats dekho"),
-        BotCommand("referlink",   "Refer link lo — 10 refer = 15 din free premium"),
-        BotCommand("request",     "File request karo"),
         BotCommand("help",        "Help aur guide dekho"),
+        BotCommand("premium",     "Premium plans aur status"),
+        BotCommand("mystats",     "Apni stats dekho"),
+        BotCommand("referlink",   "Refer link — 10 refer = 15 din free"),
+        BotCommand("request",     "File request karo"),
     ]
     await client.set_bot_commands(commands)
     cmds_text = "\n".join(f"/{c.command} — {c.description}" for c in commands)
@@ -2889,16 +2900,19 @@ async def group_shortlink_add(client, message: Message):
         return
 
     # Group premium check
+    # Group premium check
     if not await is_group_premium(chat_id) and uid not in ADMINS:
-        miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else "https://t.me/AsBhaiDropBot"
+        miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+        kb = []
+        if miniapp_url:
+            kb.append([InlineKeyboardButton("💰 Group Premium Lo", web_app=WebAppInfo(url=miniapp_url))])
+        kb.append([InlineKeyboardButton("💬 @asbhaibsr se lo", url="https://t.me/asbhaibsr")])
         await message.reply(
-            "❌ **Group Premium Nahi Hai!**\n"
-            "Apni shortlink lagane ke liye **Group Premium** chahiye.\n"
-            "💰 **₹300 / 1 Mahina** — Group Premium\n"
-            f"👉 Mini App par buy karo: {miniapp_url}",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💰 Group Premium Buy Karo", url=miniapp_url if miniapp_url.startswith("http") else f"https://t.me/AsBhaiDropBot")]
-            ])
+            "❌ **Group Premium Nahi Hai!**\n\n"
+            "Shortlink lagane ke liye Group Premium chahiye.\n"
+            "💰 **₹300/mahina | ₹550/2 mahine**\n\n"
+            "Mini App mein buy karo ya @asbhaibsr se contact karo.",
+            reply_markup=InlineKeyboardMarkup(kb)
         )
         return
 
