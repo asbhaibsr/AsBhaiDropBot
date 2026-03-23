@@ -1,9 +1,16 @@
+# ╔══════════════════════════════════════╗
+# ║  bot.py — AsBhai Drop Bot            ║
+# ║  Main File — Handlers & Entry Point  ║
+# ╚══════════════════════════════════════╝
+# bot.py — AsBhai Drop Bot — Main File
+# ═══════════════════════════════════════
+#  Imports
+# ═══════════════════════════════════════
 import os, re, time, random, string, asyncio, logging
 from datetime import datetime, timedelta
 from threading import Thread
 
 import pytz, aiohttp
-from dotenv import load_dotenv
 from pyrogram import Client, filters, enums
 from pyrogram.types import (
     Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery,
@@ -13,563 +20,42 @@ from pyrogram.errors import (
     FloodWait, UserIsBlocked, InputUserDeactivated,
     ChatWriteForbidden, PeerIdInvalid, UserNotParticipant
 )
-
-# Global FloodWait middleware
-async def safe_send(func, *args, **kwargs):
-    """FloodWait ke saath safely message bhejo"""
-    for attempt in range(3):
-        try:
-            return await func(*args, **kwargs)
-        except FloodWait as e:
-            if attempt < 2:
-                logger.warning(f"FloodWait {e.value}s, waiting...")
-                await asyncio.sleep(min(e.value, 30))
-            else:
-                logger.error(f"FloodWait max retries reached")
-                return None
-        except Exception as e:
-            logger.error(f"safe_send error: {e}")
-            return None
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from aiohttp import web as aio_web
 
-# ═══════════════════════════════════════
-#  AIOHTTP STREAMING SERVER
-#  TechVJ-style unlimited size streaming
-#  Flask-jaise JSON APIs + HTML serving
-#  Koi 20MB limit nahi — seedha Telegram se stream
-# ═══════════════════════════════════════
-aio_app = aio_web.Application()
-_stream_cache = {}   # {msg_id: ByteStreamer info}
-
-# ── Streaming helper ──
-async def get_file_info(msg_id: int):
-    """File message se streaming info nikalo"""
-    try:
-        file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
-        if not file_msg or file_msg.empty:
-            return None
-        f = None
-        fname = f"file_{msg_id}"
-        mime = "application/octet-stream"
-        if file_msg.video:
-            f = file_msg.video
-            fname = f.file_name or f"video_{msg_id}.mp4"
-            mime = f.mime_type or "video/mp4"
-        elif file_msg.document:
-            f = file_msg.document
-            fname = f.file_name or f"file_{msg_id}"
-            mime = f.mime_type or "application/octet-stream"
-        elif file_msg.audio:
-            f = file_msg.audio
-            fname = f.file_name or f"audio_{msg_id}.mp3"
-            mime = f.mime_type or "audio/mpeg"
-        if not f: return None
-        return {
-            "file_id": f.file_id,
-            "file_size": f.file_size or 0,
-            "file_name": fname,
-            "mime_type": mime,
-            "msg": file_msg
-        }
-    except Exception as e:
-        logger.error(f"get_file_info {msg_id}: {e}")
-        return None
-
-async def stream_generator(file_id: str, offset: int = 0, limit: int = None):
-    """
-    Userbot se file chunks stream karo.
-    Telegram ki koi size limit nahi — chunks mein aata hai.
-    """
-    chunk_size = 512 * 1024  # 512KB chunks
-    current_offset = offset
-    bytes_sent = 0
-
-    try:
-        async for chunk in userbot.stream_media(
-            await userbot.get_messages(FILE_CHANNEL, 0) if False else None,  # placeholder
-            file_id=file_id,
-            offset=current_offset,
-        ):
-            if limit and bytes_sent + len(chunk) > limit:
-                yield chunk[:limit - bytes_sent]
-                break
-            yield chunk
-            bytes_sent += len(chunk)
-            current_offset += len(chunk)
-    except Exception as e:
-        logger.error(f"stream_generator error: {e}")
-
-async def stream_telegram_file(file_id: str, file_size: int, mime_type: str,
-                                 file_name: str, request: aio_web.Request):
-    """
-    Range request support ke saath Telegram file stream karo.
-    Seedha Pyrogram userbot se chunks leke browser ko bhejo.
-    Works for ALL file sizes.
-    """
-    range_header = request.headers.get("Range")
-    from_bytes = 0
-    until_bytes = file_size - 1
-
-    if range_header:
-        try:
-            rng = range_header.replace("bytes=", "").split("-")
-            from_bytes = int(rng[0]) if rng[0] else 0
-            until_bytes = int(rng[1]) if rng[1] else file_size - 1
-        except:
-            pass
-
-    if until_bytes >= file_size:
-        until_bytes = file_size - 1
-    req_length = until_bytes - from_bytes + 1
-
-    chunk_size = 512 * 1024  # 512KB
-    offset = from_bytes - (from_bytes % chunk_size)
-    first_cut = from_bytes - offset
-
-    headers = {
-        "Content-Type": mime_type,
-        "Content-Range": f"bytes {from_bytes}-{until_bytes}/{file_size}",
-        "Content-Length": str(req_length),
-        "Content-Disposition": f'inline; filename="{file_name}"',
-        "Accept-Ranges": "bytes",
-    }
-
-    status = 206 if range_header else 200
-    response = aio_web.StreamResponse(status=status, headers=headers)
-    await response.prepare(request)
-
-    try:
-        client_to_use = userbot if userbot else bot
-        bytes_written = 0
-        async for chunk in client_to_use.stream_media(
-            {"chat_id": FILE_CHANNEL, "message_id": 0},
-            file_id=file_id,
-            offset=offset,
-        ):
-            if bytes_written == 0 and first_cut > 0:
-                chunk = chunk[first_cut:]
-            remaining = req_length - bytes_written
-            if len(chunk) > remaining:
-                chunk = chunk[:remaining]
-            if not chunk:
-                break
-            await response.write(chunk)
-            bytes_written += len(chunk)
-            if bytes_written >= req_length:
-                break
-    except Exception as e:
-        logger.error(f"stream write error: {e}")
-
-    await response.write_eof()
-    return response
-
-# ── AIOHTTP Routes ──
-routes = aio_web.RouteTableDef()
-
-@routes.get("/")
-async def home_handler(request):
-    """Mini app HTML serve karo"""
-    try:
-        with open("miniapp.html", "r", encoding="utf-8") as f:
-            html = f.read()
-        return aio_web.Response(text=html, content_type="text/html")
-    except FileNotFoundError:
-        return aio_web.Response(text="AsBhai Drop Bot ✅", content_type="text/plain")
-
-@routes.get("/health")
-async def health_handler(request):
-    return aio_web.json_response({
-        "status": "ok",
-        "time": now_ist().strftime("%d %b %H:%M IST")
-    })
-
-@routes.get("/stream")
-async def stream_page_handler(request):
-    """Stream page — mini app serve karo"""
-    return await home_handler(request)
-
-@routes.get(r"/stream_file/{msg_id:\d+}")
-async def stream_file_handler(request: aio_web.Request):
-    """
-    Unlimited size file streaming — TechVJ style.
-    Range requests support → browser mein video play hogi.
-    """
-    msg_id = int(request.match_info["msg_id"])
-
-    # UID check — sirf premium users
-    uid = request.rel_url.query.get("uid")
-    if uid:
-        try:
-            uid_int = int(uid)
-            if not await is_premium(uid_int) and uid_int not in ADMINS:
-                return aio_web.json_response(
-                    {"error": "Premium required for streaming"},
-                    status=403
-                )
-        except: pass
-
-    # File info get karo
-    info = await get_file_info(msg_id)
-    if not info:
-        return aio_web.json_response({"error": "File not found"}, status=404)
-
-    file_id = info["file_id"]
-    file_size = info["file_size"]
-    mime_type = info["mime_type"]
-    file_name = info["file_name"]
-    file_msg = info["msg"]
-
-    if file_size == 0:
-        return aio_web.json_response({"error": "File size unknown"}, status=404)
-
-    # Range request parse
-    range_header = request.headers.get("Range", "")
-    from_bytes = 0
-    until_bytes = file_size - 1
-
-    if range_header:
-        try:
-            rng = range_header.replace("bytes=", "").split("-")
-            from_bytes = int(rng[0]) if rng[0] else 0
-            until_bytes = int(rng[1]) if rng[1] else file_size - 1
-        except:
-            pass
-
-    if until_bytes >= file_size:
-        until_bytes = file_size - 1
-
-    req_length = until_bytes - from_bytes + 1
-    chunk_size = 1024 * 1024  # 1MB chunks
-
-    headers = {
-        "Content-Type": mime_type,
-        "Content-Range": f"bytes {from_bytes}-{until_bytes}/{file_size}",
-        "Content-Length": str(req_length),
-        "Content-Disposition": f'inline; filename="{file_name}"',
-        "Accept-Ranges": "bytes",
-    }
-
-    status = 206 if range_header else 200
-    response = aio_web.StreamResponse(status=status, headers=headers)
-    await response.prepare(request)
-
-    # Userbot se stream karo — koi size limit nahi
-    try:
-        client_to_use = userbot if userbot else bot
-        bytes_to_skip = from_bytes
-        bytes_written = 0
-
-        async for chunk in client_to_use.stream_media(file_msg):
-            if bytes_to_skip > 0:
-                if len(chunk) <= bytes_to_skip:
-                    bytes_to_skip -= len(chunk)
-                    continue
-                else:
-                    chunk = chunk[bytes_to_skip:]
-                    bytes_to_skip = 0
-
-            remaining = req_length - bytes_written
-            if len(chunk) > remaining:
-                chunk = chunk[:remaining]
-
-            await response.write(chunk)
-            bytes_written += len(chunk)
-
-            if bytes_written >= req_length:
-                break
-
-    except aio_web.ConnectionResetError:
-        pass  # User ne close kiya
-    except Exception as e:
-        logger.error(f"stream_file_handler error: {e}")
-
-    try:
-        await response.write_eof()
-    except: pass
-    return response
-
-@routes.get(r"/download/{msg_id:\d+}")
-async def download_handler(request: aio_web.Request):
-    """Download — attachment as file"""
-    msg_id = int(request.match_info["msg_id"])
-    info = await get_file_info(msg_id)
-    if not info:
-        return aio_web.json_response({"error": "File not found"}, status=404)
-
-    # Same as stream but disposition = attachment
-    request_copy = request
-    file_msg = info["msg"]
-    file_size = info["file_size"]
-    file_name = info["file_name"]
-    mime_type = info["mime_type"]
-    req_length = file_size
-
-    headers = {
-        "Content-Type": mime_type,
-        "Content-Length": str(req_length),
-        "Content-Disposition": f'attachment; filename="{file_name}"',
-        "Accept-Ranges": "bytes",
-    }
-
-    response = aio_web.StreamResponse(status=200, headers=headers)
-    await response.prepare(request)
-
-    try:
-        client_to_use = userbot if userbot else bot
-        async for chunk in client_to_use.stream_media(file_msg):
-            await response.write(chunk)
-    except aio_web.ConnectionResetError:
-        pass
-    except Exception as e:
-        logger.error(f"download_handler error: {e}")
-
-    try:
-        await response.write_eof()
-    except: pass
-    return response
-
-# JSON API routes
-@routes.get("/api/plans")
-async def api_plans(request):
-    return aio_web.json_response({
-        "plans": [
-            {"id": "10days",  "name": "10 Din",  "days": 10,  "price": 50,  "desc": "Best Starter"},
-            {"id": "30days",  "name": "30 Din",  "days": 30,  "price": 150, "desc": "Most Popular"},
-            {"id": "60days",  "name": "60 Din",  "days": 60,  "price": 200, "desc": "Great Value"},
-            {"id": "150days", "name": "150 Din", "days": 150, "price": 500, "desc": "Super Saver"},
-            {"id": "365days", "name": "1 Saal",  "days": 365, "price": 800, "desc": "Best Deal"},
-        ],
-        "group_plans": [
-            {"id": "group_1m", "name": "1 Mahina",  "days": 30, "price": 300, "desc": "Group Shortlink"},
-            {"id": "group_2m", "name": "2 Mahine",  "days": 60, "price": 550, "desc": "Best Value"},
-        ],
-        "upi": UPI_ID,
-        "qr_url": "https://envs.sh/GdE.jpg",
-        "contact": "@asbhaibsr"
-    })
-
-@routes.get("/api/user_status/{user_id}")
-async def api_user_status(request):
-    try:
-        user_id = int(request.match_info["user_id"])
-        prem_doc = await premium_col.find_one({"user_id": user_id})
-        trial_doc = await free_trial_col.find_one({"user_id": user_id})
-        user_doc = await users_col.find_one({"user_id": user_id})
-        pending = await payments_col.count_documents({"user_id": user_id, "status": "pending"})
-        is_prem, is_trial, expiry_str = False, False, None
-        if prem_doc and prem_doc.get("expiry"):
-            exp = make_aware(prem_doc["expiry"])
-            if now() < exp:
-                is_prem = True
-                is_trial = prem_doc.get("trial", False)
-                expiry_str = exp.astimezone(IST).strftime("%d %b %Y %H:%M")
-        return aio_web.json_response({
-            "is_premium": is_prem, "is_trial": is_trial,
-            "trial_used": bool(trial_doc), "expiry": expiry_str,
-            "refer_count": user_doc.get("refer_count", 0) if user_doc else 0,
-            "pending_payments": pending
-        })
-    except Exception as e:
-        return aio_web.json_response({"is_premium": False, "error": str(e)})
-
-@routes.get("/api/refer/{user_id}")
-async def api_refer(request):
-    try:
-        user_id = int(request.match_info["user_id"])
-        doc = await users_col.find_one({"user_id": user_id})
-        refer_count = doc.get("refer_count", 0) if doc else 0
-        return aio_web.json_response({
-            "refer_count": refer_count,
-            "refers_needed": max(0, 10 - (refer_count % 10))
-        })
-    except Exception as e:
-        return aio_web.json_response({"refer_count": 0, "error": str(e)})
-
-@routes.post("/api/submit_payment")
-async def api_submit_payment(request):
-    import base64, tempfile, os as _os
-    try:
-        data = await request.json()
-    except:
-        return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
-
-    user_id   = data.get("user_id")
-    name      = data.get("name", "Unknown")
-    plan_id   = data.get("plan_id")
-    amount    = data.get("amount")
-    txn_id    = data.get("txn_id", "").strip()
-    screenshot = data.get("screenshot", "")
-    group_id  = data.get("group_id")
-    group_link = data.get("group_link", "")
-
-    if not all([user_id, plan_id, txn_id]):
-        return aio_web.json_response({"ok": False, "error": "Saari details bharo!"}, status=400)
-
-    plan_days_map = {"10days":10,"30days":30,"60days":60,"150days":150,"365days":365,"group_1m":30,"group_2m":60}
-    days = plan_days_map.get(plan_id, 30)
-
-    existing = await payments_col.find_one({"txn_id": txn_id})
-    if existing:
-        return aio_web.json_response({"ok": False, "error": "Transaction ID already submitted!"}, status=400)
-
-    is_group_plan = str(plan_id).startswith("group_")
-    pay_type = "🏘 GROUP PREMIUM" if is_group_plan else "💎 USER PREMIUM"
-    group_info = f"\n🏘 Group: {group_id}\n🔗 {group_link}" if is_group_plan and group_id else ""
-
-    pay_doc = {
-        "user_id": user_id, "name": name, "plan_id": plan_id,
-        "days": days, "amount": amount, "txn_id": txn_id,
-        "screenshot": screenshot[:200] if screenshot else "",
-        "status": "pending", "submitted_at": now(),
-        "is_group": is_group_plan,
-        "group_id": str(group_id) if group_id else None,
-        "group_link": group_link or ""
-    }
-    result = await payments_col.insert_one(pay_doc)
-    pay_id = str(result.inserted_id)
-
-    msg_text = (
-        f"💰 **Naya Payment — {pay_type}**\n\n"
-        f"👤 {name} (`{user_id}`)\n"
-        f"📦 Plan: **{plan_id}** ({days} din)\n"
-        f"💵 Amount: ₹{amount}\n"
-        f"🔖 TXN ID: `{txn_id}`"
-        f"{group_info}\n"
-        f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
-    )
-    kb = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("✅ Approve", callback_data=f"pay_approve_{pay_id}_{user_id}_{days}"),
-            InlineKeyboardButton("❌ Reject",  callback_data=f"pay_reject_{pay_id}_{user_id}")
-        ]
-    ])
-
-    if screenshot and screenshot.startswith("data:image"):
-        try:
-            img_data = base64.b64decode(screenshot.split(",")[1])
-            with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf:
-                tf.write(img_data); tf_path = tf.name
-            await bot.send_photo(LOG_CHANNEL, tf_path, caption=msg_text, reply_markup=kb)
-            await bot.send_photo(OWNER_ID, tf_path, caption=msg_text, reply_markup=kb)
-            _os.unlink(tf_path)
-        except:
-            await bot.send_message(LOG_CHANNEL, msg_text, reply_markup=kb)
-            try: await bot.send_message(OWNER_ID, msg_text, reply_markup=kb)
-            except: pass
-    else:
-        await bot.send_message(LOG_CHANNEL, msg_text, reply_markup=kb)
-        try: await bot.send_message(OWNER_ID, msg_text, reply_markup=kb)
-        except: pass
-
-    return aio_web.json_response({"ok": True, "message": "✅ Request submit ho gayi! 1-2 ghante mein activate hoga."})
-
-@routes.post("/api/claim_trial")
-async def api_claim_trial(request):
-    try:
-        data = await request.json()
-    except:
-        return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
-
-    user_id = data.get("user_id")
-    if not user_id:
-        return aio_web.json_response({"ok": False, "error": "User ID missing"}, status=400)
-
-    doc = await free_trial_col.find_one({"user_id": user_id})
-    if doc:
-        return aio_web.json_response({"ok": False, "message": "Free trial pehle le chuke ho! Premium lo."})
-
-    await free_trial_col.insert_one({"user_id": user_id, "claimed_at": now()})
-    expiry = now() + timedelta(minutes=5)
-    await premium_col.update_one(
-        {"user_id": user_id},
-        {"$set": {"user_id": user_id, "expiry": expiry, "trial": True, "added": now()}},
-        upsert=True
-    )
-    try:
-        await bot.send_message(
-            user_id,
-            "🆓 **Free Trial Shuru!**\n\n**5 minute** ke liye Premium active!\n"
-            "Group mein movie search karo abhi!\n\n"
-            "⏰ 5 min baad band hoga.\n💎 Continue ke liye Premium lo!"
-        )
-    except: pass
-    await send_log(f"🆓 Free Trial\n👤 `{user_id}`")
-    return aio_web.json_response({"ok": True, "message": "Trial shuru! 5 min ke liye premium active."})
-
-@routes.post("/api/help")
-async def api_help(request):
-    try:
-        data = await request.json()
-    except:
-        return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
-
-    user_id = data.get("user_id")
-    name = data.get("name", "Unknown")
-    msg_text = data.get("message", "")
-    if not msg_text:
-        return aio_web.json_response({"ok": False, "error": "No message"}, status=400)
-
-    await help_msgs_col.insert_one({"user_id": user_id, "name": name, "message": msg_text, "time": now()})
-    await send_log(f"📩 **Mini App Help**\n\n👤 {name} (`{user_id}`)\n\n💬 {msg_text}")
-    return aio_web.json_response({"ok": True})
-
-# Add all routes
-aio_app.add_routes(routes)
-
-async def run_aiohttp_server():
-    """aiohttp server start karo"""
-    runner = aio_web.AppRunner(aio_app)
-    await runner.setup()
-    site = aio_web.TCPSite(runner, "0.0.0.0", PORT)
-    await site.start()
-    logger.info(f"✅ aiohttp server started on port {PORT}")
-
-# Backward compatibility — Flask se migrate
-def run_flask():
-    """Legacy — aiohttp use karo instead"""
-    pass
-
-
-def run_async(coro):
-    """Flask routes se async code run karo — bot ke event loop mein"""
-    try:
-        loop = bot.loop
-        if loop and loop.is_running():
-            future = asyncio.run_coroutine_threadsafe(coro, loop)
-            return future.result(timeout=30)
-        else:
-            # Fallback
-            return asyncio.run(coro)
-    except Exception as e:
-        logger.error(f"run_async error: {e}")
-        raise
-
-# ═══════════════════════════════════════
-#  DATABASE
-# ═══════════════════════════════════════
-mongo_client  = AsyncIOMotorClient(MONGO_URI)
-db            = mongo_client["asbhaidropbot"]
-users_col     = db["users"]
-groups_col    = db["groups"]
-premium_col   = db["premium"]
-settings_col  = db["settings"]
-tokens_col    = db["tokens"]
-requests_col  = db["requests"]
-banned_col    = db["banned"]
-refers_col    = db["refers"]        # {referrer_id, referred_id, time}
-free_trial_col = db["free_trials"]  # {user_id, uses, last_time}
-help_msgs_col  = db["help_msgs"]    # Mini app help messages
-payments_col   = db["payments"]     # {user_id, plan_id, txn_id, status, ...}
-shortlinks_col = db["shortlinks"]   # {api_key, url, hours, label, active, order}
-verify_log_col = db["verify_logs"]  # {user_id, shortlink_id, verified_at, count}
-group_prem_col = db["group_premium"] # {chat_id, owner_id, txn_id, status, expiry, days}
-group_sl_col   = db["group_shortlinks"] # {chat_id, api_key, url, hours, label, order}
-
-# Group-level settings: {chat_id, free_results, premium_results, force_sub, shortlink_enabled, ...}
-group_settings_col = db["group_settings"]
+# ── Local modules ──
+from config import (
+    API_ID, API_HASH, BOT_TOKEN, STRING_SESSION,
+    OWNER_ID, FILE_CHANNEL, LOG_CHANNEL, MAIN_CHANNEL,
+    FORCE_SUB_ID, FORCE_SUB_CHANNEL, SHORTLINK_API, SHORTLINK_URL,
+    KOYEB_URL, ADMINS, IST, UPI_ID, PORT,
+    _shortlink_cache, _search_locks, _search_cooldown,
+    DEFAULT_SETTINGS, GROUP_DEFAULTS,
+    now, now_ist, make_aware, logger
+)
+from database import (
+    mongo_client, db,
+    users_col, groups_col, premium_col, settings_col, tokens_col,
+    requests_col, banned_col, refers_col, free_trial_col, help_msgs_col,
+    payments_col, shortlinks_col, verify_log_col, group_prem_col,
+    group_sl_col, group_settings_col,
+    get_settings, update_setting, get_group_settings, update_group_setting,
+    save_user, save_group, is_banned, ban_user, unban_user,
+    get_free_trial_status, is_premium, add_premium, remove_premium, get_premium_expiry,
+    get_daily_count, increment_daily,
+    is_verified_today, mark_verified, make_token, check_token,
+    get_fsub_list, check_member_multi, build_fsub_keyboard, force_sub_check,
+    get_active_shortlinks, make_shortlink_with, make_shortlink,
+    get_user_verify_state, mark_sl_verified, get_cached_shortlink, verify_check,
+    clean_caption, get_file_name, get_file_size, del_later, send_log,
+    do_search, send_file_to_pm,
+    set_clients as db_set_clients,
+)
+from routes import (
+    aio_app, routes, run_aiohttp_server, run_async,
+    set_clients as routes_set_clients,
+)
 
 # ═══════════════════════════════════════
 #  CLIENTS
@@ -593,697 +79,43 @@ userbot = Client(
 scheduler = AsyncIOScheduler(timezone=IST)
 
 # ═══════════════════════════════════════
-#  SETTINGS — Global
+#  LANGUAGES for filter buttons
 # ═══════════════════════════════════════
-async def get_settings():
-    s = await settings_col.find_one({"_id": "global"})
-    if not s:
-        await settings_col.insert_one({"_id": "global", **DEFAULT_SETTINGS})
-        return DEFAULT_SETTINGS.copy()
-    # Ensure keys exist
-    for k, v in DEFAULT_SETTINGS.items():
-        if k not in s:
-            s[k] = v
-    return s
-
-async def update_setting(key, value):
-    await settings_col.update_one(
-        {"_id": "global"}, {"$set": {key: value}}, upsert=True
-    )
+LANGUAGES = [
+    ("🇬🇧 English", "english"), ("🇮🇳 Hindi", "hindi"),
+    ("🎭 Malayalam", "malayalam"), ("🎵 Tamil", "tamil"),
+    ("🎬 Telugu", "telugu"), ("🌸 Bengali", "bengali"),
+    ("🎪 Kannada", "kannada"), ("🎠 Punjabi", "punjabi"),
+]
 
 # ═══════════════════════════════════════
-#  GROUP SETTINGS
+#  CLEANUP SCHEDULER
 # ═══════════════════════════════════════
-GROUP_DEFAULTS = {
-    "free_results": 5,
-    "premium_results": 10,
-    "force_sub": True,
-    "shortlink_enabled": True,
-    "auto_delete": True,
-    "auto_delete_time": 300,
-    "request_mode": False,
-}
+async def cleanup():
+    # Requests 24h se purane delete karo
+    from datetime import timedelta
+    one_day_ago = now() - timedelta(hours=24)
+    req_deleted = await requests_col.delete_many({"time": {"$lt": one_day_ago}})
+    if req_deleted.deleted_count:
+        logger.info(f"Cleanup: {req_deleted.deleted_count} old requests deleted")
 
-async def get_group_settings(chat_id):
-    doc = await group_settings_col.find_one({"chat_id": chat_id})
-    if not doc:
-        return GROUP_DEFAULTS.copy()
-    result = GROUP_DEFAULTS.copy()
-    result.update({k: v for k, v in doc.items() if k != "_id"})
-    return result
+    deleted = await tokens_col.delete_many({"expiry": {"$lt": now()}})
+    expired_cache = [k for k, (_, exp) in _shortlink_cache.items() if now() > exp]
+    for k in expired_cache:
+        del _shortlink_cache[k]
 
-async def update_group_setting(chat_id, key, value):
-    await group_settings_col.update_one(
-        {"chat_id": chat_id},
-        {"$set": {key: value, "chat_id": chat_id}},
-        upsert=True
-    )
+    cur_time = asyncio.get_event_loop().time()
+    expired_cd = [k for k, v in _search_cooldown.items() if cur_time > v]
+    for k in expired_cd:
+        del _search_cooldown[k]
 
-# ═══════════════════════════════════════
-#  USER / GROUP
-# ═══════════════════════════════════════
-async def save_user(user, referred_by=None):
-    existing = await users_col.find_one({"user_id": user.id})
-    is_new = existing is None
-    update = {
-        "user_id": user.id,
-        "name": user.first_name,
-        "username": user.username,
-        "last_seen": now()
-    }
-    if is_new and referred_by:
-        update["referred_by"] = referred_by
-    await users_col.update_one(
-        {"user_id": user.id},
-        {"$set": update, "$setOnInsert": {"joined": now(), "refer_count": 0}},
-        upsert=True
-    )
-    # Refer credit karo
-    if is_new and referred_by and referred_by != user.id:
-        already = await refers_col.find_one({"referrer_id": referred_by, "referred_id": user.id})
-        if not already:
-            await refers_col.insert_one({
-                "referrer_id": referred_by,
-                "referred_id": user.id,
-                "time": now()
-            })
-            result = await users_col.find_one_and_update(
-                {"user_id": referred_by},
-                {"$inc": {"refer_count": 1}},
-                return_document=True
-            )
-            new_count = result.get("refer_count", 0) if result else 0
-            # Har 10 refer pe 15 din premium
-            if new_count > 0 and new_count % 10 == 0:
-                await add_premium(referred_by, 15)
-                try:
-                    await bot.send_message(
-                        referred_by,
-                        f"🎉 **{new_count} Refer Complete!**\n\n"
-                        f"Reward: **15 din ka FREE Premium!** 💎\n\n"
-                        f"Keep referring! Har 10 refer = 15 din premium!"
-                    )
-                except: pass
-            else:
-                # Notification
-                needed = 10 - (new_count % 10)
-                try:
-                    await bot.send_message(
-                        referred_by,
-                        f"✅ **Naya Refer Aaya!**\n\n"
-                        f"Total Refers: **{new_count}**\n"
-                        f"Premium ke liye: **{needed}** aur chahiye!\n\n"
-                        f"Refer link: /referlink"
-                    )
-                except: pass
-    return is_new
+    stale_locks = [k for k, v in _search_locks.items() if v]
+    for k in stale_locks:
+        _search_locks[k] = False
 
-async def save_group(chat):
-    existing = await groups_col.find_one({"chat_id": chat.id})
-    is_new = existing is None
-    await groups_col.update_one(
-        {"chat_id": chat.id},
-        {"$set": {"chat_id": chat.id, "title": chat.title, "last_active": now()}},
-        upsert=True
-    )
-    return is_new
+    if deleted.deleted_count or expired_cache or expired_cd:
+        logger.info(f"Cleanup: {deleted.deleted_count} tokens, {len(expired_cache)} sl_cache, {len(expired_cd)} cooldown")
 
-async def is_banned(user_id):
-    return bool(await banned_col.find_one({"user_id": user_id}))
-
-async def ban_user(user_id, reason="No reason"):
-    await banned_col.update_one(
-        {"user_id": user_id},
-        {"$set": {"user_id": user_id, "reason": reason, "banned_at": now()}},
-        upsert=True
-    )
-
-async def unban_user(user_id):
-    await banned_col.delete_one({"user_id": user_id})
-
-# ═══════════════════════════════════════
-#  FREE TRIAL
-# ═══════════════════════════════════════
-async def get_free_trial_status(user_id):
-    """Returns (uses_left, can_use). 2 baar 5 min ke liye use kar sakta hai."""
-    doc = await free_trial_col.find_one({"user_id": user_id})
-    if not doc:
-        return 2, True
-    uses = doc.get("uses", 0)
-    return max(0, 2 - uses), uses < 2
-
-async def use_free_trial(user_id):
-    await free_trial_col.update_one(
-        {"user_id": user_id},
-        {"$inc": {"uses": 1}, "$set": {"last_time": now(), "user_id": user_id}},
-        upsert=True
-    )
-
-# ═══════════════════════════════════════
-#  PREMIUM
-# ═══════════════════════════════════════
-async def is_premium(user_id):
-    if user_id in ADMINS: return True
-    doc = await premium_col.find_one({"user_id": user_id})
-    if not doc: return False
-    expiry = make_aware(doc.get("expiry"))
-    if expiry and now() > expiry:
-        await premium_col.delete_one({"user_id": user_id})
-        return False
-    return True
-
-async def add_premium(user_id, days=30):
-    # Existing premium extend karo
-    existing = await premium_col.find_one({"user_id": user_id})
-    if existing and existing.get("expiry"):
-        old_expiry = make_aware(existing["expiry"])
-        base = max(old_expiry, now())
-    else:
-        base = now()
-    expiry = base + timedelta(days=days)
-    await premium_col.update_one(
-        {"user_id": user_id},
-        {"$set": {"user_id": user_id, "expiry": expiry, "added": now()}},
-        upsert=True
-    )
-
-async def remove_premium(user_id):
-    await premium_col.delete_one({"user_id": user_id})
-
-async def get_premium_expiry(user_id):
-    doc = await premium_col.find_one({"user_id": user_id})
-    if doc and doc.get("expiry"):
-        return make_aware(doc["expiry"])
-    return None
-
-# ═══════════════════════════════════════
-#  DAILY LIMIT
-# ═══════════════════════════════════════
-async def get_daily_count(user_id):
-    today = now_ist().strftime("%Y-%m-%d")
-    doc = await users_col.find_one({"user_id": user_id, "date": today})
-    return doc.get("count", 0) if doc else 0
-
-async def increment_daily(user_id):
-    today = now_ist().strftime("%Y-%m-%d")
-    await users_col.update_one(
-        {"user_id": user_id, "date": today},
-        {"$inc": {"count": 1}}, upsert=True
-    )
-
-# ═══════════════════════════════════════
-#  VERIFICATION (Shortlink)
-# ═══════════════════════════════════════
-async def is_verified_today(user_id):
-    """get_user_verify_state se consistent check"""
-    if await is_premium(user_id): return True
-    all_done, _, _ = await get_user_verify_state(user_id)
-    return all_done
-
-async def mark_verified(user_id):
-    today = now_ist().strftime("%Y-%m-%d")
-    await users_col.update_one(
-        {"user_id": user_id},
-        {"$set": {"verified_date": today}},
-        upsert=True
-    )
-
-# ═══════════════════════════════════════
-#  TOKEN
-# ═══════════════════════════════════════
-async def make_token(user_id, token_type="verify"):
-    token = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
-    await tokens_col.insert_one({
-        "token": token,
-        "user_id": user_id,
-        "type": token_type,
-        "expiry": now() + timedelta(minutes=5),
-        "created": now()
-    })
-    return token
-
-async def check_token(token, expected_uid=None):
-    doc = await tokens_col.find_one({"token": token})
-    if not doc: return False, None
-    if now() > make_aware(doc["expiry"]): return False, None
-    stored_uid = doc.get("user_id")
-    if expected_uid and stored_uid != expected_uid: return False, None
-    return True, stored_uid
-
-# ═══════════════════════════════════════
-#  MULTI-CHANNEL FORCE SUB
-# ═══════════════════════════════════════
-async def get_fsub_list():
-    """Global settings se force sub channels+groups list lo"""
-    s = await get_settings()
-    channels = s.get("fsub_channels", [])
-    groups = s.get("fsub_groups", [])
-    return channels + groups
-
-async def check_member_multi(user_id, prem=False):
-    """
-    Premium users ko force sub nahi.
-    Returns: (joined_all: bool, not_joined: list of channel dicts)
-    """
-    if user_id in ADMINS: return True, []
-    if prem: return True, []   # Premium = no force sub
-    
-    s = await get_settings()
-    if not s.get("force_sub"): return True, []
-    
-    fsub_list = await get_fsub_list()
-    if not fsub_list:
-        # Fallback to old single channel
-        try:
-            m = await bot.get_chat_member(FORCE_SUB_ID, user_id)
-            if m.status in [enums.ChatMemberStatus.BANNED, enums.ChatMemberStatus.LEFT]:
-                return False, [{"id": FORCE_SUB_ID, "username": FORCE_SUB_CHANNEL, "title": "Channel"}]
-            return True, []
-        except UserNotParticipant:
-            return False, [{"id": FORCE_SUB_ID, "username": FORCE_SUB_CHANNEL, "title": "Channel"}]
-        except:
-            return True, []
-    
-    not_joined = []
-    for ch in fsub_list:
-        ch_id = ch.get("id")
-        if not ch_id: continue
-        try:
-            m = await bot.get_chat_member(ch_id, user_id)
-            if m.status in [enums.ChatMemberStatus.BANNED, enums.ChatMemberStatus.LEFT]:
-                not_joined.append(ch)
-        except UserNotParticipant:
-            not_joined.append(ch)
-        except Exception as e:
-            logger.warning(f"fsub check error {ch_id}: {e}")
-    
-    return len(not_joined) == 0, not_joined
-
-async def build_fsub_keyboard(not_joined, uid):
-    """Buttons banao — har channel ke liye join button"""
-    buttons = []
-    for ch in not_joined:
-        ch_id = ch.get("id")
-        uname = ch.get("username", "")
-        title = ch.get("title", "Channel")
-        if uname:
-            url = f"https://t.me/{uname.replace('@','')}"
-        else:
-            try:
-                url = await bot.export_chat_invite_link(ch_id)
-            except:
-                url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
-        buttons.append([InlineKeyboardButton(f"📢 {title} Join Karo", url=url)])
-    buttons.append([InlineKeyboardButton("✅ Join Kar Liya — Verify", callback_data=f"checkjoin_{uid}")])
-    return InlineKeyboardMarkup(buttons)
-
-async def force_sub_check(client, message, prem=False):
-    uid = message.from_user.id
-    if uid in ADMINS: return True
-    if prem: return True  # Premium bypass
-    
-    s = await get_settings()
-    if not s.get("force_sub"): return True
-    
-    joined, not_joined = await check_member_multi(uid, prem)
-    if joined: return True
-    
-    kb = await build_fsub_keyboard(not_joined, uid)
-    names = ", ".join(ch.get("title", "Channel") for ch in not_joined)
-    msg = await message.reply(
-        f"⚠️ **Pehle Join Karo!**\n\n"
-        f"📢 **{names}**\n\n"
-        f"Join ke baad ✅ **Verify** button dabao.",
-        reply_markup=kb
-    )
-    # Auto delete force sub message
-    asyncio.create_task(del_later(msg, 300))
-    return False
-
-# ═══════════════════════════════════════
-#  MULTI-SHORTLINK SYSTEM
-# ═══════════════════════════════════════
-
-async def get_active_shortlinks(chat_id=None):
-    """
-    Active shortlinks sorted by order.
-    Group shortlinks bhi include karo agar chat_id diya.
-    Returns list of {api_key, url, hours, label, _id}
-    """
-    links = []
-    async for doc in shortlinks_col.find({"active": True}).sort("order", 1):
-        links.append(doc)
-    # Group-specific shortlinks
-    if chat_id:
-        async for doc in group_sl_col.find({"chat_id": chat_id, "active": True}).sort("order", 1):
-            doc["_group_sl"] = True
-            links.append(doc)
-    return links
-
-async def make_shortlink_with(url, api_key, api_url):
-    """Ek specific shortlink API se link banao"""
-    try:
-        api = f"https://{api_url}/api?api={api_key}&url={url}&format=text"
-        async with aiohttp.ClientSession() as sess:
-            async with sess.get(api, timeout=aiohttp.ClientTimeout(total=10)) as r:
-                if r.status == 200:
-                    result = (await r.text()).strip()
-                    if result.startswith("http"):
-                        return result
-    except Exception as e:
-        logger.error(f"shortlink error [{api_url}]: {e}")
-    return url
-
-async def make_shortlink(url):
-    """Fallback: global settings se shortlink banao (purana system)"""
-    s = await get_settings()
-    if not s.get("shortlink_enabled"): return url
-    links = await get_active_shortlinks()
-    if links:
-        sl = links[0]
-        return await make_shortlink_with(url, sl["api_key"], sl["url"])
-    if not SHORTLINK_API: return url
-    return await make_shortlink_with(url, SHORTLINK_API, SHORTLINK_URL)
-
-async def get_user_verify_state(user_id):
-    """
-    User ka current verify state.
-    DB shortlinks + env shortlink dono check karta hai.
-    Returns: (all_verified: bool, next_sl: dict|None, wait_hours: float)
-    next_sl = None means env-based shortlink use karo
-    """
-    links = await get_active_shortlinks()
-
-    if not links:
-        # DB mein koi shortlink nahi — env check karo
-        if not SHORTLINK_API:
-            return True, None, 0  # Koi shortlink configured nahi — bypass
-        # Env shortlink hai — legacy date-based verify check
-        today = now_ist().strftime("%Y-%m-%d")
-        doc = await users_col.find_one({"user_id": user_id})
-        verified = bool(doc and doc.get("verified_date") == today)
-        if verified:
-            return True, None, 0
-        else:
-            return False, None, 0  # None = env shortlink use karo
-
-    # DB shortlinks hain — unhe check karo
-    for sl in links:
-        sl_id = str(sl["_id"])
-        hours = sl.get("hours", 24)
-        log = await verify_log_col.find_one(
-            {"user_id": user_id, "shortlink_id": sl_id},
-            sort=[("verified_at", -1)]
-        )
-        if not log:
-            return False, sl, 0
-        last_verify = make_aware(log["verified_at"])
-        time_passed = (now() - last_verify).total_seconds() / 3600
-        if time_passed >= hours:
-            return False, sl, 0
-    return True, None, 0
-
-async def mark_sl_verified(user_id, shortlink_id, sl_label=""):
-    """Shortlink verify ka log save karo"""
-    # Count kitni baar verify kiya
-    count = await verify_log_col.count_documents({"user_id": user_id, "shortlink_id": shortlink_id})
-    await verify_log_col.insert_one({
-        "user_id": user_id,
-        "shortlink_id": shortlink_id,
-        "sl_label": sl_label,
-        "verified_at": now(),
-        "verify_number": count + 1
-    })
-
-async def get_cached_shortlink(user_id, group_id, target_url, sl_doc=None):
-    """
-    5 min cache — same user, same group, same shortlink => same link.
-    5 min baad naya bane.
-    """
-    sl_id = str(sl_doc["_id"]) if sl_doc else "default"
-    key = (user_id, group_id, sl_id)
-    cached = _shortlink_cache.get(key)
-    if cached:
-        link, expiry = cached
-        if now() < expiry:
-            return link
-    if sl_doc:
-        link = await make_shortlink_with(target_url, sl_doc["api_key"], sl_doc["url"])
-    else:
-        link = await make_shortlink(target_url)
-    _shortlink_cache[key] = (link, now() + timedelta(minutes=5))
-    return link
-
-# ═══════════════════════════════════════
-#  VERIFY CHECK — Multi-Shortlink
-# ═══════════════════════════════════════
-async def verify_check(client, message, prem=False):
-    uid = message.from_user.id
-    if uid in ADMINS: return True
-    if prem: return True
-
-    s = await get_settings()
-    # Global shortlink enabled check
-    if not s.get("shortlink_enabled", True): return True
-
-    # Group-level shortlink check
-    if hasattr(message, 'chat') and message.chat:
-        try:
-            gs = await get_group_settings(message.chat.id)
-            if not gs.get("shortlink_enabled", True): return True
-        except: pass
-
-    all_done, next_sl, _ = await get_user_verify_state(uid)
-    if all_done: return True
-
-    me = await client.get_me()
-    group_id = message.chat.id
-
-    # next_sl hai ya env-based shortlink use karo
-    if next_sl:
-        sl_id = str(next_sl["_id"])
-        sl_label = next_sl.get("label", "Shortlink")
-        hours = next_sl.get("hours", 24)
-        token = await make_token(uid, f"sv_{sl_id}")
-        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
-        short = await get_cached_shortlink(uid, group_id, verify_url, next_sl)
-    else:
-        # Fallback: env SHORTLINK_API use karo
-        if not SHORTLINK_API:
-            # No shortlink configured — mark verified automatically
-            await mark_verified(uid)
-            return True
-        sl_id = "env_default"
-        sl_label = "Verify"
-        hours = 24
-        token = await make_token(uid, "sv_env")
-        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
-        # Direct shortlink banao
-        try:
-            api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
-            async with aiohttp.ClientSession() as sess:
-                async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
-                    if r.status == 200:
-                        result = (await r.text()).strip()
-                        short = result if result.startswith("http") else verify_url
-                    else:
-                        short = verify_url
-        except:
-            short = verify_url
-
-    links = await get_active_shortlinks()
-    total = max(len(links), 1)
-    done_count = 0
-    if next_sl:
-        for sl in links:
-            if str(sl["_id"]) == sl_id: break
-            done_count += 1
-
-    step_text = f"Step {done_count+1}/{total}: **{sl_label}**" if total > 1 else f"**{sl_label}**"
-    time_text = f"Har **{hours} ghante** baad" if hours < 24 else "**Har din 1 baar**"
-
-    kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"🔗 {step_text} — Verify Karo", url=short)],
-        [InlineKeyboardButton("💎 Premium — Kabhi Verify Nahi", callback_data="buy_premium")]
-    ])
-    msg = await message.reply(
-        f"🔐 **Verification Baaki Hai** ({done_count+1}/{total})\n\n"
-        f"👇 Neeche link dabao → shortlink solve karo → verify!\n"
-        f"⏰ {time_text} karna hoga.\n\n"
-        f"💎 Premium lo — kabhi verify nahi!",
-        reply_markup=kb,
-        parse_mode=enums.ParseMode.MARKDOWN
-    )
-    asyncio.create_task(del_later(msg, 300))
-    return False
-
-# ═══════════════════════════════════════
-#  UTILS
-# ═══════════════════════════════════════
-def clean_caption(text):
-    if not text: return ""
-    text = re.sub(r'http\S+', '', text)
-    text = re.sub(r't\.me/\S+', '', text)
-    text = re.sub(r'@\w+', '', text)
-    text = re.sub(r'#\w+', '', text)
-    text = re.sub(r'\n+', ' ', text)
-    return text.strip()
-
-def get_file_name(msg):
-    name = ""
-    if msg.document and msg.document.file_name:
-        name = msg.document.file_name
-    elif msg.video and msg.video.file_name:
-        name = msg.video.file_name
-    elif msg.audio and msg.audio.file_name:
-        name = msg.audio.file_name
-    elif msg.caption:
-        name = clean_caption(msg.caption)[:80]
-    else:
-        return "File"
-    name = re.sub(r'@\w+', '', name)
-    name = re.sub(r'http\S+', '', name)
-    name = re.sub(r't\.me/\S+', '', name)
-    name = name.strip()
-    return name if name else "File"
-
-def get_file_size(msg):
-    """File size nicely formatted"""
-    size = 0
-    if msg.document: size = msg.document.file_size or 0
-    elif msg.video: size = msg.video.file_size or 0
-    elif msg.audio: size = msg.audio.file_size or 0
-    if size == 0: return ""
-    for unit in ['B','KB','MB','GB']:
-        if size < 1024: return f"{size:.1f} {unit}"
-        size /= 1024
-    return f"{size:.1f} TB"
-
-async def del_later(msg, secs):
-    await asyncio.sleep(secs)
-    try: await msg.delete()
-    except FloodWait as e:
-        await asyncio.sleep(e.value + 2)
-        try: await msg.delete()
-        except: pass
-    except: pass
-
-async def send_log(text):
-    try:
-        await bot.send_message(LOG_CHANNEL, text, disable_web_page_preview=True)
-    except FloodWait as e:
-        await asyncio.sleep(e.value)
-        try: await bot.send_message(LOG_CHANNEL, text, disable_web_page_preview=True)
-        except: pass
-    except Exception as e:
-        logger.warning(f"log failed: {e}")
-
-# ═══════════════════════════════════════
-#  SEARCH
-# ═══════════════════════════════════════
-async def do_search(query, limit=5):
-    if not userbot:
-        logger.error("Userbot not available!")
-        return []
-
-    query = query.strip()
-    words = [w.lower() for w in query.split() if len(w) > 1]
-    if not words: return []
-
-    results = []
-    seen = set()
-    search_queries = []
-    if len(words) > 1:
-        search_queries.append(query)
-    search_queries.extend(words[:4])
-    longest = max(words, key=len)
-    if longest not in search_queries:
-        search_queries.append(longest)
-
-    try:
-        for sq in search_queries:
-            async for msg in userbot.search_messages(FILE_CHANNEL, sq, limit=50):
-                if msg.id in seen: continue
-                seen.add(msg.id)
-                txt = ""
-                if msg.caption: txt += msg.caption.lower() + " "
-                if msg.document and msg.document.file_name:
-                    txt += msg.document.file_name.lower() + " "
-                if msg.text: txt += msg.text.lower() + " "
-                if not txt.strip(): continue
-                score = sum(2 for w in words if w in txt)
-                if query.lower() in txt: score += 10
-                if score > 0:
-                    results.append((score, msg))
-
-        results.sort(key=lambda x: x[0], reverse=True)
-        return [m for _, m in results[:limit]]
-    except Exception as e:
-        logger.error(f"search error [{query}]: {e}")
-        return []
-
-# ═══════════════════════════════════════
-#  SEND FILE TO PM
-# ═══════════════════════════════════════
-async def send_file_to_pm(client, user, msg_id, prem=False):
-    try:
-        s = await get_settings()
-        t = s.get("auto_delete_time", 300)
-        mins = t // 60
-
-        file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
-        if not file_msg or file_msg.empty:
-            return False, "File nahi mili"
-
-        fname = get_file_name(file_msg)
-        fsize = get_file_size(file_msg)
-        size_text = f"📦 Size: {fsize}\n" if fsize else ""
-
-        clean_cap = (
-            f"🗂 **{fname}**\n\n"
-            f"{size_text}"
-            f"⏳ **{mins} min** baad delete hogi!\n"
-            f"📌 Abhi save ya forward kar lo!"
-        )
-
-        # Premium users ke liye stream + download buttons
-        kb = None
-        if prem and KOYEB_URL:
-            # Stream = mini app mein video player
-            stream_page_url = f"{KOYEB_URL}/?uid={user.id}&mid={msg_id}"
-            # Download = direct download endpoint (attachment mode)
-            download_direct_url = f"{KOYEB_URL}/download/{msg_id}?uid={user.id}"
-            kb = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("▶️ Stream", web_app=WebAppInfo(url=stream_page_url)),
-                    InlineKeyboardButton("⬇️ Download", url=download_direct_url)
-                ]
-            ])
-
-        sent = await file_msg.copy(
-            chat_id=user.id,
-            caption=clean_cap,
-            parse_mode=enums.ParseMode.MARKDOWN,
-            reply_markup=kb
-        )
-
-        if not sent:
-            return False, "Send fail hua"
-
-        await increment_daily(user.id)
-
-        if s.get("auto_delete"):
-            asyncio.create_task(del_later(sent, t))
-
-        return True, fname
-
-    except Exception as e:
-        logger.error(f"send_file_to_pm error: {e}")
-        return False, str(e)
-
-# ═══════════════════════════════════════
-#  /START
-# ═══════════════════════════════════════
 @bot.on_message(filters.command("start"))
 async def start_handler(client, message: Message):
     uid = message.from_user.id
@@ -1723,21 +555,34 @@ async def search_handler(client, message: Message):
         await wait_msg.delete()
         me = await client.get_me()
 
-        buttons = []
+        # ── File buttons banao ──
+        file_buttons = []
         for idx, fmsg in enumerate(found):
             fname = get_file_name(fmsg)
             fname_clean = re.sub(r'[@#]\w+', '', fname)
             fname_clean = re.sub(r'_+', ' ', fname_clean).strip()
-            fname_show = fname_clean[:40] if fname_clean else f"File {idx+1}"
+            fname_show = fname_clean[:38] if fname_clean else f"File {idx+1}"
             fsize = get_file_size(fmsg)
             size_text = f" [{fsize}]" if fsize else ""
-
             final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
-            buttons.append([
+            file_buttons.append([
                 InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)
             ])
 
-        kb = InlineKeyboardMarkup(buttons)
+        # ── Filter buttons — Language / Season / Episode / Send All ──
+        # Premium users free use kar sakte hain, free users ko premium prompt
+        filter_row1 = [
+            InlineKeyboardButton("🌐 Language",  callback_data=f"flang_{uid}_{query}"),
+            InlineKeyboardButton("📺 Season",    callback_data=f"fseason_{uid}_{query}"),
+            InlineKeyboardButton("🎬 Episode",   callback_data=f"fepisode_{uid}_{query}"),
+        ]
+        filter_row2 = [
+            InlineKeyboardButton("📤 Send All",  callback_data=f"fsendall_{uid}_{query[:20]}"),
+        ]
+
+        all_buttons = file_buttons + [filter_row1, filter_row2]
+        kb = InlineKeyboardMarkup(all_buttons)
+
         t = gs.get("auto_delete_time", 300)
         mins = t // 60
         count_text = len(found)
@@ -1746,6 +591,7 @@ async def search_handler(client, message: Message):
             f"🔍 {message.from_user.mention}\n\n"
             f"╔══ 🎯 **{count_text} Result{'s' if count_text > 1 else ''}** ══╗\n\n"
             f"👇 File ka button dabao → PM mein file aayegi!\n"
+            f"🌐 Language / 📺 Season / 🎬 Episode filter karo\n"
             f"⏳ Ye message {mins} min baad delete hoga."
         )
 
@@ -3358,6 +2204,389 @@ async def group_shortlinks_list(client, message: Message):
         text += f"{active} {i+1}. **{sl.get('label')}** | `{sl.get('url')}` | ⏰ {sl.get('hours',24)}h\n"
     await message.reply(text)
 
+
+# ═══════════════════════════════════════
+#  FILTER CALLBACKS — Language/Season/Episode/SendAll
+# ═══════════════════════════════════════
+
+LANGUAGES = [
+    ("🇬🇧 English", "english"), ("🇮🇳 Hindi", "hindi"),
+    ("🎭 Malayalam", "malayalam"), ("🎵 Tamil", "tamil"),
+    ("🎬 Telugu", "telugu"), ("🌸 Bengali", "bengali"),
+    ("🎪 Kannada", "kannada"), ("🎠 Punjabi", "punjabi"),
+]
+
+@bot.on_callback_query(filters.regex(r"^flang_"))
+async def lang_filter_cb(client, query: CallbackQuery):
+    parts = query.data.split("_", 2)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    search_q = parts[2] if len(parts) > 2 else ""
+
+    prem = await is_premium(query.from_user.id)
+    if not prem and query.from_user.id not in ADMINS:
+        await query.answer(
+            "💎 Language filter ke liye Premium chahiye!\n"
+            "Bot PM mein /premium type karo.",
+            show_alert=True
+        )
+        return
+
+    # Language buttons
+    kb_rows = []
+    for i in range(0, len(LANGUAGES), 2):
+        row = []
+        for lang_name, lang_key in LANGUAGES[i:i+2]:
+            row.append(InlineKeyboardButton(
+                lang_name,
+                callback_data=f"lang_{uid}_{lang_key}_{search_q[:20]}"
+            ))
+        kb_rows.append(row)
+    kb_rows.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+
+    await query.message.edit_reply_markup(InlineKeyboardMarkup(kb_rows))
+    await query.answer("Koi bhi language choose karo:", show_alert=False)
+
+@bot.on_callback_query(filters.regex(r"^lang_"))
+async def lang_select_cb(client, query: CallbackQuery):
+    parts = query.data.split("_", 3)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    lang_key = parts[2] if len(parts) > 2 else ""
+    search_q = parts[3] if len(parts) > 3 else ""
+
+    if query.from_user.id != uid and query.from_user.id not in ADMINS:
+        await query.answer("❌ Ye button aapke liye nahi!", show_alert=True)
+        return
+
+    await query.answer(f"🔍 {lang_key.title()} results dhundh raha hoon...", show_alert=False)
+
+    # Re-search with language filter
+    combined_q = f"{search_q} {lang_key}"
+    found = await do_search(combined_q, limit=10)
+    if not found:
+        await query.message.edit_text(
+            f"😕 **{lang_key.title()}** mein '{search_q}' nahi mila\n\n"
+            f"Alag language try karo ya `/request {search_q}` karo"
+        )
+        return
+
+    me = await client.get_me()
+    buttons = []
+    for idx, fmsg in enumerate(found):
+        fname = get_file_name(fmsg)
+        fname_clean = re.sub(r'[@#]\w+', '', fname)
+        fname_clean = re.sub(r'_+', ' ', fname_clean).strip()
+        fname_show = fname_clean[:38] if fname_clean else f"File {idx+1}"
+        fsize = get_file_size(fmsg)
+        size_text = f" [{fsize}]" if fsize else ""
+        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
+
+    # Language selector — current language ✅
+    lang_row = []
+    for lang_name, lk in LANGUAGES[:4]:
+        tick = "✅ " if lk == lang_key else ""
+        lang_row.append(InlineKeyboardButton(tick + lang_name.split()[-1], callback_data=f"lang_{uid}_{lk}_{search_q[:15]}"))
+    buttons.append(lang_row)
+    lang_row2 = []
+    for lang_name, lk in LANGUAGES[4:]:
+        tick = "✅ " if lk == lang_key else ""
+        lang_row2.append(InlineKeyboardButton(tick + lang_name.split()[-1], callback_data=f"lang_{uid}_{lk}_{search_q[:15]}"))
+    buttons.append(lang_row2)
+    buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+
+    await query.message.edit_text(
+        f"🌐 **{lang_key.title()}** — {len(found)} Results\n\n"
+        f"👇 File ka button dabao:",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
+@bot.on_callback_query(filters.regex(r"^fseason_"))
+async def season_filter_cb(client, query: CallbackQuery):
+    parts = query.data.split("_", 2)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    search_q = parts[2] if len(parts) > 2 else ""
+
+    prem = await is_premium(query.from_user.id)
+    if not prem and query.from_user.id not in ADMINS:
+        await query.answer(
+            "💎 Season filter ke liye Premium chahiye!\nBot PM mein /premium type karo.",
+            show_alert=True
+        )
+        return
+
+    # Season buttons — S01 to S20 (page 1), more on next page + Full Season
+    season_buttons = []
+    season_buttons.append([InlineKeyboardButton("📦 Full Season", callback_data=f"season_{uid}_full season_{search_q[:15]}")])
+    # S01-S05
+    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{search_q[:15]}") for i in range(1,6)])
+    # S06-S10
+    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{search_q[:15]}") for i in range(6,11)])
+    # S11-S15
+    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{search_q[:15]}") for i in range(11,16)])
+    # S16-S20
+    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{search_q[:15]}") for i in range(16,21)])
+    # More seasons button
+    season_buttons.append([
+        InlineKeyboardButton("▶️ S21-S40", callback_data=f"spage_{uid}_21_{search_q[:15]}"),
+        InlineKeyboardButton("▶️ S41-S60", callback_data=f"spage_{uid}_41_{search_q[:15]}"),
+        InlineKeyboardButton("▶️ S61-S100", callback_data=f"spage_{uid}_61_{search_q[:15]}"),
+    ])
+    season_buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+
+    await query.message.edit_reply_markup(InlineKeyboardMarkup(season_buttons))
+    await query.answer("Season choose karo:", show_alert=False)
+
+@bot.on_callback_query(filters.regex(r"^season_"))
+async def season_select_cb(client, query: CallbackQuery):
+    parts = query.data.split("_", 3)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    season_key = parts[2] if len(parts) > 2 else ""
+    search_q = parts[3] if len(parts) > 3 else ""
+
+    if query.from_user.id != uid and query.from_user.id not in ADMINS:
+        await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
+
+    await query.answer(f"🔍 {season_key.upper()} dhundh raha hoon...", show_alert=False)
+    combined_q = f"{search_q} {season_key}"
+    found = await do_search(combined_q, limit=10)
+
+    if not found:
+        await query.message.edit_text(f"😕 **{season_key.upper()}** mein '{search_q}' nahi mila\n\n`/request {search_q}` karo")
+        return
+
+    me = await client.get_me()
+    buttons = []
+    for idx, fmsg in enumerate(found):
+        fname = get_file_name(fmsg)
+        fname_clean = re.sub(r'[@#]\w+', '', re.sub(r'_+', ' ', fname)).strip()
+        fname_show = fname_clean[:38] if fname_clean else f"File {idx+1}"
+        fsize = get_file_size(fmsg)
+        size_text = f" [{fsize}]" if fsize else ""
+        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
+
+    # Season selector row
+    s_row1 = [InlineKeyboardButton("📦 Full", callback_data=f"season_{uid}_full season_{search_q[:12]}")]
+    for i in range(1, 4):
+        tick = "✅" if f"s0{i}" == season_key else f"S0{i}"
+        s_row1.append(InlineKeyboardButton(tick, callback_data=f"season_{uid}_s0{i}_{search_q[:12]}"))
+    buttons.append(s_row1)
+    buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+
+    await query.message.edit_text(
+        f"📺 **{season_key.upper()}** — {len(found)} Results\n\n👇 File choose karo:",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
+@bot.on_callback_query(filters.regex(r"^fepisode_"))
+async def episode_filter_cb(client, query: CallbackQuery):
+    parts = query.data.split("_", 2)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    search_q = parts[2] if len(parts) > 2 else ""
+
+    prem = await is_premium(query.from_user.id)
+    if not prem and query.from_user.id not in ADMINS:
+        await query.answer(
+            "💎 Episode filter ke liye Premium chahiye!\nBot PM mein /premium type karo.",
+            show_alert=True
+        )
+        return
+
+    # Episode buttons — E01 to E20 (page 1), next pages for more
+    ep_buttons = []
+    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{search_q[:15]}") for i in range(1, 6)])
+    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{search_q[:15]}") for i in range(6, 11)])
+    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{search_q[:15]}") for i in range(11, 16)])
+    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{search_q[:15]}") for i in range(16, 21)])
+    ep_buttons.append([
+        InlineKeyboardButton("▶️ E21-E40",  callback_data=f"epage_{uid}_21_{search_q[:15]}"),
+        InlineKeyboardButton("▶️ E41-E60",  callback_data=f"epage_{uid}_41_{search_q[:15]}"),
+        InlineKeyboardButton("▶️ E61-E80",  callback_data=f"epage_{uid}_61_{search_q[:15]}"),
+        InlineKeyboardButton("▶️ E81-E100", callback_data=f"epage_{uid}_81_{search_q[:15]}"),
+    ])
+    ep_buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+
+    await query.message.edit_reply_markup(InlineKeyboardMarkup(ep_buttons))
+    await query.answer("Episode number choose karo:", show_alert=False)
+
+@bot.on_callback_query(filters.regex(r"^ep_"))
+async def ep_select_cb(client, query: CallbackQuery):
+    parts = query.data.split("_", 3)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    ep_key = parts[2] if len(parts) > 2 else ""
+    search_q = parts[3] if len(parts) > 3 else ""
+
+    if query.from_user.id != uid and query.from_user.id not in ADMINS:
+        await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
+
+    await query.answer(f"🔍 {ep_key.upper()} dhundh raha hoon...", show_alert=False)
+    combined_q = f"{search_q} {ep_key}"
+    found = await do_search(combined_q, limit=5)
+
+    if not found:
+        await query.message.edit_text(f"😕 **{ep_key.upper()}** mein nahi mila\n\n`/request {search_q}` karo")
+        return
+
+    me = await client.get_me()
+    buttons = []
+    for idx, fmsg in enumerate(found):
+        fname = get_file_name(fmsg)
+        fname_clean = re.sub(r'[@#]\w+', '', re.sub(r'_+', ' ', fname)).strip()
+        fname_show = fname_clean[:38] if fname_clean else f"File {idx+1}"
+        fsize = get_file_size(fmsg)
+        size_text = f" [{fsize}]" if fsize else ""
+        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
+    buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+
+    await query.message.edit_text(
+        f"🎬 **{ep_key.upper()}** — {len(found)} Results\n\n👇 File choose karo:",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
+@bot.on_callback_query(filters.regex(r"^fsendall_"))
+async def sendall_cb(client, query: CallbackQuery):
+    parts = query.data.split("_", 2)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    search_q = parts[2] if len(parts) > 2 else ""
+
+    prem = await is_premium(query.from_user.id)
+    if not prem and query.from_user.id not in ADMINS:
+        await query.answer(
+            "💎 Send All ke liye Premium chahiye!\nBot PM mein /premium type karo.",
+            show_alert=True
+        )
+        return
+
+    if query.from_user.id != uid and query.from_user.id not in ADMINS:
+        await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
+
+    await query.answer("📤 Sab files bhej raha hoon PM mein...", show_alert=False)
+
+    found = await do_search(search_q, limit=10)
+    if not found:
+        await query.answer("😕 Koi file nahi mili!", show_alert=True); return
+
+    sent_count = 0
+    for fmsg in found:
+        try:
+            s = await get_settings()
+            t = s.get("auto_delete_time", 300)
+            fname = get_file_name(fmsg)
+            cap = f"🗂 **{fname}**\n\n⏳ {t//60} min baad delete hogi!"
+            sent = await fmsg.copy(
+                chat_id=uid,
+                caption=cap,
+                parse_mode=enums.ParseMode.MARKDOWN
+            )
+            await increment_daily(uid)
+            if s.get("auto_delete"):
+                asyncio.create_task(del_later(sent, t))
+            sent_count += 1
+            await asyncio.sleep(0.5)
+        except Exception as e:
+            logger.error(f"sendall error: {e}")
+
+    await query.message.edit_text(
+        f"✅ **{sent_count} files** aapke PM mein bhej di!\n\n"
+        f"📌 Save kar lo — {t//60} min baad delete hongi."
+    )
+
+
+@bot.on_callback_query(filters.regex(r"^spage_"))
+async def season_page_cb(client, query: CallbackQuery):
+    """Season pagination — S21-S40, S41-S60, S61-S100"""
+    prem = await is_premium(query.from_user.id)
+    if not prem and query.from_user.id not in ADMINS:
+        await query.answer("💎 Season filter ke liye Premium chahiye!", show_alert=True); return
+    parts = query.data.split("_", 3)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    start = int(parts[2]) if len(parts) > 2 else 21
+    search_q = parts[3] if len(parts) > 3 else ""
+    end = min(start + 19, 100)
+    buttons = []
+    for i in range(start, end+1, 5):
+        row = [InlineKeyboardButton(f"S{j:02d}", callback_data=f"season_{uid}_s{j:02d}_{search_q[:15]}") for j in range(i, min(i+5, end+1))]
+        buttons.append(row)
+    # Nav row
+    nav = []
+    if start > 1:
+        prev = max(1, start - 20)
+        nav.append(InlineKeyboardButton(f"◀️ S{prev:02d}-S{start-1:02d}", callback_data=f"spage_{uid}_{prev}_{search_q[:15]}"))
+    if end < 100:
+        nav.append(InlineKeyboardButton(f"▶️ S{end+1:02d}-S{min(end+20,100):02d}", callback_data=f"spage_{uid}_{end+1}_{search_q[:15]}"))
+    if nav: buttons.append(nav)
+    buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fseason_{uid}_{search_q[:20]}")])
+    await query.message.edit_reply_markup(InlineKeyboardMarkup(buttons))
+    await query.answer(f"Season {start}-{end}", show_alert=False)
+
+@bot.on_callback_query(filters.regex(r"^epage_"))
+async def episode_page_cb(client, query: CallbackQuery):
+    """Episode pagination — E21-E40, E41-E60, E61-E80, E81-E100"""
+    prem = await is_premium(query.from_user.id)
+    if not prem and query.from_user.id not in ADMINS:
+        await query.answer("💎 Episode filter ke liye Premium chahiye!", show_alert=True); return
+    parts = query.data.split("_", 3)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    start = int(parts[2]) if len(parts) > 2 else 21
+    search_q = parts[3] if len(parts) > 3 else ""
+    end = min(start + 19, 100)
+    buttons = []
+    for i in range(start, end+1, 5):
+        row = [InlineKeyboardButton(f"E{j:02d}", callback_data=f"ep_{uid}_e{j:02d}_{search_q[:15]}") for j in range(i, min(i+5, end+1))]
+        buttons.append(row)
+    nav = []
+    if start > 1:
+        prev = max(1, start - 20)
+        nav.append(InlineKeyboardButton(f"◀️ E{prev:02d}-E{start-1:02d}", callback_data=f"epage_{uid}_{prev}_{search_q[:15]}"))
+    if end < 100:
+        nav.append(InlineKeyboardButton(f"▶️ E{end+1:02d}-E{min(end+20,100):02d}", callback_data=f"epage_{uid}_{end+1}_{search_q[:15]}"))
+    if nav: buttons.append(nav)
+    buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fepisode_{uid}_{search_q[:20]}")])
+    await query.message.edit_reply_markup(InlineKeyboardMarkup(buttons))
+    await query.answer(f"Episode {start}-{end}", show_alert=False)
+
+@bot.on_callback_query(filters.regex(r"^fback_"))
+async def filter_back_cb(client, query: CallbackQuery):
+    """Filter back — original results dikho"""
+    parts = query.data.split("_", 2)
+    uid = int(parts[1]) if len(parts) > 1 else 0
+    search_q = parts[2] if len(parts) > 2 else ""
+
+    if query.from_user.id != uid and query.from_user.id not in ADMINS:
+        await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
+
+    await query.answer("🔄 Original results...", show_alert=False)
+    found = await do_search(search_q, limit=10)
+
+    if not found:
+        await query.message.edit_text(f"😕 '{search_q}' nahi mila")
+        return
+
+    me = await client.get_me()
+    buttons = []
+    for idx, fmsg in enumerate(found):
+        fname = get_file_name(fmsg)
+        fname_clean = re.sub(r'[@#]\w+', '', re.sub(r'_+', ' ', fname)).strip()
+        fname_show = fname_clean[:38] if fname_clean else f"File {idx+1}"
+        fsize = get_file_size(fmsg)
+        size_text = f" [{fsize}]" if fsize else ""
+        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
+
+    filter_row1 = [
+        InlineKeyboardButton("🌐 Language", callback_data=f"flang_{uid}_{search_q[:20]}"),
+        InlineKeyboardButton("📺 Season",   callback_data=f"fseason_{uid}_{search_q[:20]}"),
+        InlineKeyboardButton("🎬 Episode",  callback_data=f"fepisode_{uid}_{search_q[:20]}"),
+    ]
+    filter_row2 = [InlineKeyboardButton("📤 Send All", callback_data=f"fsendall_{uid}_{search_q[:20]}")]
+    buttons += [filter_row1, filter_row2]
+
+    await query.message.edit_text(
+        f"🔍 **{len(found)} Results** — {search_q}\n\n👇 File ka button dabao:",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
 # ═══════════════════════════════════════
 #  GROUP EVENTS
 # ═══════════════════════════════════════
@@ -3438,32 +2667,7 @@ async def inline_search(client, query):
 # ═══════════════════════════════════════
 #  SCHEDULER — Cleanup
 # ═══════════════════════════════════════
-async def cleanup():
-    # Requests 1 din se purane delete karo
-    one_day_ago = now() - timedelta(hours=24)
-    req_deleted = await requests_col.delete_many({"time": {"$lt": one_day_ago}})
-    if req_deleted.deleted_count:
-        logger.info(f"Cleanup: {req_deleted.deleted_count} old requests deleted")
 
-    deleted = await tokens_col.delete_many({"expiry": {"$lt": now()}})
-    expired_cache = [k for k, (_, exp) in _shortlink_cache.items() if now() > exp]
-    for k in expired_cache:
-        del _shortlink_cache[k]
-    # Search cooldown cleanup
-    cur_time = asyncio.get_event_loop().time()
-    expired_cd = [k for k, v in _search_cooldown.items() if cur_time > v]
-    for k in expired_cd:
-        del _search_cooldown[k]
-    # Search locks cleanup — agar koi lock 5 min se zyada purana ho
-    stale_locks = [k for k, v in _search_locks.items() if v]
-    for k in stale_locks:
-        _search_locks[k] = False
-    if deleted.deleted_count or expired_cache or expired_cd:
-        logger.info(f"Cleanup: {deleted.deleted_count} tokens, {len(expired_cache)} sl_cache, {len(expired_cd)} cooldown")
-
-# ═══════════════════════════════════════
-#  START
-# ═══════════════════════════════════════
 def start_bot():
     """
     Everything ek hi async event loop mein chalao:
@@ -3471,6 +2675,10 @@ def start_bot():
     - aiohttp streaming server (unlimited file sizes)
     - APScheduler
     """
+    # database.py aur routes.py ko bot/userbot clients do
+    db_set_clients(bot, userbot)
+    routes_set_clients(bot, userbot)
+
     if userbot:
         userbot.start()
         logger.info("✅ Userbot started")
