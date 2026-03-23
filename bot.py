@@ -13,6 +13,23 @@ from pyrogram.errors import (
     FloodWait, UserIsBlocked, InputUserDeactivated,
     ChatWriteForbidden, PeerIdInvalid, UserNotParticipant
 )
+
+# Global FloodWait middleware
+async def safe_send(func, *args, **kwargs):
+    """FloodWait ke saath safely message bhejo"""
+    for attempt in range(3):
+        try:
+            return await func(*args, **kwargs)
+        except FloodWait as e:
+            if attempt < 2:
+                logger.warning(f"FloodWait {e.value}s, waiting...")
+                await asyncio.sleep(min(e.value, 30))
+            else:
+                logger.error(f"FloodWait max retries reached")
+                return None
+        except Exception as e:
+            logger.error(f"safe_send error: {e}")
+            return None
 from motor.motor_asyncio import AsyncIOMotorClient
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from flask import Flask, jsonify, request as flask_request, send_from_directory
@@ -946,11 +963,19 @@ def get_file_size(msg):
 async def del_later(msg, secs):
     await asyncio.sleep(secs)
     try: await msg.delete()
+    except FloodWait as e:
+        await asyncio.sleep(e.value + 2)
+        try: await msg.delete()
+        except: pass
     except: pass
 
 async def send_log(text):
     try:
         await bot.send_message(LOG_CHANNEL, text, disable_web_page_preview=True)
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        try: await bot.send_message(LOG_CHANNEL, text, disable_web_page_preview=True)
+        except: pass
     except Exception as e:
         logger.warning(f"log failed: {e}")
 
@@ -1278,6 +1303,8 @@ async def refer_link_cmd(client, message: Message):
 )
 async def pm_search_handler(client, message: Message):
     if not message.from_user: return
+    if message.from_user.is_bot: return
+    if message.forward_date: return
     uid = message.from_user.id
     await save_user(message.from_user)
     query_text = message.text.strip()
@@ -1337,116 +1364,188 @@ async def pm_search_handler(client, message: Message):
 # ═══════════════════════════════════════
 #  GROUP SEARCH
 # ═══════════════════════════════════════
+# Per-user search cooldown — ek search khatam ho tab tak naya nahi
+_search_locks = {}
+_search_cooldown = {}  # {uid_query: expire_time}
+
 @bot.on_message(
     filters.group & filters.text &
+    ~filters.bot &
+    ~filters.via_bot &
+    filters.incoming &
     ~filters.command([
         "start","help","stats","broadcast","setdelete",
         "addpremium","removepremium","forcesub","settings",
         "premium","ping","shortlink","setlimit","setresults",
         "mystats","ban","unban","maintenance","request","referlink",
-        "fsub","groupsettings","gsettings","gset"
+        "fsub","groupsettings","gsettings","gset",
+        "addshortlink","removeshortlink","shortlinks",
+        "setcommands","gshortlink","gshortlinkremove","gshortlinks"
     ])
 )
 async def search_handler(client, message: Message):
-    if not message.from_user: return
-    await save_group(message.chat)
-    await save_user(message.from_user)
+    # ── Strict guards — infinite loop rokne ke liye ──
+    if not message.from_user: return          # Channel posts ignore
+    if message.from_user.is_bot: return       # Bot messages ignore
+    if message.forward_date: return           # Forwarded ignore
+    if message.via_bot: return                # Inline bot results ignore
 
-    query = message.text.strip()
-    if len(query) < 2: return
+    # Bot ka apna ID check — most important
+    try:
+        me = await client.get_me()
+        if message.from_user.id == me.id: return
+    except: pass
 
+    query = (message.text or "").strip()
+
+    # Minimum length aur maximum length
+    if len(query) < 2 or len(query) > 80: return
+
+    # Unicode/emoji-only messages ignore (sirf emoji ya special chars)
+    import unicodedata
+    plain = ''.join(c for c in query if unicodedata.category(c) not in ('So','Sm','Sk','Sc','Cs')).strip()
+    if len(plain) < 2: return
+
+    # Bot ke apne sent messages ignore — har prefix check
+    bot_msg_prefixes = (
+        "🔍","😕","⚠","📩","🔐","╔","🔧","✅","❌","🗂","🆘",
+        "🎉","💎","📢","⏳","🔒","🏓","📊","👤","🚫","🔗","📱",
+        "ℹ️","💰","🆓","📥","🏘","⚙️","🔔","📋",
+    )
+    if any(query.startswith(p) for p in bot_msg_prefixes): return
+
+    # Short common words jo movie naam nahi hain
+    skip_words = {"hi","hello","hii","hlo","helo","ok","okay","thanks","ty",
+                  "thx","bye","lol","haha","😊","🙏","yes","no","kya","koi",
+                  "hai","hain","nahi","nahi","kaise","kaisa","mera","tera"}
+    if query.lower() in skip_words: return
+
+    # Per-user rate limit — ek user ek waqt mein sirf ek search
     uid = message.from_user.id
-    chat_id = message.chat.id
-    s = await get_settings()
-    gs = await get_group_settings(chat_id)
 
-    if await is_banned(uid): return
-    if s.get("maintenance") and uid not in ADMINS:
-        msg = await message.reply("🔧 Maintenance. Thodi der baad try karo.")
-        asyncio.create_task(del_later(msg, 60))
+    # Cooldown — same user ki same query 30 sec mein ek baar
+    cache_key = f"{uid}_{query.lower()[:20]}"
+    if _search_cooldown.get(cache_key, 0) > asyncio.get_event_loop().time():
         return
 
-    prem = await is_premium(uid)
+    if _search_locks.get(uid):
+        return  # Already searching
+    _search_locks[uid] = True
+    _search_cooldown[cache_key] = asyncio.get_event_loop().time() + 30
 
-    # Request mode check
-    if gs.get("request_mode") and not prem and uid not in ADMINS:
-        msg = await message.reply(
+    try:
+        await save_group(message.chat)
+        await save_user(message.from_user)
+
+        chat_id = message.chat.id
+        s = await get_settings()
+        gs = await get_group_settings(chat_id)
+
+        if await is_banned(uid): return
+        if s.get("maintenance") and uid not in ADMINS:
+            msg = await message.reply("🔧 Maintenance. Thodi der baad try karo.")
+            asyncio.create_task(del_later(msg, 60))
+            return
+
+        prem = await is_premium(uid)
+
+        # Request mode check
+        if gs.get("request_mode") and not prem and uid not in ADMINS:
+            msg = await message.reply(
             f"📩 **Request Mode Active Hai**\n\n"
             f"Search band hai. `/request {query}` karein.\n"
             f"💎 Premium se search bypass karo!"
-        )
-        asyncio.create_task(del_later(msg, 300))
-        return
-
-    # Force sub — premium bypass karta hai
-    if not await force_sub_check(client, message, prem): return
-    if not await verify_check(client, message, prem): return
-
-    if not prem:
-        count = await get_daily_count(uid)
-        if count >= s.get("daily_limit", 10):
-            msg = await message.reply(
-                f"⚠️ {message.from_user.mention}, aaj ki limit "
-                f"**{s.get('daily_limit',10)}** ho gayi!\n"
-                f"💎 /premium lo unlimited ke liye!"
             )
             asyncio.create_task(del_later(msg, 300))
             return
 
-    wait_msg = await message.reply(f"🔍 **'{query}'** dhundh raha hoon... ⏳")
+        # Force sub — premium bypass karta hai
+        if not await force_sub_check(client, message, prem): return
+        if not await verify_check(client, message, prem): return
 
-    # Result count — group settings se
-    if prem:
-        limit = gs.get("premium_results", 10)
-    else:
-        limit = gs.get("free_results", 5)
+        if not prem:
+            count = await get_daily_count(uid)
+            if count >= s.get("daily_limit", 10):
+                msg = await message.reply(
+                f"⚠️ {message.from_user.mention}, aaj ki limit "
+                f"**{s.get('daily_limit',10)}** ho gayi!\n"
+                f"💎 /premium lo unlimited ke liye!"
+                )
+                asyncio.create_task(del_later(msg, 300))
+                return
 
-    found = await do_search(query, limit=limit)
+        try:
 
-    if not found:
-        edited = await wait_msg.edit(
+            wait_msg = await message.reply(f"🔍 **'{query}'** dhundh raha hoon... ⏳")
+        except FloodWait as e:
+            logger.warning(f"FloodWait sending wait_msg, skip uid={uid}")
+            _search_locks[uid] = False
+            return
+        except Exception as e:
+            logger.error(f"wait_msg error: {e}")
+            _search_locks[uid] = False
+            return
+        # Result count — group settings se
+        if prem:
+            limit = gs.get("premium_results", 10)
+        else:
+            limit = gs.get("free_results", 5)
+
+        found = await do_search(query, limit=limit)
+
+        if not found:
+            edited = await wait_msg.edit(
             f"😕 **'{query}' nahi mila**\n\n"
             f"• Sirf naam likhein\n"
             f"• Spelling check karo\n\n"
             f"📩 `/request {query}`"
         )
-        asyncio.create_task(del_later(edited, 300))
-        return
+            asyncio.create_task(del_later(edited, 300))
+            return
 
-    found = found[:limit]
-    await wait_msg.delete()
-    me = await client.get_me()
+        found = found[:limit]
+        await wait_msg.delete()
+        me = await client.get_me()
 
-    buttons = []
-    for idx, fmsg in enumerate(found):
-        fname = get_file_name(fmsg)
-        fname_clean = re.sub(r'[@#]\w+', '', fname)
-        fname_clean = re.sub(r'_+', ' ', fname_clean).strip()
-        fname_show = fname_clean[:40] if fname_clean else f"File {idx+1}"
-        fsize = get_file_size(fmsg)
-        size_text = f" [{fsize}]" if fsize else ""
+        buttons = []
+        for idx, fmsg in enumerate(found):
+            fname = get_file_name(fmsg)
+            fname_clean = re.sub(r'[@#]\w+', '', fname)
+            fname_clean = re.sub(r'_+', ' ', fname_clean).strip()
+            fname_show = fname_clean[:40] if fname_clean else f"File {idx+1}"
+            fsize = get_file_size(fmsg)
+            size_text = f" [{fsize}]" if fsize else ""
 
-        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
-        buttons.append([
-            InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)
-        ])
+            final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+            buttons.append([
+                InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)
+            ])
 
-    kb = InlineKeyboardMarkup(buttons)
-    t = gs.get("auto_delete_time", 300)
-    mins = t // 60
-    count_text = len(found)
+        kb = InlineKeyboardMarkup(buttons)
+        t = gs.get("auto_delete_time", 300)
+        mins = t // 60
+        count_text = len(found)
 
-    result_text = (
-        f"🔍 {message.from_user.mention}\n\n"
-        f"╔══ 🎯 **{count_text} Result{'s' if count_text > 1 else ''}** ══╗\n\n"
-        f"👇 File ka button dabao → PM mein file aayegi!\n"
-        f"⏳ Ye message {mins} min baad delete hoga."
-    )
+        result_text = (
+            f"🔍 {message.from_user.mention}\n\n"
+            f"╔══ 🎯 **{count_text} Result{'s' if count_text > 1 else ''}** ══╗\n\n"
+            f"👇 File ka button dabao → PM mein file aayegi!\n"
+            f"⏳ Ye message {mins} min baad delete hoga."
+        )
 
-    result_msg = await message.reply(result_text, reply_markup=kb)
+        result_msg = await message.reply(result_text, reply_markup=kb)
 
-    if gs.get("auto_delete", True):
-        asyncio.create_task(del_later(result_msg, t))
+        if gs.get("auto_delete", True):
+            asyncio.create_task(del_later(result_msg, t))
+
+    except FloodWait as e:
+        logger.warning(f"FloodWait {e.value}s uid={uid} — skipping reply")
+        # FloodWait mein reply mat karo — bas wait karo
+        await asyncio.sleep(min(e.value, 10))
+    except Exception as e:
+        logger.error(f"search_handler error uid={uid}: {e}")
+    finally:
+        _search_locks[uid] = False
 
 # ═══════════════════════════════════════
 #  /FSUB — Multi-channel management
@@ -2947,8 +3046,17 @@ async def cleanup():
     expired_cache = [k for k, (_, exp) in _shortlink_cache.items() if now() > exp]
     for k in expired_cache:
         del _shortlink_cache[k]
-    if deleted.deleted_count or expired_cache:
-        logger.info(f"Cleanup: {deleted.deleted_count} tokens, {len(expired_cache)} cache")
+    # Search cooldown cleanup
+    cur_time = asyncio.get_event_loop().time()
+    expired_cd = [k for k, v in _search_cooldown.items() if cur_time > v]
+    for k in expired_cd:
+        del _search_cooldown[k]
+    # Search locks cleanup — agar koi lock 5 min se zyada purana ho
+    stale_locks = [k for k, v in _search_locks.items() if v]
+    for k in stale_locks:
+        _search_locks[k] = False
+    if deleted.deleted_count or expired_cache or expired_cd:
+        logger.info(f"Cleanup: {deleted.deleted_count} tokens, {len(expired_cache)} sl_cache, {len(expired_cd)} cooldown")
 
 # ═══════════════════════════════════════
 #  START
