@@ -3,476 +3,556 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>AsBhai Premium</title>
+<title>AsBhai Bot</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{
   --bg:#07071a;--c1:#0d0d22;--c2:#121230;--c3:#181840;
   --p:#7c3aed;--p2:#a855f7;--p3:#c084fc;
-  --g:#f59e0b;--g2:#fbbf24;--g3:#fde68a;
+  --g:#f59e0b;--g2:#fbbf24;
   --gr:#10b981;--gr2:#34d399;
-  --r:#ef4444;--t:#f1f5f9;--m:#64748b;--m2:#94a3b8;
-  --bd:rgba(124,58,237,0.18);--bd2:rgba(124,58,237,0.38);
-  --sh:0 0 32px rgba(124,58,237,0.25);
+  --r:#ef4444;--b:#3b82f6;
+  --t:#f1f5f9;--m:#64748b;--m2:#94a3b8;
+  --bd:rgba(124,58,237,0.2);--bd2:rgba(124,58,237,0.4);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--t);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:76px}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 600px 400px at 15% 8%,rgba(124,58,237,0.1) 0%,transparent 70%),radial-gradient(ellipse 400px 300px at 85% 85%,rgba(168,85,247,0.07) 0%,transparent 70%);pointer-events:none;z-index:0}
-.pg{display:none;padding:14px 14px 10px;position:relative;z-index:1}
-.pg.on{display:block;animation:fu .22s ease}
-@keyframes fu{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
-.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(7,7,26,0.97);backdrop-filter:blur(28px);border-top:1px solid var(--bd2);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom)}
-.nb{flex:1;padding:9px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;border:none;background:none;color:var(--m);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;cursor:pointer;transition:color .2s;position:relative}
-.nb .i{font-size:20px;transition:transform .25s}
-.nb.on{color:var(--p2)}
-.nb.on .i{transform:scale(1.18) translateY(-1px)}
-.nbar{position:absolute;top:0;left:22%;right:22%;height:2px;background:linear-gradient(90deg,var(--p),var(--p2));border-radius:0 0 3px 3px;opacity:0;transition:opacity .2s}
-.nb.on .nbar{opacity:1}
+body{background:var(--bg);color:var(--t);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 500px 300px at 20% 10%,rgba(124,58,237,.12),transparent 70%),radial-gradient(ellipse 300px 200px at 80% 85%,rgba(168,85,247,.08),transparent 70%);pointer-events:none;z-index:0}
+
+/* ── PAGES ── */
+.pg{display:none;position:relative;z-index:1;animation:fu .2s ease}
+.pg.on{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── HOME — 3 BIG ICONS ── */
+#pg-home{padding:20px 16px 100px;display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh}
+#pg-home.on{display:flex}
+.home-brand{text-align:center;margin-bottom:36px}
+.home-brand h1{font-size:26px;font-weight:900;background:linear-gradient(90deg,var(--g),var(--p2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.home-brand p{font-size:13px;color:var(--m2);margin-top:4px}
+.home-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(124,58,237,.14);border:1px solid var(--bd2);border-radius:100px;padding:5px 14px;font-size:11px;color:var(--p3);margin-top:10px;font-weight:700}
+.dot-live{width:7px;height:7px;border-radius:50%;background:var(--gr2);box-shadow:0 0 7px var(--gr2)}
+
+.big-btns{display:flex;flex-direction:column;gap:14px;width:100%;max-width:380px}
+.big-btn{border-radius:20px;padding:22px 20px;cursor:pointer;border:1px solid;display:flex;align-items:center;gap:18px;transition:transform .18s,box-shadow .18s;text-align:left}
+.big-btn:active{transform:scale(.97)}
+.big-btn.stream{background:linear-gradient(135deg,#0c1a2e,#162845);border-color:rgba(59,130,246,.4);box-shadow:0 0 20px rgba(59,130,246,.1)}
+.big-btn.premium{background:linear-gradient(135deg,#1a0d44,#221060);border-color:rgba(168,85,247,.4);box-shadow:0 0 20px rgba(124,58,237,.15)}
+.big-btn.earn{background:linear-gradient(135deg,#0a2010,#0f3a1a);border-color:rgba(16,185,129,.4);box-shadow:0 0 20px rgba(16,185,129,.1)}
+.big-ico{font-size:48px;flex-shrink:0;line-height:1}
+.big-txt h2{font-size:20px;font-weight:900;margin-bottom:4px}
+.big-txt p{font-size:12px;color:var(--m2);line-height:1.5}
+.big-btn.stream .big-txt h2{color:#93c5fd}
+.big-btn.premium .big-txt h2{color:var(--p3)}
+.big-btn.earn .big-txt h2{color:var(--gr2)}
+
+/* ── BACK BUTTON ── */
+.back-bar{display:flex;align-items:center;gap:10px;padding:16px 16px 8px;position:sticky;top:0;background:rgba(7,7,26,.95);backdrop-filter:blur(16px);z-index:50;border-bottom:1px solid var(--bd)}
+.back-btn{width:36px;height:36px;border-radius:10px;background:var(--c1);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
+.back-title{font-size:15px;font-weight:800}
+
+/* ── STREAM PAGE ── */
+#pg-stream{padding-bottom:30px}
+.stream-player{background:#000;aspect-ratio:16/9;position:relative;overflow:hidden}
+video{width:100%;height:100%;display:none}
+.ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#03030f}
+.ph-ico{font-size:54px;opacity:.2}
+.ph p{font-size:12px;color:var(--m);text-align:center;padding:0 20px}
+.stream-ctrls{display:flex;gap:8px;padding:12px 16px;flex-wrap:wrap}
+.sc-btn{flex:1;min-width:72px;background:var(--c1);border:1px solid var(--bd);color:var(--t);border-radius:11px;padding:10px 8px;font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
+.sc-btn:active{background:var(--p);transform:scale(.96)}
+.sc-btn.dl{background:var(--p);border-color:var(--p2)}
+.stream-info{padding:0 16px 16px}
+.sinfo-card{background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px}
+.sinfo-card h3{font-size:13px;font-weight:800;margin-bottom:6px;color:var(--p3)}
+.sinfo-card p{font-size:11.5px;color:var(--m2);line-height:1.7}
+
+/* ── PREMIUM PAGE ── */
+#pg-premium{padding-bottom:30px}
+.prem-hero{background:linear-gradient(135deg,#130a38,#1e1060,#100830);padding:24px 18px 20px;text-align:center;border-bottom:1px solid var(--bd2)}
+.prem-hero h2{font-size:22px;font-weight:900}
+.prem-hero h2 span{background:linear-gradient(90deg,var(--g),var(--p2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.prem-hero p{font-size:12px;color:var(--m2);margin-top:5px}
+#premStatus{margin-top:12px}
+
+.page-body{padding:14px 16px}
 .st{font-size:10.5px;font-weight:900;color:var(--m2);text-transform:uppercase;letter-spacing:2px;margin:18px 0 10px;display:flex;align-items:center;gap:8px}
 .st::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bd2),transparent)}
-.hero{background:linear-gradient(135deg,#130a38 0%,#1e1060 50%,#100830 100%);border:1px solid var(--bd2);border-radius:22px;padding:24px 18px 20px;text-align:center;position:relative;overflow:hidden;margin-bottom:14px;box-shadow:var(--sh)}
-.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,rgba(168,85,247,0.18),transparent 65%);pointer-events:none}
-.hem{font-size:38px;display:block;margin-bottom:8px}
-.hero h1{font-size:23px;font-weight:900;letter-spacing:-.5px}
-.hero h1 b{background:linear-gradient(90deg,var(--g),var(--p2),var(--g2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero p{color:var(--m2);font-size:12px;margin-top:5px;line-height:1.5}
-.hbadge{display:inline-flex;align-items:center;gap:5px;background:rgba(124,58,237,0.14);border:1px solid var(--bd2);border-radius:100px;padding:5px 14px;font-size:11px;color:var(--p3);margin-top:11px;font-weight:700}
-.scard{border-radius:18px;padding:15px 16px;margin-bottom:12px;display:flex;align-items:center;gap:13px;border:1px solid}
-.scard.gold{background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(251,191,36,.05));border-color:rgba(245,158,11,.35)}
-.scard.grey{background:var(--c1);border-color:var(--bd)}
-.sci{font-size:30px;flex-shrink:0}
-.scinfo h3{font-size:13.5px;font-weight:800}
-.scinfo p{font-size:11px;color:var(--m2);margin-top:2px;line-height:1.4}
-.exptag{background:rgba(245,158,11,.14);color:var(--g);border:1px solid rgba(245,158,11,.3);border-radius:100px;font-size:10px;font-weight:800;padding:3px 10px;margin-top:6px;display:inline-block}
-.trial{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(52,211,153,.05));border:1px solid rgba(16,185,129,.28);border-radius:18px;padding:15px 16px;display:flex;align-items:center;gap:13px;margin-bottom:13px;cursor:pointer;transition:transform .18s;position:relative;overflow:hidden}
-.trial::after{content:'1 BAAR ONLY';position:absolute;top:8px;right:-16px;background:var(--gr);color:#000;font-size:7px;font-weight:900;padding:3px 22px;transform:rotate(35deg);letter-spacing:.5px}
-.trial:active{transform:scale(.97)}
-.trial.used{opacity:.5;cursor:not-allowed}
-.trial.used::after{content:'KHATAM';background:var(--r)}
-.tco{font-size:32px}
-.ttxt h3{font-size:13.5px;font-weight:800;color:var(--gr2)}
-.ttxt p{font-size:11.5px;color:rgba(255,255,255,.6);margin-top:2px}
-.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}
-.plan{background:var(--c1);border:1px solid var(--bd);border-radius:18px;padding:15px 13px;cursor:pointer;transition:transform .18s,box-shadow .18s;position:relative;overflow:hidden}
-.plan:active{transform:scale(.96);box-shadow:var(--sh)}
-.plan.hot{background:linear-gradient(135deg,#190d44,#221060);border-color:rgba(245,158,11,.5);box-shadow:0 0 18px rgba(245,158,11,.1)}
-.plan.hot::after{content:'🔥 BEST';position:absolute;top:7px;right:-17px;background:linear-gradient(135deg,var(--g),var(--g2));color:#000;font-size:7.5px;font-weight:900;padding:3px 22px;transform:rotate(35deg)}
+
+/* Plans */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.plan{background:var(--c1);border:1px solid var(--bd);border-radius:16px;padding:14px 12px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden}
+.plan:active{transform:scale(.96)}
+.plan.hot{background:linear-gradient(135deg,#190d44,#231060);border-color:rgba(245,158,11,.5)}
+.plan.hot::after{content:'🔥 BEST';position:absolute;top:7px;right:-17px;background:linear-gradient(135deg,var(--g),var(--g2));color:#000;font-size:7px;font-weight:900;padding:3px 22px;transform:rotate(35deg)}
 .pname{font-size:11px;font-weight:700;color:var(--m2);margin-bottom:3px}
-.pprice{font-size:25px;font-weight:900;line-height:1}
-.pprice sup{font-size:13px;vertical-align:super}
-.pdesc{font-size:10.5px;color:var(--p3);font-weight:700;margin-top:3px}
-.pdays{font-size:10px;color:var(--m);margin-top:1px}
-.flist{display:flex;flex-direction:column;gap:8px}
-.fi{background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:11px}
-.fic{font-size:20px;width:33px;text-align:center;flex-shrink:0}
+.pprice{font-size:23px;font-weight:900;line-height:1}
+.pprice sup{font-size:12px;vertical-align:super}
+.pdesc{font-size:10px;color:var(--p3);font-weight:700;margin-top:3px}
+
+/* Features */
+.flist{display:flex;flex-direction:column;gap:7px}
+.fi{background:var(--c1);border:1px solid var(--bd);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:10px}
+.fic{font-size:19px;width:30px;text-align:center;flex-shrink:0}
 .ftx h4{font-size:12.5px;font-weight:800}
-.ftx p{font-size:10.5px;color:var(--m2);margin-top:2px}
-.fbdg{background:rgba(124,58,237,.18);color:var(--p3);font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:100px;border:1px solid var(--bd2);flex-shrink:0}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:300;align-items:flex-end;backdrop-filter:blur(7px)}
+.ftx p{font-size:10.5px;color:var(--m2);margin-top:1px}
+.fbdg{background:rgba(124,58,237,.18);color:var(--p3);font-size:9px;font-weight:800;padding:2px 7px;border-radius:100px;border:1px solid var(--bd2);flex-shrink:0}
+
+/* Refer section */
+.refer-hero{background:linear-gradient(135deg,#160e48,#1e1060);border:1px solid rgba(168,85,247,.3);border-radius:18px;padding:20px 16px;text-align:center}
+.rcount{font-size:46px;font-weight:900;color:var(--p2);line-height:1}
+.rlbl{font-size:11.5px;color:var(--m2);margin-top:4px}
+.pbar{background:rgba(255,255,255,.06);border-radius:100px;height:8px;margin:11px 0 5px;overflow:hidden}
+.pfill{height:100%;background:linear-gradient(90deg,var(--p),var(--p2));border-radius:100px;transition:width .6s ease}
+.ptxt{font-size:10.5px;color:var(--m2);text-align:center}
+.link-box{background:var(--c1);border:1px solid var(--bd);border-radius:13px;padding:12px 14px;margin:10px 0;display:flex;align-items:center;gap:9px}
+.lurl{flex:1;font-size:11px;color:var(--m2);word-break:break-all}
+.cpybtn{background:var(--p);color:white;border:none;border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+
+/* Trial */
+.trial-card{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(52,211,153,.05));border:1px solid rgba(16,185,129,.28);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden}
+.trial-card::after{content:'1 BAAR ONLY';position:absolute;top:7px;right:-16px;background:var(--gr);color:#000;font-size:6.5px;font-weight:900;padding:3px 20px;transform:rotate(35deg)}
+.trial-card:active{transform:scale(.97)}
+.trial-card.used{opacity:.5;cursor:not-allowed}
+.trial-card.used::after{content:'KHATAM';background:var(--r)}
+
+/* EARN PAGE */
+#pg-earn{padding-bottom:30px}
+.earn-hero{background:linear-gradient(135deg,#081a10,#0f3020);padding:22px 18px 18px;text-align:center;border-bottom:1px solid rgba(16,185,129,.25)}
+.earn-hero h2{font-size:21px;font-weight:900;color:var(--gr2)}
+.earn-hero p{font-size:12px;color:rgba(255,255,255,.65);margin-top:5px}
+
+.step-card{background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;gap:13px;align-items:flex-start}
+.step-num{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--p2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0;margin-top:1px}
+.step-txt h4{font-size:13px;font-weight:800;margin-bottom:3px}
+.step-txt p{font-size:11.5px;color:var(--m2);line-height:1.6}
+.step-txt code{background:rgba(124,58,237,.15);border:1px solid var(--bd);border-radius:6px;padding:2px 6px;font-size:11px;color:var(--p3);font-family:monospace}
+
+.gplan{background:linear-gradient(135deg,#1a0d44,#251560);border:1px solid rgba(245,158,11,.4);border-radius:16px;padding:16px;cursor:pointer;transition:transform .15s;margin-bottom:9px}
+.gplan:active{transform:scale(.97)}
+.gplan-top{display:flex;justify-content:space-between;align-items:center}
+.gplan-price{font-size:26px;font-weight:900}
+.gplan-price sup{font-size:13px;vertical-align:super}
+.gplan-name{font-size:12px;font-weight:700;color:var(--m2);margin-bottom:3px}
+.gplan-desc{font-size:11px;color:var(--g);font-weight:600;margin-top:3px}
+
+/* PAYMENT MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:flex-end;backdrop-filter:blur(6px)}
 .overlay.on{display:flex}
-.modal{background:var(--c2);border-radius:24px 24px 0 0;padding:20px 18px 44px;width:100%;border:1px solid var(--bd2);border-bottom:none;animation:su .26s ease;max-height:92vh;overflow-y:auto}
+.modal{background:var(--c2);border-radius:22px 22px 0 0;padding:20px 18px 44px;width:100%;border:1px solid var(--bd2);border-bottom:none;animation:su .25s ease;max-height:93vh;overflow-y:auto}
 @keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.mhd{width:38px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 18px}
-.mtit{font-size:17px;font-weight:900;text-align:center;margin-bottom:3px}
-.msub{font-size:12px;color:var(--m2);text-align:center;margin-bottom:16px}
-.ptop{display:flex;gap:11px;margin-bottom:14px;align-items:stretch}
-.qrbox{background:white;border-radius:13px;padding:7px;width:96px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.qrbox img{width:82px;height:82px;object-fit:contain}
-.ubox{flex:1;background:var(--c3);border:1.5px dashed var(--p2);border-radius:13px;padding:12px 13px;display:flex;flex-direction:column;justify-content:center}
+.mhd{width:36px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 16px}
+.mtit{font-size:16px;font-weight:900;text-align:center;margin-bottom:3px}
+.msub{font-size:11.5px;color:var(--m2);text-align:center;margin-bottom:14px}
+.pay-top{display:flex;gap:10px;margin-bottom:13px;align-items:stretch}
+.qrbox{background:white;border-radius:12px;padding:6px;width:90px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.qrbox img{width:78px;height:78px;object-fit:contain}
+.ubox{flex:1;background:var(--c3);border:1.5px dashed var(--p2);border-radius:12px;padding:11px 13px}
 .ulbl{font-size:10px;color:var(--m2);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
-.uval{font-size:14px;font-weight:800;color:var(--p3);word-break:break-all;line-height:1.4}
-.ucpy{margin-top:8px;background:rgba(124,58,237,.2);border:1px solid var(--bd2);color:var(--p3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;display:inline-block}
-.infobox{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:11.5px;line-height:1.7;color:var(--g3)}
-.frow{margin-bottom:12px}
-.frow label{font-size:10.5px;font-weight:800;color:var(--m2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-input[type=text]{width:100%;background:var(--c3);border:1px solid var(--bd2);border-radius:12px;color:var(--t);font-size:13.5px;padding:12px 14px;font-family:inherit;outline:none;transition:border-color .2s}
+.uval{font-size:13.5px;font-weight:800;color:var(--p3);word-break:break-all;line-height:1.4}
+.ucpy{margin-top:7px;background:rgba(124,58,237,.2);border:1px solid var(--bd2);color:var(--p3);border-radius:7px;padding:4px 11px;font-size:11px;font-weight:700;cursor:pointer;display:inline-block}
+.infobox{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22);border-radius:11px;padding:10px 13px;margin-bottom:13px;font-size:11px;line-height:1.8;color:#fde68a}
+.frow{margin-bottom:11px}
+.frow label{font-size:10px;font-weight:800;color:var(--m2);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+input[type=text]{width:100%;background:var(--c3);border:1px solid var(--bd2);border-radius:11px;color:var(--t);font-size:13px;padding:11px 13px;font-family:inherit;outline:none;transition:border-color .2s}
 input[type=text]:focus{border-color:var(--p2)}
 input::placeholder{color:var(--m)}
-.flbl{width:100%;background:var(--c3);border:1.5px dashed var(--bd2);border-radius:12px;color:var(--m2);font-size:12.5px;padding:14px;text-align:center;cursor:pointer;display:block;transition:border-color .2s}
+.flbl{width:100%;background:var(--c3);border:1.5px dashed var(--bd2);border-radius:11px;color:var(--m2);font-size:12px;padding:12px;text-align:center;cursor:pointer;display:block;transition:border-color .2s}
 .flbl:hover{border-color:var(--p2)}
-.fprev{margin-top:8px;border-radius:10px;overflow:hidden;display:none}
-.fprev img{width:100%;max-height:150px;object-fit:cover;border-radius:10px}
-.btn{width:100%;border:none;border-radius:14px;padding:14px;font-size:14.5px;font-weight:900;cursor:pointer;transition:transform .15s,opacity .15s;letter-spacing:.3px}
+.fprev{margin-top:7px;border-radius:9px;overflow:hidden;display:none}
+.fprev img{width:100%;max-height:140px;object-fit:cover;border-radius:9px}
+.btn{width:100%;border:none;border-radius:13px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;transition:transform .15s,opacity .15s}
 .btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btnp{background:linear-gradient(135deg,var(--p),var(--p2));color:white}
-.btno{background:var(--c2);border:1px solid var(--bd2);color:var(--t)}
-.refer-hero{background:linear-gradient(135deg,#160e48,#1e1060);border:1px solid rgba(168,85,247,.3);border-radius:20px;padding:22px 18px;text-align:center;margin-bottom:14px}
-.rcount{font-size:52px;font-weight:900;color:var(--p2);line-height:1}
-.rlbl{font-size:12px;color:var(--m2);margin-top:4px}
-.pbar{background:rgba(255,255,255,.06);border-radius:100px;height:9px;margin:12px 0 6px;overflow:hidden}
-.pfill{height:100%;background:linear-gradient(90deg,var(--p),var(--p2));border-radius:100px;transition:width .6s ease}
-.ptxt{font-size:10.5px;color:var(--m2);text-align:center}
-.lbox{background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:13px 14px;margin:12px 0;display:flex;align-items:center;gap:10px}
-.lurl{flex:1;font-size:11.5px;color:var(--m2);word-break:break-all}
-.cpybtn{background:var(--p);color:white;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
-.pw{background:#000;border-radius:16px;overflow:hidden;aspect-ratio:16/9;position:relative;margin-bottom:12px;border:1px solid var(--bd)}
-#vp{width:100%;height:100%;display:none}
-.ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;background:#05050f}
-.phi{font-size:50px;opacity:.22}
-.ph p{font-size:12px;color:var(--m)}
-.ctrls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.cb{flex:1;min-width:68px;background:var(--c2);border:1px solid var(--bd);color:var(--t);border-radius:10px;padding:10px;font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
-.cb:active{background:var(--p);transform:scale(.96)}
-.faq{background:var(--c1);border:1px solid var(--bd);border-radius:14px;margin-bottom:8px;overflow:hidden}
-.fq{padding:13px 15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;gap:10px}
-.fa{display:none;padding:0 15px 13px;font-size:11.5px;color:var(--m2);line-height:1.7}
-.faq.open .fa{display:block}
-.arr{transition:transform .2s;font-size:11px;flex-shrink:0}
-.faq.open .arr{transform:rotate(180deg)}
-textarea{width:100%;background:var(--c3);border:1px solid var(--bd2);border-radius:12px;color:var(--t);font-size:13.5px;padding:12px 14px;font-family:inherit;outline:none;resize:none;height:100px;transition:border-color .2s}
+.btno{background:var(--c2);border:1px solid var(--bd2);color:var(--t);margin-top:8px;font-size:12.5px;padding:11px}
+
+/* HELP FLOATING BUTTON */
+.help-fab{position:fixed;bottom:24px;right:18px;width:46px;height:46px;background:linear-gradient(135deg,var(--p),var(--p2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;z-index:100;box-shadow:0 4px 16px rgba(124,58,237,.5);transition:transform .2s}
+.help-fab:active{transform:scale(.9)}
+
+/* HELP POPUP */
+.help-popup{position:fixed;bottom:80px;right:18px;width:min(320px,calc(100vw - 36px));background:var(--c2);border:1px solid var(--bd2);border-radius:18px;padding:16px;z-index:101;box-shadow:0 8px 32px rgba(0,0,0,.5);display:none;animation:popIn .2s ease}
+.help-popup.on{display:block}
+@keyframes popIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.help-popup h4{font-size:13px;font-weight:800;margin-bottom:10px}
+textarea{width:100%;background:var(--c3);border:1px solid var(--bd2);border-radius:10px;color:var(--t);font-size:12.5px;padding:10px 12px;font-family:inherit;outline:none;resize:none;height:80px;transition:border-color .2s}
 textarea:focus{border-color:var(--p2)}
 textarea::placeholder{color:var(--m)}
-.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(12px);background:rgba(18,18,46,.97);backdrop-filter:blur(14px);border:1px solid var(--bd2);border-radius:100px;padding:10px 22px;font-size:12.5px;font-weight:700;opacity:0;transition:all .26s;z-index:400;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.2);border-top-color:white;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+
+/* UTILS */
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:white;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px}
 @keyframes sp{to{transform:rotate(360deg)}}
-.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.dot-on{background:var(--gr2);box-shadow:0 0 7px var(--gr2)}
-.dot-off{background:var(--m)}
-.dot-g{background:var(--g);box-shadow:0 0 7px var(--g)}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:rgba(18,18,46,.97);backdrop-filter:blur(14px);border:1px solid var(--bd2);border-radius:100px;padding:9px 20px;font-size:12px;font-weight:700;opacity:0;transition:all .25s;z-index:300;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 
-<!-- HOME -->
+<!-- ══ HOME ══ -->
 <div class="pg on" id="pg-home">
-  <div class="hero">
-    <span class="hem">🎬</span>
-    <h1>AsBhai <b>Premium</b></h1>
-    <p>Movies • Web Series • Downloads • Stream</p>
-    <div id="heroStatus" class="hbadge"><span class="dot dot-off"></span><span>Loading...</span></div>
+  <div class="home-brand">
+    <div style="font-size:46px;margin-bottom:8px">🎬</div>
+    <h1>AsBhai Bot</h1>
+    <p>Movies • Downloads • Stream • Earn</p>
+    <div id="hbadge" class="home-badge"><span class="dot-live"></span><span id="hbadge-txt">Loading...</span></div>
   </div>
 
-  <div id="statusCard" class="scard grey">
-    <div class="sci">👤</div>
-    <div class="scinfo">
-      <h3 id="stTitle">Free User</h3>
-      <p id="stDesc">Premium lo — no force join, stream karo!</p>
+  <div class="big-btns">
+    <div class="big-btn stream" onclick="goPage('pg-stream')">
+      <div class="big-ico">▶️</div>
+      <div class="big-txt">
+        <h2>Stream & Download</h2>
+        <p>Movies browser mein seedha dekho ya download karo — Premium feature</p>
+      </div>
     </div>
-  </div>
-
-  <div class="trial" id="trialCard" onclick="claimTrial()">
-    <div class="tco">🆓</div>
-    <div class="ttxt">
-      <h3>Free Trial — 5 Minute</h3>
-      <p>Sirf 1 baar milega — koi payment nahi!</p>
+    <div class="big-btn premium" onclick="goPage('pg-premium')">
+      <div class="big-ico">💎</div>
+      <div class="big-txt">
+        <h2>Premium Lo</h2>
+        <p>No verify, no ads, 10 results, stream karo — puri azaadi</p>
+      </div>
     </div>
-  </div>
-
-  <div class="st">💎 Premium Plans</div>
-  <div class="pgrid" id="pgrid"></div>
-
-  <div class="st">✨ Premium Benefits</div>
-  <div class="flist">
-    <div class="fi"><div class="fic">🚫</div><div class="ftx"><h4>Force Join Nahi</h4><p>Koi channel join karne ki zaroorat nahi</p></div></div>
-    <div class="fi"><div class="fic">🔗</div><div class="ftx"><h4>Shortlink Nahi</h4><p>Direct file — zero ads, zero wait</p></div></div>
-    <div class="fi"><div class="fic">📦</div><div class="ftx"><h4>10 Results Per Search</h4><p>5 ki jagah 10 results milenge</p></div><div class="fbdg">2x</div></div>
-    <div class="fi"><div class="fic">▶️</div><div class="ftx"><h4>Browser mein Stream</h4><p>Download bhi karo seedha</p></div><div class="fbdg">NEW</div></div>
-    <div class="fi"><div class="fic">💬</div><div class="ftx"><h4>PM mein Search</h4><p>Bot PM mein seedha search karo</p></div></div>
-    <div class="fi"><div class="fic">⚡</div><div class="ftx"><h4>Priority Request</h4><p>Aapki request pehle process hogi</p></div></div>
-    <div class="fi"><div class="fic">🎛️</div><div class="ftx"><h4>Results Customize</h4><p>5 / 7 / 10 aap khud choose karo</p></div></div>
-  </div>
-  <div style="height:8px"></div>
-</div>
-
-<!-- STREAM -->
-<div class="pg" id="pg-stream">
-  <div class="hero" style="padding:20px 18px 16px">
-    <span class="hem" style="font-size:30px">▶️</span>
-    <h1 style="font-size:19px">Stream <b>Player</b></h1>
-    <p>Browser mein seedha dekho — Premium only</p>
-  </div>
-  <div class="pw">
-    <video id="vp" controls playsinline></video>
-    <div class="ph" id="ph">
-      <div class="phi">🎬</div>
-      <p>Koi video nahi</p>
-      <p style="font-size:10.5px;color:rgba(148,163,184,.35)">Group mein movie search karo → Stream button dabao</p>
-      <div style="margin-top:14px;display:flex;gap:8px;justify-content:center">
-        <div style="background:var(--p);border-radius:9px;padding:8px 16px;font-size:12px;font-weight:700;opacity:.5">▶️ Stream</div>
-        <div style="background:var(--c2);border:1px solid var(--bd);border-radius:9px;padding:8px 16px;font-size:12px;font-weight:700;opacity:.5">⬇️ Download</div>
+    <div class="big-btn earn" onclick="goPage('pg-earn')">
+      <div class="big-ico">💰</div>
+      <div class="big-txt">
+        <h2>Paise Kamao</h2>
+        <p>Apne group mein shortlink lagao aur har search se earning karo</p>
       </div>
     </div>
   </div>
-  <div class="ctrls">
-    <button class="cb" onclick="doFull()">⛶ Full</button>
-    <button class="cb" onclick="doSpd()">⚡ <span id="spv">1x</span></button>
-    <button class="cb" onclick="doPip()">📺 PiP</button>
-    <button class="cb" style="background:var(--p);border-color:var(--p2)" onclick="doDl()">⬇️ Save</button>
+</div>
+
+<!-- ══ STREAM PAGE ══ -->
+<div class="pg" id="pg-stream">
+  <div class="back-bar">
+    <div class="back-btn" onclick="goHome()">←</div>
+    <div class="back-title">▶️ Stream & Download</div>
   </div>
-  <div id="sguard" style="display:none;text-align:center;padding:28px 20px">
-    <div style="font-size:44px">🔒</div>
-    <h3 style="margin:10px 0 6px;font-size:17px">Premium Feature</h3>
-    <p style="font-size:12px;color:var(--m2);margin-bottom:16px">Stream ke liye Premium chahiye</p>
-    <button class="btn btnp" onclick="showPage('pg-home')">💎 Plans Dekho</button>
+  <div class="stream-player">
+    <video id="vp" controls playsinline></video>
+    <div class="ph" id="ph">
+      <div class="ph-ico">🎬</div>
+      <p>Group mein movie search karo<br>phir Stream ya Download button dabao</p>
+    </div>
+  </div>
+  <div class="stream-ctrls">
+    <button class="sc-btn" onclick="doFull()">⛶ Full</button>
+    <button class="sc-btn" onclick="doSpd()">⚡ <span id="spv">1x</span></button>
+    <button class="sc-btn" onclick="doPip()">📺 PiP</button>
+    <button class="sc-btn dl" onclick="doDl()">⬇️ Download</button>
+  </div>
+  <div class="stream-info">
+    <div class="sinfo-card">
+      <h3>🔒 Premium Feature</h3>
+      <p>Stream aur download karne ke liye Premium chahiye.<br>
+      Group mein movie search karo → file milne par Stream/Download button aayega → yahan video chalegi.</p>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn btnp" onclick="goPage('pg-premium')">💎 Premium Lo — Stream Activate Karo</button>
+    </div>
   </div>
 </div>
 
-<!-- REFER -->
-<div class="pg" id="pg-refer">
-  <div class="refer-hero">
-    <div style="font-size:11px;color:var(--m2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px">Aapke Refers</div>
-    <div class="rcount" id="rc">—</div>
-    <div class="rlbl">Har 10 refer = 15 din FREE Premium 💎</div>
-    <div class="pbar"><div class="pfill" id="pf" style="width:0"></div></div>
-    <div class="ptxt" id="pt">Loading...</div>
+<!-- ══ PREMIUM PAGE ══ -->
+<div class="pg" id="pg-premium">
+  <div class="back-bar">
+    <div class="back-btn" onclick="goHome()">←</div>
+    <div class="back-title">💎 Premium</div>
   </div>
-  <div class="st">🔗 Aapka Refer Link</div>
-  <div class="lbox">
-    <div class="lurl" id="rl">—</div>
-    <button class="cpybtn" onclick="cpyRL()">📋 Copy</button>
+  <div class="prem-hero">
+    <h2>AsBhai <span>Premium</span></h2>
+    <p>Sab kuch unlimited — koi verify nahi, koi ads nahi</p>
+    <div id="premStatus" style="margin-top:12px;font-size:12px;color:var(--m2)">Loading...</div>
   </div>
-  <button class="btn btnp" style="margin-bottom:13px" onclick="shareRL()">📤 Share Karo</button>
-  <div class="st">🎁 Rewards</div>
-  <div class="flist">
-    <div class="fi"><div class="fic">🎯</div><div class="ftx"><h4>10 Refer Complete</h4><p>15 din ka FREE Premium auto-milega</p></div><div class="fbdg">15 din</div></div>
-    <div class="fi"><div class="fic">🔄</div><div class="ftx"><h4>Unlimited Baar</h4><p>Har 10 par reward milta rahega!</p></div></div>
-    <div class="fi"><div class="fic">⚠️</div><div class="ftx"><h4>Note</h4><p>Sirf new users count honge — pehle se join kiye hue nahi</p></div></div>
+
+  <div class="page-body">
+    <!-- Trial -->
+    <div class="trial-card" id="trialCard" onclick="claimTrial()">
+      <div style="font-size:30px">🆓</div>
+      <div>
+        <div style="font-size:13.5px;font-weight:800;color:var(--gr2)">Free Trial — 5 Minute</div>
+        <div style="font-size:11.5px;color:rgba(255,255,255,.6);margin-top:2px">Sirf 1 baar milega — koi payment nahi!</div>
+      </div>
+    </div>
+
+    <div class="st">💎 Premium Plans</div>
+    <div class="pgrid" id="pgrid" style="margin-bottom:14px"></div>
+
+    <!-- Refer -->
+    <div class="st">🔗 Refer Karke Free Premium Lo</div>
+    <div class="refer-hero">
+      <div style="font-size:11px;color:var(--m2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Aapke Total Refers</div>
+      <div class="rcount" id="rc">—</div>
+      <div class="rlbl">Har 10 refer = 15 din FREE Premium 💎</div>
+      <div class="pbar"><div class="pfill" id="pf" style="width:0"></div></div>
+      <div class="ptxt" id="pt">Loading...</div>
+      <div class="link-box" style="margin-top:12px">
+        <div class="lurl" id="rl">—</div>
+        <button class="cpybtn" onclick="cpyRL()">📋 Copy</button>
+      </div>
+      <button class="btn btnp" style="margin-top:8px" onclick="shareRL()">📤 Share Karo</button>
+    </div>
+
+    <div class="st">✨ Kya Milega Premium Mein</div>
+    <div class="flist">
+      <div class="fi"><div class="fic">🚫</div><div class="ftx"><h4>Force Join Nahi</h4><p>Koi channel join karne ki zaroorat nahi</p></div></div>
+      <div class="fi"><div class="fic">🔗</div><div class="ftx"><h4>Shortlink Nahi</h4><p>Direct file — zero ads, zero wait</p></div></div>
+      <div class="fi"><div class="fic">📦</div><div class="ftx"><h4>10 Results Per Search</h4><p>Free se zyada options</p></div><div class="fbdg">2x</div></div>
+      <div class="fi"><div class="fic">▶️</div><div class="ftx"><h4>Stream & Download</h4><p>Browser mein seedha dekho</p></div><div class="fbdg">NEW</div></div>
+      <div class="fi"><div class="fic">💬</div><div class="ftx"><h4>PM mein Search</h4><p>Bot PM mein seedha search karo</p></div></div>
+      <div class="fi"><div class="fic">⚡</div><div class="ftx"><h4>Priority Request</h4><p>Aapki request pehle process hogi</p></div></div>
+    </div>
   </div>
 </div>
 
-<!-- HELP -->
-<div class="pg" id="pg-help">
-  <div class="hero" style="padding:20px 18px 16px;margin-bottom:14px">
-    <span class="hem" style="font-size:30px">🆘</span>
-    <h1 style="font-size:19px">Help <b>Center</b></h1>
-    <p>Problem hai? Hum fix karenge!</p>
+<!-- ══ EARN PAGE ══ -->
+<div class="pg" id="pg-earn">
+  <div class="back-bar">
+    <div class="back-btn" onclick="goHome()">←</div>
+    <div class="back-title">💰 Paise Kamao</div>
   </div>
-  <div class="st">💬 Owner Ko Message Bhejo</div>
-  <div style="display:flex;flex-direction:column;gap:11px">
-    <textarea id="hm" placeholder="Apni problem detail mein likhein...&#10;&#10;Jaise: Bot kaam nahi, Premium activate nahi, file nahi aa rahi..."></textarea>
-    <button class="btn btnp" onclick="sendHelp()" id="hbtn">📤 Message Bhejo</button>
+  <div class="earn-hero">
+    <h2>💰 Bot Se Paise Kamao!</h2>
+    <p>Apne Telegram group mein shortlink lagao — har search se earning karo</p>
   </div>
-  <div class="st">❓ Aksar Puche Sawaal</div>
-  <div class="faq"><div class="fq" onclick="ft(this)"><span>Bot search nahi kar raha?</span><span class="arr">▾</span></div><div class="fa">Pehle @asfilter_group join karo, phir daily shortlink se verify karo. Uske baad group mein search karo.</div></div>
-  <div class="faq"><div class="fq" onclick="ft(this)"><span>Premium activate nahi hua?</span><span class="arr">▾</span></div><div class="fa">Payment ke baad TXN ID aur screenshot ke saath form submit karo. 1-2 ghante mein activate hoga.</div></div>
-  <div class="faq"><div class="fq" onclick="ft(this)"><span>File PM mein delete ho gayi?</span><span class="arr">▾</span></div><div class="fa">Files auto-delete hoti hain kuch minute baad. Milte hi save ya forward karo. Dobara search karke download kar sakte ho.</div></div>
-  <div class="faq"><div class="fq" onclick="ft(this)"><span>Refer credit nahi aaya?</span><span class="arr">▾</span></div><div class="fa">Sirf new users count hote hain. Pehle se join kiye ya bot block karne par credit nahi milta.</div></div>
-  <div class="faq"><div class="fq" onclick="ft(this)"><span>Movie nahi mil rahi?</span><span class="arr">▾</span></div><div class="fa">/request command se request karo. Premium users ki request pehle process hoti hai (1-6 ghante).</div></div>
-  <div style="margin-top:14px">
-    <a href="https://t.me/asbhaibsr" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--c1);border:1px solid var(--bd2);border-radius:13px;padding:13px;color:var(--t);text-decoration:none;font-size:13px;font-weight:700">💬 Direct Contact: @asbhaibsr</a>
+
+  <div class="page-body">
+    <div class="st">📋 Step-by-Step Guide</div>
+
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-txt">
+        <h4>Pehle Group Premium Lo</h4>
+        <p>Niche se Group Premium plan choose karo. ₹300 mein 1 mahina — shortlink lagane ka haq milega.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-txt">
+        <h4>Shortlink Account Banao</h4>
+        <p><strong>modijiurl.com</strong> ya kisi bhi shortlink site par free account banao. Wahan se API Key lo.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-txt">
+        <h4>Bot Ko Group Mein Add Karo</h4>
+        <p>Owner approve karne ke baad <strong>@AsBhaiDropBot</strong> ko apne group mein add karo aur admin banao.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <div class="step-txt">
+        <h4>Shortlink Set Karo</h4>
+        <p>Group mein ye command chalao:<br>
+        <code>/gshortlink API_KEY modijiurl.com 6 ModiJi</code><br>
+        (6 = kitne ghante baad dobara verify karna hoga)</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">5</div>
+      <div class="step-txt">
+        <h4>Paise Kamana Shuru! 💸</h4>
+        <p>Ab jab bhi koi user group mein movie search karega, <strong>aapki shortlink</strong> se verify karega. Har click = aapki earning!</p>
+      </div>
+    </div>
+
+    <div class="st">🏆 Group Premium Plans</div>
+    <div class="gplan" onclick="openGroupPay({id:'group_1m',name:'1 Mahina',days:30,price:300})">
+      <div class="gplan-top">
+        <div>
+          <div class="gplan-name">Group Premium</div>
+          <div class="gplan-price"><sup>₹</sup>300</div>
+          <div class="gplan-desc">1 Mahina — Kamaai shuru karo!</div>
+        </div>
+        <div style="font-size:38px">🏆</div>
+      </div>
+    </div>
+    <div class="gplan" onclick="openGroupPay({id:'group_2m',name:'2 Mahine',days:60,price:550})">
+      <div class="gplan-top">
+        <div>
+          <div class="gplan-name">Group Premium</div>
+          <div class="gplan-price"><sup>₹</sup>550</div>
+          <div class="gplan-desc">2 Mahine — Best Value 🔥</div>
+        </div>
+        <div style="font-size:38px">💎</div>
+      </div>
+    </div>
+
+    <div class="st">❓ Aksar Puche Sawaal</div>
+    <div style="background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;font-size:12px;color:var(--m2);line-height:1.9">
+      <b style="color:var(--t)">Kitna kama sakte hain?</b><br>
+      Shortlink rates depend karti hain — ₹20-₹200 per 1000 views tak.<br><br>
+      <b style="color:var(--t)">Kitne groups mein laga sakte hain?</b><br>
+      Ek Group Premium = ek group. Zyada groups ke liye zyada plans lo.<br><br>
+      <b style="color:var(--t)">Kitne ghante baad shortlink dobara aayegi?</b><br>
+      Aap khud set karo — 1 ghante se 720 ghante tak.<br><br>
+      <b style="color:var(--t)">Payment kab milegi?</b><br>
+      Shortlink site direct aapke account mein bhejti hai.
+    </div>
+    <div style="height:10px"></div>
   </div>
 </div>
 
-<!-- PAYMENT MODAL -->
+<!-- ══ PAYMENT MODAL ══ -->
 <div class="overlay" id="pm" onclick="pmOut(event)">
   <div class="modal">
     <div class="mhd"></div>
     <div class="mtit" id="mT">💎 Premium Kharidein</div>
     <div class="msub" id="mS">Aaj hi activate karo</div>
-    <div class="ptop">
+    <div class="pay-top">
       <div class="qrbox">
-        <img src="https://envs.sh/GdE.jpg" alt="QR" onerror="this.parentElement.innerHTML='<div style=\'padding:10px;font-size:10px;color:#888;text-align:center\'>QR<br>Unavailable</div>'">
+        <img src="https://envs.sh/GdE.jpg" alt="QR" onerror="this.parentElement.innerHTML='<div style=\'text-align:center;color:#888;font-size:10px;padding:8px\'>QR<br>Load<br>Error</div>'">
       </div>
       <div class="ubox">
         <div class="ulbl">UPI ID par bhejo</div>
-        <div class="uval" id="uv">arsadsaifi8272@ibl</div>
+        <div class="uval">arsadsaifi8272@ibl</div>
         <div class="ucpy" onclick="cpyUpi()">📋 Copy UPI</div>
       </div>
     </div>
-    <div class="infobox">
-      1️⃣ QR scan karo ya UPI ID par <b id="mAmt">₹—</b> bhejo<br>
+    <div class="infobox" id="mInfo">
+      1️⃣ UPI ID par <b id="mAmt">₹—</b> bhejo<br>
       2️⃣ Transaction ID note karo<br>
-      3️⃣ Niche form fill kar ke Submit karo<br>
-      4️⃣ 1-2 ghante mein Premium activate! ⚡
+      3️⃣ Niche form fill karke Submit karo<br>
+      4️⃣ 1-2 ghante mein activate! ⚡
     </div>
     <div class="frow">
       <label>Transaction ID *</label>
       <input type="text" id="txn" placeholder="Jaise: 4231xxxxxx ya UPI Ref No.">
     </div>
+    <div id="groupIdField" style="display:none" class="frow">
+      <label>Group ID ya Link *</label>
+      <input type="text" id="groupIdInp" placeholder="@groupusername ya t.me/joinchat/xxx">
+      <div style="font-size:10px;color:var(--m2);margin-top:4px;line-height:1.6">Group link ya username do — owner approve karega phir bot add karo</div>
+    </div>
     <div class="frow">
-      <label>Screenshot (optional)</label>
+      <label>Screenshot (Optional)</label>
       <label class="flbl" for="ssf" id="ssl">📷 Screenshot attach karo</label>
       <input type="file" id="ssf" accept="image/*" style="display:none" onchange="prevSS(this)">
       <div class="fprev" id="fpr"><img id="fpi" src="" alt=""></div>
     </div>
     <button class="btn btnp" id="subBtn" onclick="submitPay()">✅ Submit Payment Request</button>
-    <div style="height:8px"></div>
-    <button class="btn btno" style="font-size:13px;padding:11px" onclick="openContact()">💬 Direct Contact @asbhaibsr</button>
+    <button class="btn btno" onclick="openContact()">💬 Direct Contact @asbhaibsr</button>
   </div>
 </div>
 
-<!-- EARN MONEY PAGE -->
-<div class="pg" id="pg-earn">
-  <div class="hero" style="padding:22px 18px 18px;margin-bottom:14px">
-    <span class="hem" style="font-size:34px">💰</span>
-    <h1 style="font-size:20px">Earn <b>Money</b></h1>
-    <p>Apne group mein shortlink lagao aur paise kamao!</p>
-  </div>
-
-  <div style="background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.06));border:1px solid rgba(16,185,129,.28);border-radius:18px;padding:16px 18px;margin-bottom:14px">
-    <h3 style="font-size:14px;font-weight:800;color:var(--gr2);margin-bottom:8px">🎯 Kaise Kamaye?</h3>
-    <p style="font-size:12px;color:rgba(255,255,255,.75);line-height:1.8">
-      1️⃣ Apne Telegram group mein <b>AsBhai Bot</b> add karo<br>
-      2️⃣ <b>Group Premium</b> lo (₹300/mahina)<br>
-      3️⃣ Apni shortlink add karo: <code>/gshortlink api url hours</code><br>
-      4️⃣ Group mein har search pe users aapki shortlink se verify karenge<br>
-      5️⃣ <b>Shortlink earnings</b> seedha aapke account mein! 💸
-    </p>
-  </div>
-
-  <div class="st">💎 Group Premium Plans</div>
-  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
-    <div class="plan" style="background:linear-gradient(135deg,#1a0d44,#221060);border-color:rgba(245,158,11,.5);cursor:pointer" onclick="openGroupPay({id:'group_1m',name:'1 Mahina',days:30,price:300})">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div class="pname">Group Premium</div>
-          <div class="pprice"><sup>₹</sup>300</div>
-          <div class="pdesc">1 Mahina — Apni shortlink lagao</div>
-        </div>
-        <div style="font-size:32px">🏆</div>
-      </div>
-    </div>
-    <div class="plan" style="background:linear-gradient(135deg,#0c1a2e,#162845);border-color:rgba(59,130,246,.4);cursor:pointer" onclick="openGroupPay({id:'group_2m',name:'2 Mahine',days:60,price:550})">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div class="pname">Group Premium</div>
-          <div class="pprice"><sup>₹</sup>550</div>
-          <div class="pdesc">2 Mahine — Best Value 💰</div>
-        </div>
-        <div style="font-size:32px">🔥</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="st">✅ Group Premium Benefits</div>
-  <div class="flist" style="margin-bottom:14px">
-    <div class="fi"><div class="fic">🔗</div><div class="ftx"><h4>Apni Shortlink Lagao</h4><p>/gshortlink command se koi bhi shortlink add karo</p></div></div>
-    <div class="fi"><div class="fic">💸</div><div class="ftx"><h4>Unlimited Earnings</h4><p>Har user verification se aapki shortlink hit hogi</p></div></div>
-    <div class="fi"><div class="fic">🎛️</div><div class="ftx"><h4>Full Control</h4><p>Add/remove shortlinks, hours set karo</p></div></div>
-    <div class="fi"><div class="fic">👥</div><div class="ftx"><h4>Group ke liye</h4><p>Aap khud use karo ya doosron ke group mein lagao</p></div></div>
-  </div>
-
-  <div class="st">📋 Commands</div>
-  <div style="background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;font-size:12px;line-height:2;color:var(--m2)">
-    <code style="color:var(--p3)">/gshortlink api_key url hours label</code> — Shortlink add karo<br>
-    <code style="color:var(--p3)">/gshortlinks</code> — Apni shortlinks dekho<br>
-    <code style="color:var(--p3)">/gshortlinkremove 1</code> — Shortlink #1 hataao<br>
-    <code style="color:var(--p3)">/gsettings</code> — Group settings manage karo
-  </div>
+<!-- ══ HELP FAB ══ -->
+<div class="help-fab" onclick="toggleHelp()" id="helpFab">🆘</div>
+<div class="help-popup" id="helpPopup">
+  <h4>🆘 Help chahiye?</h4>
+  <textarea id="hm" placeholder="Problem likhein — bot issue, payment, kuch bhi..."></textarea>
+  <button class="btn btnp" style="margin-top:8px;padding:10px;font-size:13px" onclick="sendHelp()" id="hbtn">📤 Send</button>
+  <a href="https://t.me/asbhaibsr" target="_blank" style="display:block;text-align:center;margin-top:8px;font-size:12px;color:var(--p3)">Ya directly @asbhaibsr ko message karo</a>
 </div>
-
-<nav class="nav">
-  <button class="nb on" id="nb-home" onclick="showPage('pg-home')"><div class="nbar"></div><span class="i">🏠</span><span>Home</span></button>
-  <button class="nb" id="nb-stream" onclick="showPage('pg-stream')"><div class="nbar"></div><span class="i">▶️</span><span>Stream</span></button>
-  <button class="nb" id="nb-earn" onclick="showPage('pg-earn')"><div class="nbar"></div><span class="i">💰</span><span>Earn</span></button>
-  <button class="nb" id="nb-refer" onclick="showPage('pg-refer')"><div class="nbar"></div><span class="i">🔗</span><span>Refer</span></button>
-  <button class="nb" id="nb-help" onclick="showPage('pg-help')"><div class="nbar"></div><span class="i">🆘</span><span>Help</span></button>
-</nav>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ── INLINE PLANS DATA — no fetch, no JSON error ──
+// ── CONFIG ──
 const PLANS=[
-  {id:"10days", name:"10 Din", days:10, price:50,  desc:"Best Starter",hot:false},
-  {id:"30days", name:"30 Din", days:30, price:150, desc:"Most Popular",hot:true},
-  {id:"60days", name:"60 Din", days:60, price:200, desc:"Great Value", hot:false},
-  {id:"150days",name:"150 Din",days:150,price:500, desc:"Super Saver",hot:false},
+  {id:"10days", name:"10 Din", days:10, price:50,  desc:"Best Starter", hot:false},
+  {id:"30days", name:"30 Din", days:30, price:150, desc:"Most Popular", hot:true},
+  {id:"60days", name:"60 Din", days:60, price:200, desc:"Great Value",  hot:false},
+  {id:"150days",name:"150 Din",days:150,price:500, desc:"Super Saver", hot:false},
   {id:"365days",name:"1 Saal", days:365,price:800, desc:"Best Deal 🔥",hot:false},
 ];
 const UPI="arsadsaifi8272@ibl";
 const BASE=window.location.origin;
 
+// ── TELEGRAM ──
 const tg=window.Telegram?.WebApp;
 if(tg){tg.ready();tg.expand();tg.setHeaderColor('#07071a');tg.setBackgroundColor('#07071a');}
 const UID=tg?.initDataUnsafe?.user?.id||null;
 const FNAME=tg?.initDataUnsafe?.user?.first_name||'User';
 
-let isPrem=false,trialUsed=false,selPlan=null;
-let spds=[0.5,0.75,1,1.25,1.5,2],spIdx=2,curVid=null;
+// ── STATE ──
+let isPrem=false,trialUsed=false,selPlan=null,curVid=null;
+let spds=[0.5,0.75,1,1.25,1.5,2],spIdx=2;
 
+// ── INIT ──
 async function init(){
   renderPlans();
-  if(!UID){setStatus(false,false,null);loadRef(0);return;}
+  if(!UID){setHomeBadge(false,false,null);loadRef(0);return;}
   try{
     const r=await fetch(`${BASE}/api/user_status/${UID}`);
     if(!r.ok)throw new Error();
     const d=await r.json();
     isPrem=d.is_premium||false;
     trialUsed=d.trial_used||false;
-    setStatus(isPrem,d.is_trial||false,d.expiry||null,d.pending_payments||0);
+    setHomeBadge(isPrem,d.is_trial||false,d.expiry||null);
     loadRef(d.refer_count||0);
     if(trialUsed)markTrial();
+    if(isPrem){
+      document.getElementById('premStatus').innerHTML=
+        `<span style="color:var(--g2);font-weight:800">✅ Premium Active${d.expiry?' — Expiry: '+d.expiry:''}</span>`;
+    } else {
+      document.getElementById('premStatus').innerHTML=
+        `<span style="color:var(--m2)">Free User — Upgrade karo!</span>`;
+    }
   }catch{
-    setStatus(false,false,null);
+    setHomeBadge(false,false,null);
     loadRef(0);
+    document.getElementById('premStatus').textContent='Status load nahi hua';
   }
   checkStream();
 }
 
-function setStatus(prem,isTrial,expiry,pending=0){
-  const hb=document.getElementById('heroStatus');
-  const sc=document.getElementById('statusCard');
-  const st=document.getElementById('stTitle');
-  const sd=document.getElementById('stDesc');
+function setHomeBadge(prem,isTrial,expiry){
+  const b=document.getElementById('hbadge');
+  const t=document.getElementById('hbadge-txt');
   if(prem&&!isTrial){
-    hb.innerHTML=`<span class="dot dot-g"></span> Premium Active ✨`;
-    Object.assign(hb.style,{background:'rgba(245,158,11,.13)',borderColor:'rgba(245,158,11,.4)',color:'var(--g)'});
-    sc.className='scard gold';
-    sc.querySelector('.sci').textContent='💎';
-    st.textContent='Premium User 💎';
-    sd.innerHTML=expiry?`Expiry: <b>${expiry}</b>`:'Active';
-    if(expiry){const e=document.createElement('div');e.className='exptag';e.textContent='⏰ Expiry: '+expiry;sd.after(e);}
-    document.getElementById('trialCard').style.display='none';
+    b.style.background='rgba(245,158,11,.14)';b.style.borderColor='rgba(245,158,11,.4)';b.style.color='var(--g2)';
+    b.querySelector('.dot-live').style.background='var(--g2)';b.querySelector('.dot-live').style.boxShadow='0 0 7px var(--g2)';
+    t.textContent='Premium Active ✨';
   }else if(isTrial){
-    hb.innerHTML=`<span class="dot dot-on"></span> Trial Active (5 min)`;
-    hb.style.color='var(--gr2)';
-    sc.querySelector('.sci').textContent='🆓';
-    st.textContent='Free Trial Active!';
-    sd.textContent='5 minute ke liye Premium. Abhi group mein search karo!';
-    markTrial();
+    b.style.color='var(--gr2)';t.textContent='Trial Active (5 min)';
   }else{
-    hb.innerHTML=`<span class="dot dot-off"></span> Free User`;
-    sc.querySelector('.sci').textContent='👤';
-    st.textContent='Free User';
-    sd.textContent=pending>0?`⏳ ${pending} payment pending — jaldi approve hoga!`:'Premium lo — no force join, stream karo!';
+    t.textContent='Free User';
   }
 }
 
-function markTrial(){
-  const tc=document.getElementById('trialCard');
-  tc.classList.add('used');
-  tc.querySelector('h3').textContent='Trial Khatam ✓';
-  tc.querySelector('p').textContent='Premium lo — unlimited use karo';
-  tc.onclick=()=>toast('❌ Trial khatam! Premium lo.');
-}
-
+// ── PLANS ──
 function renderPlans(){
   const g=document.getElementById('pgrid');
+  if(!g)return;
   PLANS.forEach(p=>{
     const d=document.createElement('div');
     d.className='plan'+(p.hot?' hot':'');
-    d.innerHTML=`<div class="pname">${p.name}</div><div class="pprice"><sup>₹</sup>${p.price}</div><div class="pdesc">${p.desc}</div><div class="pdays">${p.days} din</div>`;
-    d.onclick=()=>openPM(p);
+    d.innerHTML=`<div class="pname">${p.name}</div><div class="pprice"><sup>₹</sup>${p.price}</div><div class="pdesc">${p.desc}</div>`;
+    d.onclick=()=>openPM({...p,isGroup:false});
     g.appendChild(d);
   });
 }
 
+// ── REFER ──
 function loadRef(count){
-  document.getElementById('rc').textContent=count;
+  const rc=document.getElementById('rc');
+  const pf=document.getElementById('pf');
+  const pt=document.getElementById('pt');
+  const rl=document.getElementById('rl');
+  if(!rc)return;
+  rc.textContent=count;
   const pct=(count%10)*10;
-  document.getElementById('pf').style.width=pct+'%';
+  pf.style.width=pct+'%';
   const done=count%10===0&&count>0?10:count%10;
   const need=10-(count%10===0?10:count%10);
-  document.getElementById('pt').textContent=`${done}/10 — ${need===10?'10 aur chahiye':need+' aur chahiye premium ke liye'}`;
-  const lnk=UID?`https://t.me/AsBhaiDropBot?start=ref_${UID}`:'Telegram se kholo pehle';
-  document.getElementById('rl').textContent=lnk;
+  pt.textContent=`${done}/10 — ${need===10?'10 aur':''+need+' aur'} chahiye`;
+  rl.textContent=UID?`https://t.me/AsBhaiDropBot?start=ref_${UID}`:'Telegram se kholo';
 }
-
 function cpyRL(){
-  const t=document.getElementById('rl').textContent;
-  if(!UID){toast('❌ Telegram se kholo');return;}
-  cpy(t,'✅ Link copy ho gaya!');
+  const t=document.getElementById('rl')?.textContent;
+  if(!t||!UID){toast('❌ Telegram se kholo');return;}
+  cpy(t,'✅ Refer link copy ho gaya!');
 }
 function shareRL(){
   if(!UID){toast('❌ Telegram se kholo');return;}
   const l=document.getElementById('rl').textContent;
-  const u=`https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent('🎬 Is bot se free movies download karo!')}`;
+  const u=`https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent('🎬 Free movies download karo is bot se!')}`;
   tg?tg.openTelegramLink(u):window.open(u,'_blank');
 }
 
+// ── TRIAL ──
 async function claimTrial(){
   if(trialUsed){toast('❌ Trial pehle le chuke ho!');return;}
   if(!UID){toast('❌ Telegram se kholo');return;}
@@ -486,31 +566,55 @@ async function claimTrial(){
     const d=await r.json();
     if(d.ok){trialUsed=true;markTrial();toast('🆓 Trial shuru! Bot PM check karo!');}
     else{toast('❌ '+(d.error||d.message||'Error'));tc.style.opacity='';tc.style.pointerEvents='';}
-  }catch{
-    toast('❌ Server se connect nahi hua!');
+  }catch(e){
+    toast('❌ '+(e.message||'Server error'));
     tc.style.opacity='';tc.style.pointerEvents='';
   }
 }
+function markTrial(){
+  const tc=document.getElementById('trialCard');
+  if(!tc)return;
+  tc.classList.add('used');
+  tc.querySelector('div:nth-child(2)>div:first-child').textContent='Trial Khatam ✓';
+  tc.querySelector('div:nth-child(2)>div:last-child').textContent='Premium lo — unlimited use karo';
+  tc.onclick=()=>toast('❌ Trial khatam!');
+}
 
+// ── PAY MODAL ──
 function openPM(plan){
-  selPlan={...plan, isGroup:false};
+  selPlan=plan;
   document.getElementById('mT').textContent=`💎 ${plan.name} — ₹${plan.price}`;
   document.getElementById('mS').textContent=`${plan.days} din ka Premium`;
   document.getElementById('mAmt').textContent=`₹${plan.price}`;
   document.getElementById('txn').value='';
   document.getElementById('fpr').style.display='none';
   document.getElementById('ssl').textContent='📷 Screenshot attach karo';
-  const sb=document.getElementById('subBtn');sb.disabled=false;sb.textContent='✅ Submit Payment Request';
-  // Hide group field for normal plans
-  const gf=document.getElementById('groupIdField');
-  if(gf) gf.style.display='none';
-  // Reset infobox
-  const infoEl=document.querySelector('.infobox');
-  if(infoEl){
-    infoEl.innerHTML=`1️⃣ QR scan karo ya UPI ID par <b id="mAmt">${plan.price ? '₹'+plan.price : '₹—'}</b> bhejo<br>2️⃣ Transaction ID note karo<br>3️⃣ Niche form fill kar ke Submit karo<br>4️⃣ 1-2 ghante mein Premium activate! ⚡`;
-  }
+  document.getElementById('subBtn').disabled=false;
+  document.getElementById('subBtn').textContent='✅ Submit Payment Request';
+  document.getElementById('groupIdField').style.display='none';
+  document.getElementById('mInfo').innerHTML=
+    `1️⃣ UPI ID par <b>₹${plan.price}</b> bhejo<br>2️⃣ Transaction ID note karo<br>3️⃣ Niche form fill karke Submit karo<br>4️⃣ 1-2 ghante mein activate! ⚡`;
   document.getElementById('pm').classList.add('on');
 }
+
+function openGroupPay(plan){
+  selPlan={...plan,isGroup:true};
+  document.getElementById('mT').textContent=`🏘 Group Premium — ${plan.name}`;
+  document.getElementById('mS').textContent=`Apni shortlink lagao — ${plan.days} din`;
+  document.getElementById('mAmt').textContent=`₹${plan.price}`;
+  document.getElementById('txn').value='';
+  document.getElementById('fpr').style.display='none';
+  document.getElementById('ssl').textContent='📷 Screenshot attach karo (optional)';
+  document.getElementById('subBtn').disabled=false;
+  document.getElementById('subBtn').textContent='✅ Submit Group Premium Request';
+  const gf=document.getElementById('groupIdField');
+  gf.style.display='block';
+  document.getElementById('groupIdInp').value='';
+  document.getElementById('mInfo').innerHTML=
+    `1️⃣ UPI ID par <b>₹${plan.price}</b> bhejo<br>2️⃣ TXN ID note karo<br>3️⃣ Group ID/Link dalo<br>4️⃣ Submit karo → Owner approve karega → Bot add karo → Kamao! 💸`;
+  document.getElementById('pm').classList.add('on');
+}
+
 function pmOut(e){if(e.target.id==='pm')document.getElementById('pm').classList.remove('on');}
 function cpyUpi(){cpy(UPI,'✅ UPI ID copy ho gaya!');}
 
@@ -520,54 +624,9 @@ function prevSS(inp){
   r.onload=e=>{
     document.getElementById('fpi').src=e.target.result;
     document.getElementById('fpr').style.display='block';
-    document.getElementById('ssl').textContent='✅ Screenshot: '+inp.files[0].name.slice(0,22);
+    document.getElementById('ssl').textContent='✅ Screenshot: '+inp.files[0].name.slice(0,20);
   };
   r.readAsDataURL(inp.files[0]);
-}
-
-function openGroupPay(plan){
-  selPlan={...plan, isGroup:true};
-  document.getElementById('mT').textContent=`🏘 Group Premium — ${plan.name}`;
-  document.getElementById('mS').textContent=`Apni shortlink lagao — ${plan.days} din`;
-  document.getElementById('mAmt').textContent=`₹${plan.price}`;
-  document.getElementById('txn').value='';
-  document.getElementById('fpr').style.display='none';
-  document.getElementById('ssl').textContent='📷 Screenshot attach karo (optional)';
-  const sb=document.getElementById('subBtn');
-  sb.disabled=false;
-  sb.textContent='✅ Submit Group Premium Request';
-
-  // Group ID field add/show
-  let gf=document.getElementById('groupIdField');
-  if(!gf){
-    const frow=document.createElement('div');
-    frow.className='frow'; frow.id='groupIdField';
-    frow.innerHTML=`
-      <label>Group ID ya Group Link *</label>
-      <input type="text" id="groupIdInp" placeholder="@groupusername ya group invite link">
-      <div style="font-size:10.5px;color:var(--m2);margin-top:5px;line-height:1.6">
-        💡 Group username (@yourgroup) ya invite link do<br>
-        Owner approve hone ke baad bot us group pe kaam karega
-      </div>`;
-    // Insert before screenshot field
-    document.getElementById('subBtn').before(frow);
-  } else {
-    gf.style.display='block';
-    document.getElementById('groupIdInp').value='';
-  }
-
-  // Info box update
-  const infoEl=document.querySelector('.infobox');
-  if(infoEl){
-    infoEl.innerHTML=`
-      1️⃣ UPI ID par <b id="mAmt2">₹${plan.price}</b> bhejo<br>
-      2️⃣ Transaction ID note karo<br>
-      3️⃣ Apna <b>Group ID / Link</b> dalo<br>
-      4️⃣ Submit karo → Owner approve karega<br>
-      5️⃣ Approve hone ke baad group mein bot add karo aur shortlink lagao! 💸`;
-  }
-
-  document.getElementById('pm').classList.add('on');
 }
 
 async function submitPay(){
@@ -575,10 +634,9 @@ async function submitPay(){
   if(!UID){toast('❌ Telegram se kholo');return;}
   const txn=document.getElementById('txn').value.trim();
   if(!txn){toast('❌ Transaction ID bharo!');document.getElementById('txn').focus();return;}
-  // Group plan validation
   if(selPlan.isGroup){
-    const gInp=document.getElementById('groupIdInp');
-    if(!gInp||!gInp.value.trim()){toast('❌ Group ID ya Link bharo!');gInp?.focus();return;}
+    const gi=document.getElementById('groupIdInp');
+    if(!gi||!gi.value.trim()){toast('❌ Group ID ya Link bharo!');gi?.focus();return;}
   }
   const sb=document.getElementById('subBtn');
   sb.disabled=true;sb.innerHTML='<span class="spin"></span>Submit ho raha hai...';
@@ -591,27 +649,23 @@ async function submitPay(){
     const res=await fetch(`${BASE}/api/submit_payment`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        user_id:UID, name:FNAME,
-        plan_id:selPlan.id, amount:selPlan.price,
-        txn_id:txn, screenshot:ss,
-        group_id: selPlan.isGroup ? (document.getElementById('groupIdInp')?.value||'') : null,
-        group_link: selPlan.isGroup ? (document.getElementById('groupIdInp')?.value||'') : null
+        user_id:UID,name:FNAME,
+        plan_id:selPlan.id,amount:selPlan.price,
+        txn_id:txn,screenshot:ss,
+        group_id:selPlan.isGroup?(document.getElementById('groupIdInp')?.value||''):null,
+        group_link:selPlan.isGroup?(document.getElementById('groupIdInp')?.value||''):null
       })
     });
     const d=await res.json();
     if(d.ok){
       document.getElementById('pm').classList.remove('on');
-      const successMsg = selPlan.isGroup
-        ? '✅ Group Premium request submit! Owner approve karega phir group mein bot add karo.'
-        : '✅ Request submit ho gayi! 1-2 ghante mein activate hoga.';
-      toast(successMsg);
-      if(!selPlan.isGroup) setStatus(false,false,null,1);
+      toast(selPlan.isGroup?'✅ Group Premium request submit! Owner approve karega.':'✅ Request submit! 1-2 ghante mein activate hoga.');
     }else{
       toast('❌ '+(d.error||'Submit fail!'));
-      sb.disabled=false;sb.textContent='✅ Submit Payment Request';
+      sb.disabled=false;sb.textContent=selPlan.isGroup?'✅ Submit Group Premium Request':'✅ Submit Payment Request';
     }
-  }catch{
-    toast('❌ Server se connect nahi hua!');
+  }catch(e){
+    toast('❌ Server error: '+e.message);
     sb.disabled=false;sb.textContent='✅ Submit Payment Request';
   }
 }
@@ -622,31 +676,14 @@ function openContact(){
   tg?tg.openTelegramLink(u):window.open(u,'_blank');
 }
 
-async function sendHelp(){
-  const msg=document.getElementById('hm').value.trim();
-  if(!msg||msg.length<8){toast('❌ Thoda detail mein likhein!');return;}
-  const btn=document.getElementById('hbtn');
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span>Bhej raha hoon...';
-  try{
-    const r=await fetch(`${BASE}/api/help`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({user_id:UID,name:FNAME,message:msg})});
-    const d=await r.json();
-    document.getElementById('hm').value='';
-    toast(d.ok?'✅ Message bhej diya! Jaldi reply aayega.':'✅ Bheja gaya!');
-  }catch{
-    const u=`https://t.me/asbhaibsr?text=${encodeURIComponent('Help: '+msg)}`;
-    tg?tg.openTelegramLink(u):window.open(u,'_blank');
-    toast('✅ Telegram khul raha hai...');
-  }finally{btn.disabled=false;btn.textContent='📤 Message Bhejo';}
-}
-
+// ── STREAM ──
 function checkStream(){
   const p=new URLSearchParams(window.location.search);
   const uid=p.get('uid'),mid=p.get('mid');
   if(!uid||!mid)return;
-  if(!isPrem){showPage('pg-stream');document.getElementById('sguard').style.display='block';return;}
+  if(!isPrem){goPage('pg-stream');return;}
   loadVid(`${BASE}/stream_file/${mid}`);
-  showPage('pg-stream');
+  goPage('pg-stream');
 }
 function loadVid(url){
   curVid=url;
@@ -656,8 +693,8 @@ function loadVid(url){
 }
 function doFull(){
   const v=document.getElementById('vp');
-  if(!v.src){toast('❌ Koi video nahi');return;}
-  (v.requestFullscreen||v.webkitRequestFullscreen||v.mozRequestFullScreen).call(v);
+  if(!v.src||!curVid){toast('❌ Koi video nahi');return;}
+  (v.requestFullscreen||v.webkitRequestFullscreen).call(v);
 }
 function doSpd(){
   spIdx=(spIdx+1)%spds.length;
@@ -666,234 +703,75 @@ function doSpd(){
 }
 function doPip(){
   const v=document.getElementById('vp');
-  if(!v.src){toast('❌ Koi video nahi');return;}
+  if(!curVid){toast('❌ Koi video nahi');return;}
   if(document.pictureInPictureEnabled)v.requestPictureInPicture?.().catch(()=>toast('PiP unsupported'));
 }
 function doDl(){
-  if(!curVid){toast('❌ Koi video nahi');return;}
+  if(!curVid){toast('❌ Koi video nahi — group mein search karo');return;}
   const a=document.createElement('a');a.href=curVid;a.download='';a.click();
   toast('⬇️ Download shuru...');
 }
 
-function showPage(id){
+// ── NAV ──
+function goPage(id){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   document.getElementById(id).classList.add('on');
-  const nb=document.getElementById('nb-'+id.replace('pg-',''));
-  if(nb)nb.classList.add('on');
   window.scrollTo({top:0,behavior:'smooth'});
+  // Hide help popup
+  document.getElementById('helpPopup').classList.remove('on');
+}
+function goHome(){goPage('pg-home');}
+
+// ── HELP ──
+function toggleHelp(){
+  const hp=document.getElementById('helpPopup');
+  hp.classList.toggle('on');
+}
+// Close help on outside click
+document.addEventListener('click',e=>{
+  const fab=document.getElementById('helpFab');
+  const popup=document.getElementById('helpPopup');
+  if(!fab.contains(e.target)&&!popup.contains(e.target)){
+    popup.classList.remove('on');
+  }
+});
+
+async function sendHelp(){
+  const msg=document.getElementById('hm').value.trim();
+  if(!msg||msg.length<6){toast('❌ Thoda likho!');return;}
+  const btn=document.getElementById('hbtn');
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
+  try{
+    const r=await fetch(`${BASE}/api/help`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:UID,name:FNAME,message:msg})});
+    const d=await r.json();
+    document.getElementById('hm').value='';
+    document.getElementById('helpPopup').classList.remove('on');
+    toast(d.ok?'✅ Message bhej diya!':'✅ Bheja gaya!');
+  }catch{
+    const u=`https://t.me/asbhaibsr?text=${encodeURIComponent('Help: '+msg)}`;
+    tg?tg.openTelegramLink(u):window.open(u,'_blank');
+    document.getElementById('helpPopup').classList.remove('on');
+  }finally{btn.disabled=false;btn.textContent='📤 Send';}
 }
 
-function ft(el){el.parentElement.classList.toggle('open');}
-
-let tt;
+// ── UTILS ──
+let toastT;
 function toast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
-  clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2900);
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3000);
 }
 function cpy(text,msg){
   navigator.clipboard?.writeText(text).then(()=>toast(msg)).catch(()=>{
     const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';
     document.body.appendChild(ta);ta.select();document.execCommand('copy');
-    document.body.removeChild(ta);toast(msg);
+    document.body.removeChild(ta);toast(msg||'✅ Copy ho gaya!');
   });
 }
 
+// ── START ──
 init();
 </script>
 </body>
-  </html>Instance created. Preparing to start...
-Starting download for registry01.prod.koyeb.com/k-192684ca-24ba-4165-afa9-7016dcade1a0/74c1af17-f22b-4f0c-a89d-697106892af5:1aa95f96-b8a7-4939-b307-275493533ab9
-Download progress: 100% |[32m++++++++[0m| (16.8 MiB/s)
-Download complete for registry01.prod.koyeb.com/k-192684ca-24ba-4165-afa9-7016dcade1a0/74c1af17-f22b-4f0c-a89d-697106892af5:1aa95f96-b8a7-4939-b307-275493533ab9
-Instance is starting... Waiting for health checks to pass.
- * Serving Flask app 'bot'
- * Debug mode: off
-2026-03-22 20:11:06,163 - __main__ - INFO - ✅ Flask started
-2026-03-22 20:11:06,173 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
- * Running on all addresses (0.0.0.0)
- * Running on http://127.0.0.1:8080
- * Running on http://10.2.32.44:8080
-2026-03-22 20:11:06,173 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
-2026-03-22 20:11:06,352 - pyrogram.connection.connection - INFO - Connecting...
-2026-03-22 20:11:06,507 - pyrogram.connection.connection - INFO - Connected! Production DC5 - IPv4
-2026-03-22 20:11:06,508 - pyrogram.session.session - INFO - NetworkTask started
-2026-03-22 20:11:06,988 - pyrogram.session.session - INFO - Session initialized: Layer 187
-2026-03-22 20:11:06,988 - pyrogram.session.session - INFO - Device: CPython 3.11.13 - Pyrogram 2.3.45
-2026-03-22 20:11:06,988 - pyrogram.session.session - INFO - System: Linux 6.1.62 (en)
-2026-03-22 20:11:06,988 - pyrogram.session.session - INFO - Session started
-2026-03-22 20:11:06,991 - pyrogram.session.session - INFO - PingTask started
-2026-03-22 20:11:07,339 - pyrogram.dispatcher - INFO - Started 5 HandlerTasks
-2026-03-22 20:11:07,339 - __main__ - INFO - ✅ Userbot started
-2026-03-22 20:11:07,339 - __main__ - INFO - 🚀 AsBhai Drop Bot starting...
-2026-03-22 20:11:07,353 - pyrogram.session.auth - INFO - Start creating a new auth key on DC2
-2026-03-22 20:11:07,354 - pyrogram.connection.connection - INFO - Connecting...
-2026-03-22 20:11:07,365 - pyrogram.connection.connection - INFO - Connected! Production DC2 - IPv4
-2026-03-22 20:11:08,627 - pyrogram.session.auth - INFO - Done auth key exchange: DhGenOk
-2026-03-22 20:11:08,627 - pyrogram.connection.connection - INFO - Disconnected
-2026-03-22 20:11:08,637 - pyrogram.connection.connection - INFO - Connecting...
-2026-03-22 20:11:08,652 - pyrogram.connection.connection - INFO - Connected! Production DC2 - IPv4
-2026-03-22 20:11:08,653 - pyrogram.session.session - INFO - NetworkTask started
-2026-03-22 20:11:08,710 - pyrogram.session.session - INFO - Session initialized: Layer 187
-2026-03-22 20:11:08,710 - pyrogram.session.session - INFO - Device: CPython 3.11.13 - Pyrogram 2.3.45
-2026-03-22 20:11:08,710 - pyrogram.session.session - INFO - System: Linux 6.1.62 (en)
-2026-03-22 20:11:08,710 - pyrogram.session.session - INFO - Session started
-2026-03-22 20:11:08,712 - pyrogram.session.session - INFO - PingTask started
-2026-03-22 20:11:08,738 - pyrogram.session.session - INFO - PingTask stopped
-2026-03-22 20:11:08,739 - pyrogram.connection.connection - INFO - Disconnected
-2026-03-22 20:11:08,739 - pyrogram.session.session - INFO - NetworkTask stopped
-2026-03-22 20:11:08,739 - pyrogram.session.session - INFO - Session stopped
-2026-03-22 20:11:08,743 - pyrogram.session.auth - INFO - Start creating a new auth key on DC5
-2026-03-22 20:11:08,743 - pyrogram.connection.connection - INFO - Connecting...
-2026-03-22 20:11:08,901 - pyrogram.connection.connection - INFO - Connected! Production DC5 - IPv4
-Instance is healthy. All health checks are passing.
-2026-03-22 20:11:10,342 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
-2026-03-22 20:11:10,343 - apscheduler.scheduler - INFO - Added job "start_bot.<locals>._do_scheduler_start.<locals>.<lambda>" to job store "default"
-2026-03-22 20:11:10,343 - apscheduler.scheduler - INFO - Scheduler started
-2026-03-22 20:11:10,343 - __main__ - INFO - ✅ Scheduler started
-2026-03-22 20:11:10,564 - pyrogram.session.auth - INFO - Done auth key exchange: DhGenOk
-2026-03-22 20:11:10,564 - pyrogram.connection.connection - INFO - Disconnected
-2026-03-22 20:11:10,569 - pyrogram.connection.connection - INFO - Connecting...
-2026-03-22 20:11:10,728 - pyrogram.connection.connection - INFO - Connected! Production DC5 - IPv4
-2026-03-22 20:11:10,728 - pyrogram.session.session - INFO - NetworkTask started
-2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - Session initialized: Layer 187
-2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - Device: CPython 3.11.13 - Pyrogram 2.3.45
-2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - System: Linux 6.1.62 (en)
-2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - Session started
-2026-03-22 20:11:11,220 - pyrogram.session.session - INFO - PingTask started
-2026-03-22 20:11:11,742 - pyrogram.dispatcher - INFO - Started 5 HandlerTasks
-2026-03-22 20:11:49,309 - werkzeug - INFO - 10.250.0.22 - - [22/Mar/2026 20:11:49] "HEAD / HTTP/1.1" 200 -
-2026-03-22 20:11:58,404 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
-Traceback (most recent call last):
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
-    await handler.callback(self.client, *args)
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
-    await self.original_callback(client, message, *args)
-  File "/workspace/bot.py", line 1207, in start_handler
-    await message.reply(
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
-    return await self._client.send_message(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
-    reply_markup=await reply_markup.write(self) if reply_markup else None,
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
-    buttons.append(await b.write(client))
-                   ^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
-    url=self.web_app.url
-        ^^^^^^^^^^^^^^^^
-AttributeError: 'dict' object has no attribute 'url'
-2026-03-22 20:12:01,079 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
-Traceback (most recent call last):
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
-    await handler.callback(self.client, *args)
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
-    await self.original_callback(client, message, *args)
-  File "/workspace/bot.py", line 1207, in start_handler
-    await message.reply(
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
-    return await self._client.send_message(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
-    reply_markup=await reply_markup.write(self) if reply_markup else None,
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
-    buttons.append(await b.write(client))
-                   ^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
-    url=self.web_app.url
-        ^^^^^^^^^^^^^^^^
-AttributeError: 'dict' object has no attribute 'url'
-2026-03-22 20:12:08,149 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
-Traceback (most recent call last):
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
-    await handler.callback(self.client, *args)
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
-    await self.original_callback(client, message, *args)
-  File "/workspace/bot.py", line 1207, in start_handler
-    await message.reply(
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
-    return await self._client.send_message(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
-    reply_markup=await reply_markup.write(self) if reply_markup else None,
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
-    buttons.append(await b.write(client))
-                   ^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
-    url=self.web_app.url
-        ^^^^^^^^^^^^^^^^
-AttributeError: 'dict' object has no attribute 'url'
-2026-03-22 20:12:23,591 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
-Traceback (most recent call last):
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
-    await handler.callback(self.client, *args)
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
-    await self.original_callback(client, message, *args)
-  File "/workspace/bot.py", line 1207, in start_handler
-    await message.reply(
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
-    return await self._client.send_message(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
-    reply_markup=await reply_markup.write(self) if reply_markup else None,
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
-    buttons.append(await b.write(client))
-                   ^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
-    url=self.web_app.url
-        ^^^^^^^^^^^^^^^^
-AttributeError: 'dict' object has no attribute 'url'
-2026-03-22 20:12:36,507 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
-Traceback (most recent call last):
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
-    await handler.callback(self.client, *args)
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
-    await self.original_callback(client, message, *args)
-  File "/workspace/bot.py", line 1207, in start_handler
-    await message.reply(
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
-    return await self._client.send_message(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
-    reply_markup=await reply_markup.write(self) if reply_markup else None,
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
-    buttons.append(await b.write(client))
-                   ^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
-    url=self.web_app.url
-        ^^^^^^^^^^^^^^^^
-AttributeError: 'dict' object has no attribute 'url'
-2026-03-22 20:12:53,043 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:12:53] "GET / HTTP/1.1" 200 -
-2026-03-22 20:13:00,041 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:13:00] "GET / HTTP/1.1" 200 -
-2026-03-22 20:13:01,091 - werkzeug - INFO - 10.250.0.21 - - [22/Mar/2026 20:13:01] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
-2026-03-22 20:13:36,693 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:13:36] "GET /stream?uid=7315805581&mid=127467 HTTP/1.1" 200 -
-2026-03-22 20:13:37,122 - werkzeug - INFO - 10.250.0.21 - - [22/Mar/2026 20:13:37] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
-2026-03-22 20:13:49,832 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:13:49] "[36mGET /stream?uid=7315805581&mid=127467 HTTP/1.1[0m" 304 -
-2026-03-22 20:15:59,061 - pyrogram.dispatcher - ERROR - 'dict' object has no attribute 'url'
-Traceback (most recent call last):
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/dispatcher.py", line 363, in handler_worker
-    await handler.callback(self.client, *args)
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/handlers/message_handler.py", line 154, in resolve_future_or_callback
-    await self.original_callback(client, message, *args)
-  File "/workspace/bot.py", line 1207, in start_handler
-    await message.reply(
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/messages_and_media/message.py", line 1482, in reply_text
-    return await self._client.send_message(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/methods/messages/send_message.py", line 185, in send_message
-    reply_markup=await reply_markup.write(self) if reply_markup else None,
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_markup.py", line 66, in write
-    buttons.append(await b.write(client))
-                   ^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/.heroku/python/lib/python3.11/site-packages/pyrogram/types/bots_and_keyboards/inline_keyboard_button.py", line 218, in write
-    url=self.web_app.url
-        ^^^^^^^^^^^^^^^^
-AttributeError: 'dict' object has no attribute 'url'
-2026-03-22 20:16:53,783 - werkzeug - INFO - 10.250.0.20 - - [22/Mar/2026 20:16:53] "HEAD / HTTP/1.1" 200 -
+  </html>
