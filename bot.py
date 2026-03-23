@@ -57,7 +57,7 @@ FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "@asbhai_bsr")
 FORCE_SUB_ID      = int(os.getenv("FORCE_SUB_ID", "-1002352329534"))
 SHORTLINK_API     = os.getenv("SHORTLINK_API", "")
 SHORTLINK_URL     = os.getenv("SHORTLINK_URL", "modijiurl.com")
-KOYEB_URL         = os.getenv("KOYEB_URL", "")  # Mini app ka URL e.g. https://yourapp.koyeb.app
+KOYEB_URL         = os.getenv("KOYEB_URL", "").rstrip("/")  # Mini app URL — trailing slash auto remove
 ADMINS            = [OWNER_ID]
 IST               = pytz.timezone("Asia/Kolkata")
 UPI_ID            = os.getenv("UPI_ID", "arsadsaifi8272@ibl")
@@ -631,7 +631,10 @@ async def is_verified_today(user_id):
     # Shortlinks exist karte hain?
     count = await shortlinks_col.count_documents({"active": True})
     if count == 0:
-        # No shortlinks configured — legacy date-based check
+        # Koi shortlink DB mein nahi — env SHORTLINK_API check karo
+        if not SHORTLINK_API:
+            return True  # Shortlink configured hi nahi — skip
+        # Env shortlink hai — legacy date check
         today = now_ist().strftime("%Y-%m-%d")
         doc = await users_col.find_one({"user_id": user_id})
         return bool(doc and doc.get("verified_date") == today)
@@ -881,25 +884,55 @@ async def verify_check(client, message, prem=False):
     if uid in ADMINS: return True
     if prem: return True
 
+    s = await get_settings()
+    # Global shortlink enabled check
+    if not s.get("shortlink_enabled", True): return True
+
     all_done, next_sl, _ = await get_user_verify_state(uid)
     if all_done: return True
 
     me = await client.get_me()
     group_id = message.chat.id
-    sl_id = str(next_sl["_id"])
-    sl_label = next_sl.get("label", "Shortlink")
-    hours = next_sl.get("hours", 24)
 
-    token = await make_token(uid, f"sv_{sl_id}")
-    verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
-    short = await get_cached_shortlink(uid, group_id, verify_url, next_sl)
+    # next_sl hai ya env-based shortlink use karo
+    if next_sl:
+        sl_id = str(next_sl["_id"])
+        sl_label = next_sl.get("label", "Shortlink")
+        hours = next_sl.get("hours", 24)
+        token = await make_token(uid, f"sv_{sl_id}")
+        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
+        short = await get_cached_shortlink(uid, group_id, verify_url, next_sl)
+    else:
+        # Fallback: env SHORTLINK_API use karo
+        if not SHORTLINK_API:
+            # No shortlink configured — mark verified automatically
+            await mark_verified(uid)
+            return True
+        sl_id = "env_default"
+        sl_label = "Verify"
+        hours = 24
+        token = await make_token(uid, "sv_env")
+        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
+        # Direct shortlink banao
+        try:
+            api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                    if r.status == 200:
+                        result = (await r.text()).strip()
+                        short = result if result.startswith("http") else verify_url
+                    else:
+                        short = verify_url
+        except:
+            short = verify_url
 
     links = await get_active_shortlinks()
-    total = len(links)
+    total = max(len(links), 1)
     done_count = 0
-    for sl in links:
-        if str(sl["_id"]) == sl_id: break
-        done_count += 1
+    if next_sl:
+        for sl in links:
+            if str(sl["_id"]) == sl_id: break
+            done_count += 1
 
     step_text = f"Step {done_count+1}/{total}: **{sl_label}**" if total > 1 else f"**{sl_label}**"
     time_text = f"Har **{hours} ghante** baad" if hours < 24 else "**Har din 1 baar**"
@@ -1117,7 +1150,7 @@ async def start_handler(client, message: Message):
         try:
             token_uid = int(parts[0])
             token = parts[1]
-            sl_id = parts[2] if len(parts) > 2 else None
+            sl_id = parts[2] if len(parts) > 2 else "env_default"
         except:
             await message.reply("❌ Invalid link.")
             return
@@ -1133,7 +1166,7 @@ async def start_handler(client, message: Message):
 
             # Shortlink verify log
             sl_label = "Shortlink"
-            if sl_id:
+            if sl_id and sl_id != "env_default":
                 try:
                     from bson import ObjectId
                     sl_doc = await shortlinks_col.find_one({"_id": ObjectId(sl_id)})
@@ -1398,6 +1431,9 @@ async def search_handler(client, message: Message):
 
     query = (message.text or "").strip()
 
+    # MOST IMPORTANT: "/" se shuru = command = ignore karo
+    if query.startswith("/"): return
+
     # Minimum length aur maximum length
     if len(query) < 2 or len(query) > 80: return
 
@@ -1416,8 +1452,10 @@ async def search_handler(client, message: Message):
 
     # Short common words jo movie naam nahi hain
     skip_words = {"hi","hello","hii","hlo","helo","ok","okay","thanks","ty",
-                  "thx","bye","lol","haha","😊","🙏","yes","no","kya","koi",
-                  "hai","hain","nahi","nahi","kaise","kaisa","mera","tera"}
+                  "thx","bye","lol","haha","yes","no","kya","koi",
+                  "hai","hain","nahi","kaise","kaisa","mera","tera",
+                  "acha","accha","theek","thik","bhai","bhi","wala",
+                  "movie","film","web","series","episode","part"}
     if query.lower() in skip_words: return
 
     # Per-user rate limit — ek user ek waqt mein sirf ek search
