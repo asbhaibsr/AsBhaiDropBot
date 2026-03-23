@@ -712,16 +712,20 @@ function checkStream(){
   if(!uid||!mid)return;
   goPage('pg-stream');
   if(!isPrem){
-    document.getElementById('streamPremMsg').style.display='block';
+    const sg=document.getElementById('streamPremMsg');
+    if(sg) sg.style.display='block';
     return;
   }
-  // Stream file load karo
-  const streamUrl=`${BASE}/stream_file/${mid}`;
-  loadVid(streamUrl, mid);
+  // Correct stream URL — aiohttp server
+  const streamUrl=`${BASE}/stream_file/${mid}?uid=${uid}`;
+  const downloadUrl=`${BASE}/download/${mid}?uid=${uid}`;
+  loadVid(streamUrl, downloadUrl, mid);
 }
 
-async function loadVid(streamUrl, mid){
+let curDownload=null;
+async function loadVid(streamUrl, downloadUrl, mid){
   curVid=streamUrl;
+  curDownload=downloadUrl||streamUrl;
   const vp=document.getElementById('vp');
   const ph=document.getElementById('ph');
   const loadingEl=document.getElementById('streamLoading');
@@ -768,10 +772,10 @@ function doPip(){
   if(document.pictureInPictureEnabled)v.requestPictureInPicture?.().catch(()=>toast('PiP unsupported'));
 }
 function doDl(){
-  if(!curVid){toast('❌ Koi video nahi — group mein search karo');return;}
-  // Download link — new tab mein kholo download ke liye
-  window.open(curVid, '_blank');
-  toast('⬇️ File link new tab mein khul rahi hai...');
+  const dlUrl = curDownload || curVid;
+  if(!dlUrl){toast('❌ Koi video nahi — group mein search karo');return;}
+  window.open(dlUrl, '_blank');
+  toast('⬇️ Download shuru ho rahi hai...');
 }
 
 // ── NAV ──
