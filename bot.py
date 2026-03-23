@@ -31,320 +31,507 @@ async def safe_send(func, *args, **kwargs):
             logger.error(f"safe_send error: {e}")
             return None
 from motor.motor_asyncio import AsyncIOMotorClient
+from bson import ObjectId
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from flask import Flask, jsonify, request as flask_request, send_from_directory
-
-load_dotenv()
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from aiohttp import web as aio_web
 
 # ═══════════════════════════════════════
-#  CONFIG
+#  AIOHTTP STREAMING SERVER
+#  TechVJ-style unlimited size streaming
+#  Flask-jaise JSON APIs + HTML serving
+#  Koi 20MB limit nahi — seedha Telegram se stream
 # ═══════════════════════════════════════
-API_ID            = int(os.getenv("API_ID", "0"))
-API_HASH          = os.getenv("API_HASH", "")
-BOT_TOKEN         = os.getenv("BOT_TOKEN", "")
-STRING_SESSION    = os.getenv("STRING_SESSION", "")
-MONGO_URI         = os.getenv("MONGO_URI", "")
-OWNER_ID          = int(os.getenv("OWNER_ID", "7315805581"))
-FILE_CHANNEL      = int(os.getenv("FILE_CHANNEL", "-1002463804038"))
-LOG_CHANNEL       = int(os.getenv("LOG_CHANNEL", "-1002463804038"))
-MAIN_CHANNEL      = os.getenv("MAIN_CHANNEL", "@asbhai_bsr")
-FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "@asbhai_bsr")
-FORCE_SUB_ID      = int(os.getenv("FORCE_SUB_ID", "-1002352329534"))
-SHORTLINK_API     = os.getenv("SHORTLINK_API", "")
-SHORTLINK_URL     = os.getenv("SHORTLINK_URL", "modijiurl.com")
-KOYEB_URL         = os.getenv("KOYEB_URL", "").rstrip("/")  # Mini app URL — trailing slash auto remove
-ADMINS            = [OWNER_ID]
-IST               = pytz.timezone("Asia/Kolkata")
-UPI_ID            = os.getenv("UPI_ID", "arsadsaifi8272@ibl")
-PORT              = int(os.getenv("PORT", "8080"))
+aio_app = aio_web.Application()
+_stream_cache = {}   # {msg_id: ByteStreamer info}
 
-# ── Shortlink cache: {user_id: {group_id: (link, expiry)}}
-_shortlink_cache = {}
+# ── Streaming helper ──
+async def get_file_info(msg_id: int):
+    """File message se streaming info nikalo"""
+    try:
+        file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
+        if not file_msg or file_msg.empty:
+            return None
+        f = None
+        fname = f"file_{msg_id}"
+        mime = "application/octet-stream"
+        if file_msg.video:
+            f = file_msg.video
+            fname = f.file_name or f"video_{msg_id}.mp4"
+            mime = f.mime_type or "video/mp4"
+        elif file_msg.document:
+            f = file_msg.document
+            fname = f.file_name or f"file_{msg_id}"
+            mime = f.mime_type or "application/octet-stream"
+        elif file_msg.audio:
+            f = file_msg.audio
+            fname = f.file_name or f"audio_{msg_id}.mp3"
+            mime = f.mime_type or "audio/mpeg"
+        if not f: return None
+        return {
+            "file_id": f.file_id,
+            "file_size": f.file_size or 0,
+            "file_name": fname,
+            "mime_type": mime,
+            "msg": file_msg
+        }
+    except Exception as e:
+        logger.error(f"get_file_info {msg_id}: {e}")
+        return None
 
-def now():
-    return datetime.now(pytz.utc)
+async def stream_generator(file_id: str, offset: int = 0, limit: int = None):
+    """
+    Userbot se file chunks stream karo.
+    Telegram ki koi size limit nahi — chunks mein aata hai.
+    """
+    chunk_size = 512 * 1024  # 512KB chunks
+    current_offset = offset
+    bytes_sent = 0
 
-def now_ist():
-    return datetime.now(IST)
+    try:
+        async for chunk in userbot.stream_media(
+            await userbot.get_messages(FILE_CHANNEL, 0) if False else None,  # placeholder
+            file_id=file_id,
+            offset=current_offset,
+        ):
+            if limit and bytes_sent + len(chunk) > limit:
+                yield chunk[:limit - bytes_sent]
+                break
+            yield chunk
+            bytes_sent += len(chunk)
+            current_offset += len(chunk)
+    except Exception as e:
+        logger.error(f"stream_generator error: {e}")
 
-def make_aware(dt):
-    if dt is None: return None
-    if dt.tzinfo is None: return pytz.utc.localize(dt)
-    return dt
+async def stream_telegram_file(file_id: str, file_size: int, mime_type: str,
+                                 file_name: str, request: aio_web.Request):
+    """
+    Range request support ke saath Telegram file stream karo.
+    Seedha Pyrogram userbot se chunks leke browser ko bhejo.
+    Works for ALL file sizes.
+    """
+    range_header = request.headers.get("Range")
+    from_bytes = 0
+    until_bytes = file_size - 1
 
-DEFAULT_SETTINGS = {
-    "auto_delete": True,
-    "auto_delete_time": 300,
-    "force_sub": True,
-    "shortlink_enabled": True,
-    "daily_limit": 10,
-    "premium_results": 10,
-    "free_results": 5,
-    "welcome_msg": "👋 Welcome {name}! Koi bhi file ka naam type karo 🗂",
-    "maintenance": False,
-    "request_mode": False,         # Agar True: sirf request, search band
-    "fsub_channels": [],           # [{id: int, username: str, title: str}]
-    "fsub_groups": [],             # [{id: int, username: str, title: str}]
-}
+    if range_header:
+        try:
+            rng = range_header.replace("bytes=", "").split("-")
+            from_bytes = int(rng[0]) if rng[0] else 0
+            until_bytes = int(rng[1]) if rng[1] else file_size - 1
+        except:
+            pass
 
-# ═══════════════════════════════════════
-#  FLASK APP
-# ═══════════════════════════════════════
-flask_app = Flask(__name__, static_folder="static")
+    if until_bytes >= file_size:
+        until_bytes = file_size - 1
+    req_length = until_bytes - from_bytes + 1
 
-@flask_app.route("/")
-def home():
-    return send_from_directory(".", "miniapp.html")
+    chunk_size = 512 * 1024  # 512KB
+    offset = from_bytes - (from_bytes % chunk_size)
+    first_cut = from_bytes - offset
 
-@flask_app.route("/health")
-def health():
-    return jsonify({"status": "ok", "time": now_ist().strftime("%d %b %H:%M IST")}), 200
+    headers = {
+        "Content-Type": mime_type,
+        "Content-Range": f"bytes {from_bytes}-{until_bytes}/{file_size}",
+        "Content-Length": str(req_length),
+        "Content-Disposition": f'inline; filename="{file_name}"',
+        "Accept-Ranges": "bytes",
+    }
 
-@flask_app.route("/api/plans")
-def plans():
-    return jsonify({
+    status = 206 if range_header else 200
+    response = aio_web.StreamResponse(status=status, headers=headers)
+    await response.prepare(request)
+
+    try:
+        client_to_use = userbot if userbot else bot
+        bytes_written = 0
+        async for chunk in client_to_use.stream_media(
+            {"chat_id": FILE_CHANNEL, "message_id": 0},
+            file_id=file_id,
+            offset=offset,
+        ):
+            if bytes_written == 0 and first_cut > 0:
+                chunk = chunk[first_cut:]
+            remaining = req_length - bytes_written
+            if len(chunk) > remaining:
+                chunk = chunk[:remaining]
+            if not chunk:
+                break
+            await response.write(chunk)
+            bytes_written += len(chunk)
+            if bytes_written >= req_length:
+                break
+    except Exception as e:
+        logger.error(f"stream write error: {e}")
+
+    await response.write_eof()
+    return response
+
+# ── AIOHTTP Routes ──
+routes = aio_web.RouteTableDef()
+
+@routes.get("/")
+async def home_handler(request):
+    """Mini app HTML serve karo"""
+    try:
+        with open("miniapp.html", "r", encoding="utf-8") as f:
+            html = f.read()
+        return aio_web.Response(text=html, content_type="text/html")
+    except FileNotFoundError:
+        return aio_web.Response(text="AsBhai Drop Bot ✅", content_type="text/plain")
+
+@routes.get("/health")
+async def health_handler(request):
+    return aio_web.json_response({
+        "status": "ok",
+        "time": now_ist().strftime("%d %b %H:%M IST")
+    })
+
+@routes.get("/stream")
+async def stream_page_handler(request):
+    """Stream page — mini app serve karo"""
+    return await home_handler(request)
+
+@routes.get(r"/stream_file/{msg_id:\d+}")
+async def stream_file_handler(request: aio_web.Request):
+    """
+    Unlimited size file streaming — TechVJ style.
+    Range requests support → browser mein video play hogi.
+    """
+    msg_id = int(request.match_info["msg_id"])
+
+    # UID check — sirf premium users
+    uid = request.rel_url.query.get("uid")
+    if uid:
+        try:
+            uid_int = int(uid)
+            if not await is_premium(uid_int) and uid_int not in ADMINS:
+                return aio_web.json_response(
+                    {"error": "Premium required for streaming"},
+                    status=403
+                )
+        except: pass
+
+    # File info get karo
+    info = await get_file_info(msg_id)
+    if not info:
+        return aio_web.json_response({"error": "File not found"}, status=404)
+
+    file_id = info["file_id"]
+    file_size = info["file_size"]
+    mime_type = info["mime_type"]
+    file_name = info["file_name"]
+    file_msg = info["msg"]
+
+    if file_size == 0:
+        return aio_web.json_response({"error": "File size unknown"}, status=404)
+
+    # Range request parse
+    range_header = request.headers.get("Range", "")
+    from_bytes = 0
+    until_bytes = file_size - 1
+
+    if range_header:
+        try:
+            rng = range_header.replace("bytes=", "").split("-")
+            from_bytes = int(rng[0]) if rng[0] else 0
+            until_bytes = int(rng[1]) if rng[1] else file_size - 1
+        except:
+            pass
+
+    if until_bytes >= file_size:
+        until_bytes = file_size - 1
+
+    req_length = until_bytes - from_bytes + 1
+    chunk_size = 1024 * 1024  # 1MB chunks
+
+    headers = {
+        "Content-Type": mime_type,
+        "Content-Range": f"bytes {from_bytes}-{until_bytes}/{file_size}",
+        "Content-Length": str(req_length),
+        "Content-Disposition": f'inline; filename="{file_name}"',
+        "Accept-Ranges": "bytes",
+    }
+
+    status = 206 if range_header else 200
+    response = aio_web.StreamResponse(status=status, headers=headers)
+    await response.prepare(request)
+
+    # Userbot se stream karo — koi size limit nahi
+    try:
+        client_to_use = userbot if userbot else bot
+        bytes_to_skip = from_bytes
+        bytes_written = 0
+
+        async for chunk in client_to_use.stream_media(file_msg):
+            if bytes_to_skip > 0:
+                if len(chunk) <= bytes_to_skip:
+                    bytes_to_skip -= len(chunk)
+                    continue
+                else:
+                    chunk = chunk[bytes_to_skip:]
+                    bytes_to_skip = 0
+
+            remaining = req_length - bytes_written
+            if len(chunk) > remaining:
+                chunk = chunk[:remaining]
+
+            await response.write(chunk)
+            bytes_written += len(chunk)
+
+            if bytes_written >= req_length:
+                break
+
+    except aio_web.ConnectionResetError:
+        pass  # User ne close kiya
+    except Exception as e:
+        logger.error(f"stream_file_handler error: {e}")
+
+    try:
+        await response.write_eof()
+    except: pass
+    return response
+
+@routes.get(r"/download/{msg_id:\d+}")
+async def download_handler(request: aio_web.Request):
+    """Download — attachment as file"""
+    msg_id = int(request.match_info["msg_id"])
+    info = await get_file_info(msg_id)
+    if not info:
+        return aio_web.json_response({"error": "File not found"}, status=404)
+
+    # Same as stream but disposition = attachment
+    request_copy = request
+    file_msg = info["msg"]
+    file_size = info["file_size"]
+    file_name = info["file_name"]
+    mime_type = info["mime_type"]
+    req_length = file_size
+
+    headers = {
+        "Content-Type": mime_type,
+        "Content-Length": str(req_length),
+        "Content-Disposition": f'attachment; filename="{file_name}"',
+        "Accept-Ranges": "bytes",
+    }
+
+    response = aio_web.StreamResponse(status=200, headers=headers)
+    await response.prepare(request)
+
+    try:
+        client_to_use = userbot if userbot else bot
+        async for chunk in client_to_use.stream_media(file_msg):
+            await response.write(chunk)
+    except aio_web.ConnectionResetError:
+        pass
+    except Exception as e:
+        logger.error(f"download_handler error: {e}")
+
+    try:
+        await response.write_eof()
+    except: pass
+    return response
+
+# JSON API routes
+@routes.get("/api/plans")
+async def api_plans(request):
+    return aio_web.json_response({
         "plans": [
-            {"id": "10days",  "name": "10 Din",  "days": 10,  "price": 50,  "desc": "Best for beginners"},
+            {"id": "10days",  "name": "10 Din",  "days": 10,  "price": 50,  "desc": "Best Starter"},
             {"id": "30days",  "name": "30 Din",  "days": 30,  "price": 150, "desc": "Most Popular"},
             {"id": "60days",  "name": "60 Din",  "days": 60,  "price": 200, "desc": "Great Value"},
             {"id": "150days", "name": "150 Din", "days": 150, "price": 500, "desc": "Super Saver"},
             {"id": "365days", "name": "1 Saal",  "days": 365, "price": 800, "desc": "Best Deal"},
         ],
         "group_plans": [
-            {"id": "group_1m",  "name": "1 Mahina",  "days": 30,  "price": 300, "desc": "Group Premium — Apni shortlink lagao"},
-            {"id": "group_2m",  "name": "2 Mahine",  "days": 60,  "price": 550, "desc": "Group Premium — Best Value"},
+            {"id": "group_1m", "name": "1 Mahina",  "days": 30, "price": 300, "desc": "Group Shortlink"},
+            {"id": "group_2m", "name": "2 Mahine",  "days": 60, "price": 550, "desc": "Best Value"},
         ],
         "upi": UPI_ID,
         "qr_url": "https://envs.sh/GdE.jpg",
         "contact": "@asbhaibsr"
     })
 
-@flask_app.route("/api/submit_payment", methods=["POST"])
-def submit_payment():
-    import asyncio as _a, base64, tempfile, os as _os
-    data = flask_request.get_json(silent=True) or {}
+@routes.get("/api/user_status/{user_id}")
+async def api_user_status(request):
+    try:
+        user_id = int(request.match_info["user_id"])
+        prem_doc = await premium_col.find_one({"user_id": user_id})
+        trial_doc = await free_trial_col.find_one({"user_id": user_id})
+        user_doc = await users_col.find_one({"user_id": user_id})
+        pending = await payments_col.count_documents({"user_id": user_id, "status": "pending"})
+        is_prem, is_trial, expiry_str = False, False, None
+        if prem_doc and prem_doc.get("expiry"):
+            exp = make_aware(prem_doc["expiry"])
+            if now() < exp:
+                is_prem = True
+                is_trial = prem_doc.get("trial", False)
+                expiry_str = exp.astimezone(IST).strftime("%d %b %Y %H:%M")
+        return aio_web.json_response({
+            "is_premium": is_prem, "is_trial": is_trial,
+            "trial_used": bool(trial_doc), "expiry": expiry_str,
+            "refer_count": user_doc.get("refer_count", 0) if user_doc else 0,
+            "pending_payments": pending
+        })
+    except Exception as e:
+        return aio_web.json_response({"is_premium": False, "error": str(e)})
+
+@routes.get("/api/refer/{user_id}")
+async def api_refer(request):
+    try:
+        user_id = int(request.match_info["user_id"])
+        doc = await users_col.find_one({"user_id": user_id})
+        refer_count = doc.get("refer_count", 0) if doc else 0
+        return aio_web.json_response({
+            "refer_count": refer_count,
+            "refers_needed": max(0, 10 - (refer_count % 10))
+        })
+    except Exception as e:
+        return aio_web.json_response({"refer_count": 0, "error": str(e)})
+
+@routes.post("/api/submit_payment")
+async def api_submit_payment(request):
+    import base64, tempfile, os as _os
+    try:
+        data = await request.json()
+    except:
+        return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
     user_id   = data.get("user_id")
     name      = data.get("name", "Unknown")
     plan_id   = data.get("plan_id")
     amount    = data.get("amount")
     txn_id    = data.get("txn_id", "").strip()
     screenshot = data.get("screenshot", "")
-
-    group_id   = data.get("group_id")       # Group premium ke liye
-    group_link = data.get("group_link", "")  # Group link
+    group_id  = data.get("group_id")
+    group_link = data.get("group_link", "")
 
     if not all([user_id, plan_id, txn_id]):
-        return jsonify({"ok": False, "error": "Saari details bharo!"}), 400
+        return aio_web.json_response({"ok": False, "error": "Saari details bharo!"}, status=400)
 
     plan_days_map = {"10days":10,"30days":30,"60days":60,"150days":150,"365days":365,"group_1m":30,"group_2m":60}
     days = plan_days_map.get(plan_id, 30)
 
-    async def _process():
-        existing = await payments_col.find_one({"txn_id": txn_id})
-        if existing:
-            return False, "Ye Transaction ID pehle se submit ho chuka hai!"
-        is_group_plan = str(plan_id).startswith("group_")
-        pay_doc = {
-            "user_id": user_id, "name": name, "plan_id": plan_id,
-            "days": days, "amount": amount, "txn_id": txn_id,
-            "screenshot": screenshot[:200] if screenshot else "",
-            "status": "pending", "submitted_at": now(),
-            "is_group": is_group_plan,
-            "group_id": str(group_id) if group_id else None,
-            "group_link": group_link or ""
-        }
-        result = await payments_col.insert_one(pay_doc)
-        pay_id = str(result.inserted_id)
-        group_info = ""
-        if is_group_plan and group_id:
-            group_info = f"\n🏘 Group ID: `{group_id}`\n🔗 Link: {group_link}"
-        pay_type = "🏘 GROUP PREMIUM" if is_group_plan else "💎 USER PREMIUM"
-        msg_text = (
-            f"💰 **Naya Payment — {pay_type}**\n\n"
-            f"👤 {name} (`{user_id}`)\n"
-            f"📦 Plan: **{plan_id}** ({days} din)\n"
-            f"💵 Amount: ₹{amount}\n"
-            f"🔖 TXN ID: `{txn_id}`"
-            f"{group_info}\n"
-            f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
-        )
-        kb = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✅ Approve", callback_data=f"pay_approve_{pay_id}_{user_id}_{days}"),
-                InlineKeyboardButton("❌ Reject",  callback_data=f"pay_reject_{pay_id}_{user_id}")
-            ]
-        ])
-        if screenshot and screenshot.startswith("data:image"):
-            try:
-                img_data = base64.b64decode(screenshot.split(",")[1])
-                with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf:
-                    tf.write(img_data); tf_path = tf.name
-                await bot.send_photo(LOG_CHANNEL, tf_path, caption=msg_text, reply_markup=kb)
-                await bot.send_photo(OWNER_ID, tf_path, caption=msg_text, reply_markup=kb)
-                _os.unlink(tf_path)
-            except:
-                await bot.send_message(LOG_CHANNEL, msg_text, reply_markup=kb)
-                await bot.send_message(OWNER_ID, msg_text, reply_markup=kb)
-        else:
+    existing = await payments_col.find_one({"txn_id": txn_id})
+    if existing:
+        return aio_web.json_response({"ok": False, "error": "Transaction ID already submitted!"}, status=400)
+
+    is_group_plan = str(plan_id).startswith("group_")
+    pay_type = "🏘 GROUP PREMIUM" if is_group_plan else "💎 USER PREMIUM"
+    group_info = f"\n🏘 Group: {group_id}\n🔗 {group_link}" if is_group_plan and group_id else ""
+
+    pay_doc = {
+        "user_id": user_id, "name": name, "plan_id": plan_id,
+        "days": days, "amount": amount, "txn_id": txn_id,
+        "screenshot": screenshot[:200] if screenshot else "",
+        "status": "pending", "submitted_at": now(),
+        "is_group": is_group_plan,
+        "group_id": str(group_id) if group_id else None,
+        "group_link": group_link or ""
+    }
+    result = await payments_col.insert_one(pay_doc)
+    pay_id = str(result.inserted_id)
+
+    msg_text = (
+        f"💰 **Naya Payment — {pay_type}**\n\n"
+        f"👤 {name} (`{user_id}`)\n"
+        f"📦 Plan: **{plan_id}** ({days} din)\n"
+        f"💵 Amount: ₹{amount}\n"
+        f"🔖 TXN ID: `{txn_id}`"
+        f"{group_info}\n"
+        f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
+    )
+    kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✅ Approve", callback_data=f"pay_approve_{pay_id}_{user_id}_{days}"),
+            InlineKeyboardButton("❌ Reject",  callback_data=f"pay_reject_{pay_id}_{user_id}")
+        ]
+    ])
+
+    if screenshot and screenshot.startswith("data:image"):
+        try:
+            img_data = base64.b64decode(screenshot.split(",")[1])
+            with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf:
+                tf.write(img_data); tf_path = tf.name
+            await bot.send_photo(LOG_CHANNEL, tf_path, caption=msg_text, reply_markup=kb)
+            await bot.send_photo(OWNER_ID, tf_path, caption=msg_text, reply_markup=kb)
+            _os.unlink(tf_path)
+        except:
             await bot.send_message(LOG_CHANNEL, msg_text, reply_markup=kb)
             try: await bot.send_message(OWNER_ID, msg_text, reply_markup=kb)
             except: pass
-        return True, "✅ Request submit ho gayi! 1-2 ghante mein activate hoga."
+    else:
+        await bot.send_message(LOG_CHANNEL, msg_text, reply_markup=kb)
+        try: await bot.send_message(OWNER_ID, msg_text, reply_markup=kb)
+        except: pass
 
+    return aio_web.json_response({"ok": True, "message": "✅ Request submit ho gayi! 1-2 ghante mein activate hoga."})
+
+@routes.post("/api/claim_trial")
+async def api_claim_trial(request):
     try:
-        ok, msg = run_async(_process())
-        return jsonify({"ok": ok, "message": msg}) if ok else (jsonify({"ok": False, "error": msg}), 400)
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        data = await request.json()
+    except:
+        return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
 
-@flask_app.route("/api/claim_trial", methods=["POST"])
-def claim_trial():
-    data = flask_request.get_json(silent=True) or {}
     user_id = data.get("user_id")
     if not user_id:
-        return jsonify({"ok": False, "error": "User ID missing"}), 400
+        return aio_web.json_response({"ok": False, "error": "User ID missing"}, status=400)
 
-    async def _claim():
-        doc = await free_trial_col.find_one({"user_id": user_id})
-        if doc:
-            return False, "Free trial pehle le chuke ho! Premium lo."
-        await free_trial_col.insert_one({"user_id": user_id, "claimed_at": now()})
-        expiry = now() + timedelta(minutes=5)
-        await premium_col.update_one(
-            {"user_id": user_id},
-            {"$set": {"user_id": user_id, "expiry": expiry, "trial": True, "added": now()}},
-            upsert=True
+    doc = await free_trial_col.find_one({"user_id": user_id})
+    if doc:
+        return aio_web.json_response({"ok": False, "message": "Free trial pehle le chuke ho! Premium lo."})
+
+    await free_trial_col.insert_one({"user_id": user_id, "claimed_at": now()})
+    expiry = now() + timedelta(minutes=5)
+    await premium_col.update_one(
+        {"user_id": user_id},
+        {"$set": {"user_id": user_id, "expiry": expiry, "trial": True, "added": now()}},
+        upsert=True
+    )
+    try:
+        await bot.send_message(
+            user_id,
+            "🆓 **Free Trial Shuru!**\n\n**5 minute** ke liye Premium active!\n"
+            "Group mein movie search karo abhi!\n\n"
+            "⏰ 5 min baad band hoga.\n💎 Continue ke liye Premium lo!"
         )
-        try:
-            await bot.send_message(
-                user_id,
-                "🆓 **Free Trial Shuru!**\n\n**5 minute** ke liye Premium active!\n"
-                "Group mein movie search karo abhi!\n\n"
-                "⏰ 5 min baad band hoga.\n💎 Continue ke liye Premium lo!"
-            )
-        except: pass
-        await send_log(f"🆓 Free Trial Claimed\n👤 `{user_id}`")
-        return True, "Trial shuru! 5 min ke liye premium active."
+    except: pass
+    await send_log(f"🆓 Free Trial\n👤 `{user_id}`")
+    return aio_web.json_response({"ok": True, "message": "Trial shuru! 5 min ke liye premium active."})
 
+@routes.post("/api/help")
+async def api_help(request):
     try:
-        ok, msg = run_async(_claim())
-        return jsonify({"ok": ok, "message": msg})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        data = await request.json()
+    except:
+        return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
 
-@flask_app.route("/api/user_status/<int:user_id>")
-def user_status_api(user_id):
-    loop = _a.new_event_loop()
-    try:
-        async def _check():
-            prem_doc = await premium_col.find_one({"user_id": user_id})
-            trial_doc = await free_trial_col.find_one({"user_id": user_id})
-            user_doc = await users_col.find_one({"user_id": user_id})
-            pending = await payments_col.count_documents({"user_id": user_id, "status": "pending"})
-            is_prem, is_trial, expiry_str = False, False, None
-            if prem_doc and prem_doc.get("expiry"):
-                exp = make_aware(prem_doc["expiry"])
-                if now() < exp:
-                    is_prem = True
-                    is_trial = prem_doc.get("trial", False)
-                    expiry_str = exp.astimezone(IST).strftime("%d %b %Y %H:%M")
-            return {
-                "is_premium": is_prem, "is_trial": is_trial,
-                "trial_used": bool(trial_doc), "expiry": expiry_str,
-                "refer_count": user_doc.get("refer_count", 0) if user_doc else 0,
-                "pending_payments": pending
-            }
-        return jsonify(run_async(_check()))
-    except Exception as e:
-        return jsonify({"is_premium": False, "error": str(e)})
-
-@flask_app.route("/api/refer/<int:user_id>")
-def refer_info(user_id):
-    try:
-        doc = run_async(users_col.find_one({"user_id": user_id}))
-        refer_count = doc.get("refer_count", 0) if doc else 0
-        refers_needed = max(0, 10 - (refer_count % 10))
-        return jsonify({"refer_count": refer_count, "refers_needed": refers_needed})
-    except Exception as e:
-        return jsonify({"refer_count": 0, "refers_needed": 10})
-
-@flask_app.route("/api/help", methods=["POST"])
-def help_api():
-    """Mini app se help message owner ko bhejo"""
-    data = flask_request.get_json(silent=True) or {}
     user_id = data.get("user_id")
     name = data.get("name", "Unknown")
-    message_text = data.get("message", "")
-    if not message_text:
-        return jsonify({"ok": False, "error": "No message"}), 400
+    msg_text = data.get("message", "")
+    if not msg_text:
+        return aio_web.json_response({"ok": False, "error": "No message"}, status=400)
 
-    async def _send():
-        await help_msgs_col.insert_one({
-            "user_id": user_id, "name": name,
-            "message": message_text, "time": now()
-        })
-        await send_log(
-            f"📩 **Mini App Help**\n\n"
-            f"👤 {name} (`{user_id}`)\n\n"
-            f"💬 {message_text}"
-        )
+    await help_msgs_col.insert_one({"user_id": user_id, "name": name, "message": msg_text, "time": now()})
+    await send_log(f"📩 **Mini App Help**\n\n👤 {name} (`{user_id}`)\n\n💬 {msg_text}")
+    return aio_web.json_response({"ok": True})
 
-    try:
-        run_async(_send())
-        return jsonify({"ok": True})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+# Add all routes
+aio_app.add_routes(routes)
 
-@flask_app.route("/stream")
-def stream_page():
-    """Stream URL redirect — Mini app se aata hai"""
-    return send_from_directory(".", "miniapp.html")
+async def run_aiohttp_server():
+    """aiohttp server start karo"""
+    runner = aio_web.AppRunner(aio_app)
+    await runner.setup()
+    site = aio_web.TCPSite(runner, "0.0.0.0", PORT)
+    await site.start()
+    logger.info(f"✅ aiohttp server started on port {PORT}")
 
-@flask_app.route("/stream_file/<int:msg_id>")
-def stream_file(msg_id):
-    """Telegram file URL get karke redirect karo — proper implementation"""
-    from flask import redirect as fl_redirect
-    try:
-        async def _get_file_url():
-            try:
-                file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
-                if not file_msg or file_msg.empty:
-                    return None
-                fid = None
-                if file_msg.video: fid = file_msg.video.file_id
-                elif file_msg.document: fid = file_msg.document.file_id
-                elif file_msg.audio: fid = file_msg.audio.file_id
-                if not fid:
-                    return None
-                async with aiohttp.ClientSession() as sess:
-                    async with sess.get(
-                        f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={fid}",
-                        timeout=aiohttp.ClientTimeout(total=15)
-                    ) as r:
-                        d = await r.json()
-                        if d.get("ok"):
-                            fp = d["result"]["file_path"]
-                            return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{fp}"
-                return None
-            except Exception as e:
-                logger.error(f"stream_file error: {e}")
-                return None
-
-        file_url = run_async(_get_file_url())
-        if file_url:
-            return fl_redirect(file_url)
-        return jsonify({"error": "File not found or size > 20MB"}), 404
-    except Exception as e:
-        logger.error(f"stream_file route error: {e}")
-        return jsonify({"error": str(e)}), 500
-
+# Backward compatibility — Flask se migrate
 def run_flask():
-    flask_app.run(host="0.0.0.0", port=PORT, use_reloader=False)
+    """Legacy — aiohttp use karo instead"""
+    pass
+
 
 def run_async(coro):
     """Flask routes se async code run karo — bot ke event loop mein"""
@@ -818,7 +1005,6 @@ async def get_user_verify_state(user_id):
 
 async def mark_sl_verified(user_id, shortlink_id, sl_label=""):
     """Shortlink verify ka log save karo"""
-    from bson import ObjectId
     # Count kitni baar verify kiya
     count = await verify_log_col.count_documents({"user_id": user_id, "shortlink_id": shortlink_id})
     await verify_log_col.insert_one({
@@ -922,10 +1108,11 @@ async def verify_check(client, message, prem=False):
     ])
     msg = await message.reply(
         f"🔐 **Verification Baaki Hai** ({done_count+1}/{total})\n\n"
-        f"👇 Link dabao → shortlink solve karo → verify!\n"
+        f"👇 Neeche link dabao → shortlink solve karo → verify!\n"
         f"⏰ {time_text} karna hoga.\n\n"
-        f"💎 **Premium lo** — kabhi verify nahi!",
-        reply_markup=kb
+        f"💎 Premium lo — kabhi verify nahi!",
+        reply_markup=kb,
+        parse_mode=enums.ParseMode.MARKDOWN
     )
     asyncio.create_task(del_later(msg, 300))
     return False
@@ -1062,13 +1249,14 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
         # Premium users ke liye stream + download buttons
         kb = None
         if prem and KOYEB_URL:
-            stream_url = f"{KOYEB_URL}/stream?uid={user.id}&mid={msg_id}"
-            # Download = Telegram file direct URL via bot token
-            # Ya stream URL same use karo — mini app mein download button hai
+            # Stream = mini app mein video player
+            stream_page_url = f"{KOYEB_URL}/?uid={user.id}&mid={msg_id}"
+            # Download = direct download endpoint (attachment mode)
+            download_direct_url = f"{KOYEB_URL}/download/{msg_id}?uid={user.id}"
             kb = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("▶️ Stream Karo", web_app=WebAppInfo(url=stream_url)),
-                    InlineKeyboardButton("⬇️ Download", web_app=WebAppInfo(url=stream_url))
+                    InlineKeyboardButton("▶️ Stream", web_app=WebAppInfo(url=stream_page_url)),
+                    InlineKeyboardButton("⬇️ Download", url=download_direct_url)
                 ]
             ])
 
@@ -1148,7 +1336,6 @@ async def start_handler(client, message: Message):
             sl_label = "Shortlink"
             if sl_id and sl_id != "env_default":
                 try:
-                    from bson import ObjectId
                     sl_doc = await shortlinks_col.find_one({"_id": ObjectId(sl_id)})
                     if sl_doc:
                         sl_label = sl_doc.get("label", "Shortlink")
@@ -2199,7 +2386,6 @@ async def pay_approve(client, query: CallbackQuery):
     pay_id = parts[2]
     user_id = int(parts[3])
     days = int(parts[4])
-    from bson import ObjectId
     pay_doc = await payments_col.find_one({"_id": ObjectId(pay_id)})
     await payments_col.update_one(
         {"_id": ObjectId(pay_id)},
@@ -2261,7 +2447,6 @@ async def pay_reject(client, query: CallbackQuery):
     parts = query.data.split("_")
     pay_id = parts[2]
     user_id = int(parts[3])
-    from bson import ObjectId
     await payments_col.update_one(
         {"_id": ObjectId(pay_id)},
         {"$set": {"status": "rejected", "rejected_at": now()}}
@@ -2548,7 +2733,6 @@ async def remove_shortlink_cmd(client, message: Message):
 async def sl_toggle_cb(client, query: CallbackQuery):
     if query.from_user.id not in ADMINS:
         await query.answer("❌ Sirf owner!", show_alert=True); return
-    from bson import ObjectId
     sl_id = query.data.replace("sl_toggle_", "")
     sl = await shortlinks_col.find_one({"_id": ObjectId(sl_id)})
     if not sl:
@@ -2580,7 +2764,6 @@ async def sl_toggle_cb(client, query: CallbackQuery):
 async def sl_remove_cb(client, query: CallbackQuery):
     if query.from_user.id not in ADMINS:
         await query.answer("❌ Sirf owner!", show_alert=True); return
-    from bson import ObjectId
     sl_id = query.data.replace("sl_remove_", "")
     sl = await shortlinks_col.find_one({"_id": ObjectId(sl_id)})
     if not sl:
@@ -2719,12 +2902,86 @@ async def show_requests(client, message: Message):
     if total == 0:
         await message.reply("📩 Koi request nahi!")
         return
+
+    args = message.command
+    # /requests clear — sab delete karo
+    if len(args) > 1 and args[1].lower() == "clear":
+        await requests_col.delete_many({})
+        await message.reply(f"✅ {total} requests clear kar di!")
+        return
+
+    # /requests <number> — specific request ka detail
+    if len(args) > 1:
+        try:
+            req_num = int(args[1])
+            reqs = []
+            async for r in requests_col.find({}).sort("time", -1):
+                reqs.append(r)
+            if 0 < req_num <= len(reqs):
+                req = reqs[req_num-1]
+                uid = req.get("user_id")
+                txt = req.get("request","")
+                name = req.get("name","?")
+                t = req.get("time")
+                time_str = make_aware(t).astimezone(IST).strftime("%d %b %H:%M") if t else "N/A"
+                kb = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📥 Upload Karo", callback_data=f"req_upload_{uid}_{txt[:30]}")],
+                    [InlineKeyboardButton("🗑 Delete Request", callback_data=f"req_del_{str(req['_id'])}")]
+                ])
+                await message.reply(
+                    f"📩 **Request #{req_num}**\n\n"
+                    f"👤 {name} (`{uid}`)\n"
+                    f"📁 `{txt}`\n"
+                    f"🕐 {time_str}",
+                    reply_markup=kb
+                )
+            else:
+                await message.reply(f"❌ #{req_num} nahi mila. Total: {len(reqs)}")
+            return
+        except ValueError:
+            pass
+
+    # Default: list dikho
     text = f"📩 **Requests ({total})**\n\n"
-    async for req in requests_col.find({}).sort("time", -1).limit(10):
-        text += f"• `{req['request']}` — {req.get('name','?')}\n"
-    if total > 10:
-        text += f"\n...aur {total-10} hain."
+    i = 1
+    async for req in requests_col.find({}).sort("time", -1).limit(15):
+        t = req.get("time")
+        time_str = make_aware(t).astimezone(IST).strftime("%d %b") if t else ""
+        text += f"**{i}.** `{req.get('request','?')}` — {req.get('name','?')} ({time_str})\n"
+        i += 1
+    if total > 15:
+        text += f"\n...aur {total-15} hain."
+    text += f"\n\n`/requests <number>` — detail dekho\n`/requests clear` — sab delete karo"
     await message.reply(text)
+
+@bot.on_callback_query(filters.regex(r"^req_del_"))
+async def req_delete_cb(client, query: CallbackQuery):
+    if query.from_user.id not in ADMINS:
+        await query.answer("❌ Sirf owner!", show_alert=True); return
+    req_id = query.data.replace("req_del_", "")
+    try:
+        await requests_col.delete_one({"_id": ObjectId(req_id)})
+        await query.message.edit_reply_markup(None)
+        await query.answer("✅ Request delete ho gayi!", show_alert=False)
+    except Exception as e:
+        await query.answer(f"❌ {e}", show_alert=True)
+
+@bot.on_callback_query(filters.regex(r"^req_upload_"))
+async def req_upload_cb(client, query: CallbackQuery):
+    if query.from_user.id not in ADMINS:
+        await query.answer("❌ Sirf owner!", show_alert=True); return
+    parts = query.data.split("_", 3)
+    user_id = int(parts[2]) if len(parts) > 2 else None
+    movie_name = parts[3] if len(parts) > 3 else "file"
+    await query.answer()
+    await query.message.reply(
+        f"📥 **Upload Guide**\n\n"
+        f"👤 User: `{user_id}`\n"
+        f"📁 File: `{movie_name}`\n\n"
+        f"1. File ko FILE_CHANNEL mein upload karo\n"
+        f"2. File ka message ID lo\n"
+        f"3. `/notify {user_id} <message>` se user ko batao"
+    )
 
 @bot.on_message(filters.command("broadcast") & filters.user(ADMINS) & filters.private)
 async def broadcast(client, message: Message):
@@ -2740,32 +2997,90 @@ async def broadcast(client, message: Message):
     target = args[1].lower()
     text = " ".join(args[2:])
     sm = await message.reply("📡 Shuru...")
-    total = done = failed = blocked = 0
+    total = done = failed = blocked = deleted = 0
+
     if target in ["users","all"]:
-        async for doc in users_col.find({}):
-            uid = doc.get("user_id")
-            if not uid: continue
+        user_ids = []
+        async for doc in users_col.find({}, {"user_id": 1}):
+            if doc.get("user_id"):
+                user_ids.append(doc["user_id"])
+
+        for uid in user_ids:
             total += 1
             try:
-                await client.send_message(uid, text); done += 1
+                await client.send_message(uid, text)
+                done += 1
                 await asyncio.sleep(0.05)
+            except FloodWait as e:
+                await asyncio.sleep(e.value + 1)
+                try:
+                    await client.send_message(uid, text)
+                    done += 1
+                except: failed += 1
             except (UserIsBlocked, InputUserDeactivated):
-                blocked += 1; await users_col.delete_one({"user_id": uid})
-            except FloodWait as e: await asyncio.sleep(e.value)
-            except: failed += 1
+                blocked += 1
+                deleted += 1
+                # Blocked/deactivated — user data clean karo
+                await users_col.delete_one({"user_id": uid})
+                await premium_col.delete_one({"user_id": uid})
+                await verify_log_col.delete_many({"user_id": uid})
+            except PeerIdInvalid:
+                blocked += 1
+                deleted += 1
+                await users_col.delete_one({"user_id": uid})
+            except Exception as e:
+                failed += 1
+                logger.warning(f"broadcast user {uid}: {e}")
+
+            # Progress update every 50
+            if total % 50 == 0:
+                try:
+                    await sm.edit(f"📡 Broadcasting... {total} done")
+                except: pass
+
     if target in ["groups","all"]:
-        async for doc in groups_col.find({}):
-            cid = doc.get("chat_id")
-            if not cid: continue
+        group_ids = []
+        async for doc in groups_col.find({}, {"chat_id": 1}):
+            if doc.get("chat_id"):
+                group_ids.append(doc["chat_id"])
+
+        for cid in group_ids:
             total += 1
             try:
-                await client.send_message(cid, text); done += 1
+                await client.send_message(cid, text)
+                done += 1
                 await asyncio.sleep(0.1)
+            except FloodWait as e:
+                await asyncio.sleep(e.value + 1)
+                try:
+                    await client.send_message(cid, text)
+                    done += 1
+                except: failed += 1
             except (ChatWriteForbidden, PeerIdInvalid):
-                failed += 1; await groups_col.delete_one({"chat_id": cid})
-            except FloodWait as e: await asyncio.sleep(e.value)
-            except: failed += 1
-    await sm.edit(f"📡 **Done!**\nTotal:{total} ✅{done} ❌{failed} 🚫{blocked}")
+                failed += 1
+                deleted += 1
+                # Bot removed from group — data clean karo
+                await groups_col.delete_one({"chat_id": cid})
+                await group_settings_col.delete_one({"chat_id": cid})
+                await group_prem_col.delete_one({"chat_id": cid})
+                await group_sl_col.delete_many({"chat_id": cid})
+            except Exception as e:
+                failed += 1
+                logger.warning(f"broadcast group {cid}: {e}")
+
+            if total % 20 == 0:
+                try:
+                    await sm.edit(f"📡 Broadcasting... {total} done")
+                except: pass
+
+    await sm.edit(
+        f"📡 **Broadcast Complete!**\n\n"
+        f"📊 Total: **{total}**\n"
+        f"✅ Success: **{done}**\n"
+        f"❌ Failed: **{failed}**\n"
+        f"🚫 Blocked/Left: **{blocked}**\n"
+        f"🗑 Data Cleaned: **{deleted}**"
+    )
 
 @bot.on_message(filters.command("help"))
 async def help_cmd(client, message: Message):
@@ -2838,6 +3153,36 @@ async def mystats(client, message: Message):
         f"📥 Aaj Downloads: {count}/{limit}\n"
         f"🔗 Total Refers: {refers}"
     )
+
+@bot.on_message(filters.command("notify") & filters.user(ADMINS))
+async def notify_user(client, message: Message):
+    """
+    /notify <user_id> <message>
+    User ko batao ki uski requested file upload ho gayi
+    """
+    args = message.command
+    if len(args) < 3:
+        await message.reply(
+            "Usage: `/notify <user_id> <message>`\n\n"
+            "Example:\n"
+            "`/notify 123456789 Aapki Kalki 2898 AD file upload ho gayi!`"
+        )
+        return
+    try:
+        uid = int(args[1])
+        msg_text = " ".join(args[2:])
+    except:
+        await message.reply("❌ Valid user_id do")
+        return
+    try:
+        await client.send_message(
+            uid,
+            f"📢 **Admin Message**\n\n{msg_text}\n\n"
+            f"Group mein search karke download karo! 🗂"
+        )
+        await message.reply(f"✅ `{uid}` ko notify kar diya!")
+    except Exception as e:
+        await message.reply(f"❌ Error: {e}")
 
 @bot.on_message(filters.command("ping") & filters.user(ADMINS))
 async def ping(client, message: Message):
@@ -3094,6 +3439,12 @@ async def inline_search(client, query):
 #  SCHEDULER — Cleanup
 # ═══════════════════════════════════════
 async def cleanup():
+    # Requests 1 din se purane delete karo
+    one_day_ago = now() - timedelta(hours=24)
+    req_deleted = await requests_col.delete_many({"time": {"$lt": one_day_ago}})
+    if req_deleted.deleted_count:
+        logger.info(f"Cleanup: {req_deleted.deleted_count} old requests deleted")
+
     deleted = await tokens_col.delete_many({"expiry": {"$lt": now()}})
     expired_cache = [k for k, (_, exp) in _shortlink_cache.items() if now() > exp]
     for k in expired_cache:
@@ -3114,47 +3465,40 @@ async def cleanup():
 #  START
 # ═══════════════════════════════════════
 def start_bot():
-    # Flask alag thread mein
-    Thread(target=run_flask, daemon=True).start()
-    logger.info("✅ Flask started")
-
-    # Userbot sync start
+    """
+    Everything ek hi async event loop mein chalao:
+    - Pyrogram bot + userbot
+    - aiohttp streaming server (unlimited file sizes)
+    - APScheduler
+    """
     if userbot:
         userbot.start()
         logger.info("✅ Userbot started")
     else:
-        logger.warning("⚠️ STRING_SESSION missing!")
+        logger.warning("⚠️ STRING_SESSION missing! Streaming limited.")
 
     logger.info("🚀 AsBhai Drop Bot starting...")
 
-    # bot.run() — Pyrogram ka sahi tarika
-    # Yeh internally event loop banata hai, handlers register karta hai
-    # aur hamesha idle rehta hai jab tak Ctrl+C na dabaao
-    # Scheduler bot ke on_start se start hoga
-    # Scheduler ko bot ke start hone ke baad thread se start karo
     def _start_scheduler_thread():
         import time
         time.sleep(4)
         try:
             loop = bot.loop
             if not loop or not loop.is_running():
-                logger.error("Bot loop not running for scheduler!")
                 return
-            # Scheduler ko bot ke loop mein start karo
             async def _start():
-                try:
-                    # Cleanup job — asyncio.run_coroutine_threadsafe use karo
-                    def _run_cleanup():
-                        if bot.loop and bot.loop.is_running():
-                            asyncio.run_coroutine_threadsafe(cleanup(), bot.loop)
-                    scheduler.add_job(_run_cleanup, 'interval', hours=1)
-                    scheduler.start()
-                    logger.info("✅ Scheduler started")
-                except Exception as e:
-                    logger.error(f"Scheduler start error: {e}")
+                # aiohttp server start
+                await run_aiohttp_server()
+                # Scheduler
+                def _run_cleanup():
+                    if bot.loop and bot.loop.is_running():
+                        asyncio.run_coroutine_threadsafe(cleanup(), bot.loop)
+                scheduler.add_job(_run_cleanup, 'interval', hours=1)
+                scheduler.start()
+                logger.info("✅ Scheduler + aiohttp started")
             asyncio.run_coroutine_threadsafe(_start(), loop)
         except Exception as e:
-            logger.error(f"Scheduler thread error: {e}")
+            logger.error(f"Startup thread error: {e}")
 
     Thread(target=_start_scheduler_thread, daemon=True).start()
     bot.run()
