@@ -458,11 +458,19 @@ const PLANS=[
   {id:"365days",name:"1 Saal", days:365,price:800, desc:"Best Deal 🔥",hot:false},
 ];
 const UPI="arsadsaifi8272@ibl";
-const BASE=window.location.origin;
+// BASE URL — always use current origin (Koyeb pe automatically sahi hoga)
+const BASE = window.location.origin.replace('http://', 'https://');
 
 // ── TELEGRAM ──
 const tg=window.Telegram?.WebApp;
-if(tg){tg.ready();tg.expand();tg.setHeaderColor('#07071a');tg.setBackgroundColor('#07071a');}
+try{
+  if(tg){
+    tg.ready();
+    tg.expand();
+    if(tg.setHeaderColor) tg.setHeaderColor('#07071a');
+    if(tg.setBackgroundColor) tg.setBackgroundColor('#07071a');
+  }
+}catch(e){console.log('TG init err:', e);}
 const UID=tg?.initDataUnsafe?.user?.id||null;
 const FNAME=tg?.initDataUnsafe?.user?.first_name||'User';
 
@@ -475,25 +483,31 @@ async function init(){
   renderPlans();
   if(!UID){setHomeBadge(false,false,null);loadRef(0);return;}
   try{
-    const r=await fetch(`${BASE}/api/user_status/${UID}`);
-    if(!r.ok)throw new Error();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const r=await fetch(`${BASE}/api/user_status/${UID}`, {signal: controller.signal});
+    clearTimeout(timeoutId);
+    if(!r.ok)throw new Error('Server ' + r.status);
     const d=await r.json();
     isPrem=d.is_premium||false;
     trialUsed=d.trial_used||false;
     setHomeBadge(isPrem,d.is_trial||false,d.expiry||null);
     loadRef(d.refer_count||0);
     if(trialUsed)markTrial();
-    if(isPrem){
-      document.getElementById('premStatus').innerHTML=
-        `<span style="color:var(--g2);font-weight:800">✅ Premium Active${d.expiry?' — Expiry: '+d.expiry:''}</span>`;
-    } else {
-      document.getElementById('premStatus').innerHTML=
-        `<span style="color:var(--m2)">Free User — Upgrade karo!</span>`;
+    const ps = document.getElementById('premStatus');
+    if(ps){
+      if(isPrem){
+        ps.innerHTML=`<span style="color:var(--g2);font-weight:800">✅ Premium Active${d.expiry?' — '+d.expiry:''}</span>`;
+      } else {
+        ps.innerHTML=`<span style="color:var(--m2)">Free User — Premium lo!</span>`;
+      }
     }
-  }catch{
+  }catch(err){
+    console.log('Status fetch err:', err.message);
     setHomeBadge(false,false,null);
     loadRef(0);
-    document.getElementById('premStatus').textContent='Status load nahi hua';
+    const ps=document.getElementById('premStatus');
+    if(ps) ps.textContent='Bot se /mystats type karo';
   }
   checkStream();
 }
