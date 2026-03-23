@@ -179,18 +179,14 @@ def submit_payment():
             except: pass
         return True, "✅ Request submit ho gayi! 1-2 ghante mein activate hoga."
 
-    loop = _a.new_event_loop()
     try:
-        ok, msg = loop.run_until_complete(_process())
+        ok, msg = run_async(_process())
         return jsonify({"ok": ok, "message": msg}) if ok else (jsonify({"ok": False, "error": msg}), 400)
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
-    finally:
-        loop.close()
 
 @flask_app.route("/api/claim_trial", methods=["POST"])
 def claim_trial():
-    import asyncio as _a
     data = flask_request.get_json(silent=True) or {}
     user_id = data.get("user_id")
     if not user_id:
@@ -218,18 +214,14 @@ def claim_trial():
         await send_log(f"🆓 Free Trial Claimed\n👤 `{user_id}`")
         return True, "Trial shuru! 5 min ke liye premium active."
 
-    loop = _a.new_event_loop()
     try:
-        ok, msg = loop.run_until_complete(_claim())
+        ok, msg = run_async(_claim())
         return jsonify({"ok": ok, "message": msg})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
-    finally:
-        loop.close()
 
 @flask_app.route("/api/user_status/<int:user_id>")
 def user_status_api(user_id):
-    import asyncio as _a
     loop = _a.new_event_loop()
     try:
         async def _check():
@@ -250,28 +242,23 @@ def user_status_api(user_id):
                 "refer_count": user_doc.get("refer_count", 0) if user_doc else 0,
                 "pending_payments": pending
             }
-        return jsonify(loop.run_until_complete(_check()))
+        return jsonify(run_async(_check()))
     except Exception as e:
         return jsonify({"is_premium": False, "error": str(e)})
-    finally:
-        loop.close()
 
 @flask_app.route("/api/refer/<int:user_id>")
 def refer_info(user_id):
-    import asyncio as _a
-    loop = _a.new_event_loop()
     try:
-        doc = loop.run_until_complete(users_col.find_one({"user_id": user_id}))
+        doc = run_async(users_col.find_one({"user_id": user_id}))
         refer_count = doc.get("refer_count", 0) if doc else 0
         refers_needed = max(0, 10 - (refer_count % 10))
         return jsonify({"refer_count": refer_count, "refers_needed": refers_needed})
-    finally:
-        loop.close()
+    except Exception as e:
+        return jsonify({"refer_count": 0, "refers_needed": 10})
 
 @flask_app.route("/api/help", methods=["POST"])
 def help_api():
     """Mini app se help message owner ko bhejo"""
-    import asyncio as _a
     data = flask_request.get_json(silent=True) or {}
     user_id = data.get("user_id")
     name = data.get("name", "Unknown")
@@ -290,14 +277,11 @@ def help_api():
             f"💬 {message_text}"
         )
 
-    loop = _a.new_event_loop()
     try:
-        loop.run_until_complete(_send())
+        run_async(_send())
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
-    finally:
-        loop.close()
 
 @flask_app.route("/stream")
 def stream_page():
@@ -311,7 +295,6 @@ def stream_file(msg_id):
     Note: Yeh basic version hai — production mein
     alag streaming server use karo.
     """
-    import asyncio as _a
     from flask import Response, stream_with_context
     import requests as req_lib
 
@@ -350,9 +333,7 @@ def stream_file(msg_id):
                 logger.error(f"get_file_path error: {e}")
             return None
 
-        loop = _a.new_event_loop()
-        file_url = loop.run_until_complete(_get_file_path())
-        loop.close()
+        file_url = run_async(_get_file_path())
 
         if file_url:
             # Redirect to Telegram CDN
@@ -365,6 +346,20 @@ def stream_file(msg_id):
 
 def run_flask():
     flask_app.run(host="0.0.0.0", port=PORT, use_reloader=False)
+
+def run_async(coro):
+    """Flask routes se async code run karo — bot ke event loop mein"""
+    try:
+        loop = bot.loop
+        if loop and loop.is_running():
+            future = asyncio.run_coroutine_threadsafe(coro, loop)
+            return future.result(timeout=30)
+        else:
+            # Fallback
+            return asyncio.run(coro)
+    except Exception as e:
+        logger.error(f"run_async error: {e}")
+        raise
 
 # ═══════════════════════════════════════
 #  DATABASE
@@ -2979,28 +2974,27 @@ def start_bot():
     # Scheduler ko bot ke start hone ke baad thread se start karo
     def _start_scheduler_thread():
         import time
-        time.sleep(3)  # Bot ko start hone do
+        time.sleep(4)
         try:
             loop = bot.loop
-            if loop and loop.is_running():
-                loop.call_soon_threadsafe(
-                    lambda: asyncio.ensure_future(
-                        _do_scheduler_start(), loop=loop
-                    )
-                )
+            if not loop or not loop.is_running():
+                logger.error("Bot loop not running for scheduler!")
+                return
+            # Scheduler ko bot ke loop mein start karo
+            async def _start():
+                try:
+                    # Cleanup job — asyncio.run_coroutine_threadsafe use karo
+                    def _run_cleanup():
+                        if bot.loop and bot.loop.is_running():
+                            asyncio.run_coroutine_threadsafe(cleanup(), bot.loop)
+                    scheduler.add_job(_run_cleanup, 'interval', hours=1)
+                    scheduler.start()
+                    logger.info("✅ Scheduler started")
+                except Exception as e:
+                    logger.error(f"Scheduler start error: {e}")
+            asyncio.run_coroutine_threadsafe(_start(), loop)
         except Exception as e:
             logger.error(f"Scheduler thread error: {e}")
-
-    async def _do_scheduler_start():
-        try:
-            scheduler.add_job(
-                lambda: asyncio.create_task(cleanup()),
-                'interval', hours=1
-            )
-            scheduler.start()
-            logger.info("✅ Scheduler started")
-        except Exception as e:
-            logger.error(f"Scheduler start error: {e}")
 
     Thread(target=_start_scheduler_thread, daemon=True).start()
     bot.run()
