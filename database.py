@@ -42,47 +42,10 @@ group_prem_col    = db["group_premium"]
 group_sl_col      = db["group_shortlinks"]
 group_settings_col = db["group_settings"]
 
-mongo_client  = AsyncIOMotorClient(MONGO_URI)
-db            = mongo_client["asbhaidropbot"]
-users_col     = db["users"]
-groups_col    = db["groups"]
-premium_col   = db["premium"]
-settings_col  = db["settings"]
-tokens_col    = db["tokens"]
-requests_col  = db["requests"]
-banned_col    = db["banned"]
-refers_col    = db["refers"]        # {referrer_id, referred_id, time}
-free_trial_col = db["free_trials"]  # {user_id, uses, last_time}
-help_msgs_col  = db["help_msgs"]    # Mini app help messages
-payments_col   = db["payments"]     # {user_id, plan_id, txn_id, status, ...}
-shortlinks_col = db["shortlinks"]   # {api_key, url, hours, label, active, order}
-verify_log_col = db["verify_logs"]  # {user_id, shortlink_id, verified_at, count}
-group_prem_col = db["group_premium"] # {chat_id, owner_id, txn_id, status, expiry, days}
-group_sl_col   = db["group_shortlinks"] # {chat_id, api_key, url, hours, label, order}
+# bot/userbot — set from bot.py via set_clients()
+bot = None
+userbot = None
 
-# Group-level settings: {chat_id, free_results, premium_results, force_sub, shortlink_enabled, ...}
-group_settings_col = db["group_settings"]
-
-# ═══════════════════════════════════════
-#  CLIENTS
-# ═══════════════════════════════════════
-bot = Client(
-    "asbhai_drop_bot",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    bot_token=BOT_TOKEN,
-    in_memory=True
-)
-
-userbot = Client(
-    "asbhai_userbot",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    session_string=STRING_SESSION,
-    in_memory=True
-) if STRING_SESSION else None
-
-scheduler = AsyncIOScheduler(timezone=IST)
 
 # ═══════════════════════════════════════
 #  SETTINGS — Global
@@ -459,27 +422,30 @@ async def make_shortlink(url):
 
 async def get_user_verify_state(user_id):
     """
-    User ka current verify state.
-    DB shortlinks + env shortlink dono check karta hai.
+    User ka current verify state — SEQUENTIAL shortlink rotation.
+    
+    Logic:
+    - Shortlinks order mein check karo
+    - Agar SL1 verified nahi → SL1 dikhao
+    - Agar SL1 verified hai aur time expired nahi → SL2 check karo
+    - Agar SL1 time expired → SL1 dobara dikhao (time-based rotation)
+    - Sab verified aur valid → bypass (all_done=True)
+    
     Returns: (all_verified: bool, next_sl: dict|None, wait_hours: float)
-    next_sl = None means env-based shortlink use karo
     """
     links = await get_active_shortlinks()
 
     if not links:
-        # DB mein koi shortlink nahi — env check karo
         if not SHORTLINK_API:
-            return True, None, 0  # Koi shortlink configured nahi — bypass
-        # Env shortlink hai — legacy date-based verify check
+            return True, None, 0
+        # Env shortlink — date-based
         today = now_ist().strftime("%Y-%m-%d")
         doc = await users_col.find_one({"user_id": user_id})
-        verified = bool(doc and doc.get("verified_date") == today)
-        if verified:
+        if doc and doc.get("verified_date") == today:
             return True, None, 0
-        else:
-            return False, None, 0  # None = env shortlink use karo
+        return False, None, 0
 
-    # DB shortlinks hain — unhe check karo
+    # Sequential check — order mein
     for sl in links:
         sl_id = str(sl["_id"])
         hours = sl.get("hours", 24)
@@ -488,11 +454,16 @@ async def get_user_verify_state(user_id):
             sort=[("verified_at", -1)]
         )
         if not log:
+            # Kabhi verify nahi kiya — ye wali dikhao
             return False, sl, 0
         last_verify = make_aware(log["verified_at"])
         time_passed = (now() - last_verify).total_seconds() / 3600
         if time_passed >= hours:
-            return False, sl, 0
+            # Time expire ho gaya — ye wali dobara dikhao
+            return False, sl, time_passed - hours
+        # Ye SL valid hai — agli check karo
+
+    # Sab shortlinks verified aur valid
     return True, None, 0
 
 async def mark_sl_verified(user_id, shortlink_id, sl_label=""):
