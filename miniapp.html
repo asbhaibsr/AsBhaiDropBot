@@ -1,842 +1,541 @@
 <!DOCTYPE html>
+<!-- © 2025 @asbhaibsr | @asbhai_bsr | DO NOT REMOVE CREDITS -->
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>AsBhai Bot</title>
+<title>AsBhai Drop Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-:root{
-  --bg:#07071a;--c1:#0d0d22;--c2:#121230;--c3:#181840;
-  --p:#7c3aed;--p2:#a855f7;--p3:#c084fc;
-  --g:#f59e0b;--g2:#fbbf24;
-  --gr:#10b981;--gr2:#34d399;
-  --r:#ef4444;--b:#3b82f6;
-  --t:#f1f5f9;--m:#64748b;--m2:#94a3b8;
-  --bd:rgba(124,58,237,0.2);--bd2:rgba(124,58,237,0.4);
-}
+:root{--bg:#ffffff;--bg2:#f5f5f5;--bg3:#eeeeee;--ink:#0a0a0a;--ink2:#444;--ink3:#888;--grn:#22c55e;--red:#ef4444;--bd:#e5e5e5;--bd2:#ccc;--ff:'Space Grotesk',sans-serif;--mono:'Space Mono',monospace}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--t);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 500px 300px at 20% 10%,rgba(124,58,237,.12),transparent 70%),radial-gradient(ellipse 300px 200px at 80% 85%,rgba(168,85,247,.08),transparent 70%);pointer-events:none;z-index:0}
+body{font-family:var(--ff);background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+.pg{display:none;animation:pi .2s ease}.pg.on{display:block}#home.on{display:flex;flex-direction:column;min-height:100vh}
+@keyframes pi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-/* ── PAGES ── */
-.pg{display:none;position:relative;z-index:1;animation:fu .2s ease}
-.pg.on{display:block}
-@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* NAV */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;border-bottom:1.5px solid var(--ink);position:sticky;top:0;background:var(--bg);z-index:50}
+.nlogo{display:flex;align-items:center;gap:10px}
+.nico{width:36px;height:36px;background:var(--ink);border-radius:10px;display:grid;place-items:center;font-size:17px}
+.nname{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:-.5px}
+.nstat{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);color:var(--ink3)}
+.ldot{width:8px;height:8px;border-radius:50%;background:var(--grn);animation:bk 1.8s ease-in-out infinite}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── HOME — 3 BIG ICONS ── */
-#pg-home{padding:20px 16px 100px;display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh}
-#pg-home.on{display:flex}
-.home-brand{text-align:center;margin-bottom:36px}
-.home-brand h1{font-size:26px;font-weight:900;background:linear-gradient(90deg,var(--g),var(--p2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.home-brand p{font-size:13px;color:var(--m2);margin-top:4px}
-.home-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(124,58,237,.14);border:1px solid var(--bd2);border-radius:100px;padding:5px 14px;font-size:11px;color:var(--p3);margin-top:10px;font-weight:700}
-.dot-live{width:7px;height:7px;border-radius:50%;background:var(--gr2);box-shadow:0 0 7px var(--gr2)}
+/* HERO */
+.hero{padding:44px 20px 36px;border-bottom:1.5px solid var(--ink)}
+.htag{display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1.5px solid var(--ink);border-radius:100px;padding:5px 14px;font-size:11px;font-family:var(--mono);font-weight:700;margin-bottom:20px;letter-spacing:.3px}
+.hero h1{font-family:var(--mono);font-size:42px;font-weight:700;line-height:1.05;letter-spacing:-2px;margin-bottom:6px}
+.hero h1 span{color:var(--ink3);display:block}
+.hero p{font-size:14.5px;color:var(--ink2);line-height:1.65;margin-top:12px}
+.hcta{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap}
+.bprim{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:#fff;border:1.5px solid var(--ink);border-radius:100px;padding:12px 22px;font-size:13.5px;font-weight:700;font-family:var(--ff);cursor:pointer;transition:all .15s}
+.bprim:active{transform:scale(.97)}
+.bout{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--ink);border:1.5px solid var(--ink);border-radius:100px;padding:12px 20px;font-size:13.5px;font-weight:600;font-family:var(--ff);cursor:pointer;transition:all .15s}
+.bout:active{background:var(--bg2)}
 
-.big-btns{display:flex;flex-direction:column;gap:14px;width:100%;max-width:380px}
-.big-btn{border-radius:20px;padding:22px 20px;cursor:pointer;border:1px solid;display:flex;align-items:center;gap:18px;transition:transform .18s,box-shadow .18s;text-align:left}
-.big-btn:active{transform:scale(.97)}
-.big-btn.stream{background:linear-gradient(135deg,#0c1a2e,#162845);border-color:rgba(59,130,246,.4);box-shadow:0 0 20px rgba(59,130,246,.1)}
-.big-btn.premium{background:linear-gradient(135deg,#1a0d44,#221060);border-color:rgba(168,85,247,.4);box-shadow:0 0 20px rgba(124,58,237,.15)}
-.big-btn.earn{background:linear-gradient(135deg,#0a2010,#0f3a1a);border-color:rgba(16,185,129,.4);box-shadow:0 0 20px rgba(16,185,129,.1)}
-.big-ico{font-size:48px;flex-shrink:0;line-height:1}
-.big-txt h2{font-size:20px;font-weight:900;margin-bottom:4px}
-.big-txt p{font-size:12px;color:var(--m2);line-height:1.5}
-.big-btn.stream .big-txt h2{color:#93c5fd}
-.big-btn.premium .big-txt h2{color:var(--p3)}
-.big-btn.earn .big-txt h2{color:var(--gr2)}
+/* STATS */
+.stats{display:flex;border-bottom:1.5px solid var(--ink);overflow-x:auto}
+.si{flex:1;min-width:100px;padding:18px 16px;border-right:1.5px solid var(--ink);text-align:center}
+.si:last-child{border-right:none}
+.sn{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:-1px;display:block}
+.sl{font-size:9.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:1.5px;font-family:var(--mono);margin-top:3px;display:block}
 
-/* ── BACK BUTTON ── */
-.back-bar{display:flex;align-items:center;gap:10px;padding:16px 16px 8px;position:sticky;top:0;background:rgba(7,7,26,.95);backdrop-filter:blur(16px);z-index:50;border-bottom:1px solid var(--bd)}
-.back-btn{width:36px;height:36px;border-radius:10px;background:var(--c1);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
-.back-title{font-size:15px;font-weight:800}
+/* LANG */
+.lrow{display:flex;border-bottom:1.5px solid var(--ink)}
+.lb{flex:1;padding:11px;background:transparent;border:none;border-right:1.5px solid var(--ink);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;color:var(--ink3);transition:all .15s;letter-spacing:.3px}
+.lb:last-child{border-right:none}
+.lb.on{background:var(--ink);color:#fff}
 
-/* ── STREAM PAGE ── */
-#pg-stream{padding-bottom:30px}
-.stream-player{background:#000;aspect-ratio:16/9;position:relative;overflow:hidden}
-video{width:100%;height:100%;display:none}
-.ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#03030f}
-.ph-ico{font-size:54px;opacity:.2}
-.ph p{font-size:12px;color:var(--m);text-align:center;padding:0 20px}
-.stream-ctrls{display:flex;gap:8px;padding:12px 16px;flex-wrap:wrap}
-.sc-btn{flex:1;min-width:72px;background:var(--c1);border:1px solid var(--bd);color:var(--t);border-radius:11px;padding:10px 8px;font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
-.sc-btn:active{background:var(--p);transform:scale(.96)}
-.sc-btn.dl{background:var(--p);border-color:var(--p2)}
-.stream-info{padding:0 16px 16px}
-.sinfo-card{background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px}
-.sinfo-card h3{font-size:13px;font-weight:800;margin-bottom:6px;color:var(--p3)}
-.sinfo-card p{font-size:11.5px;color:var(--m2);line-height:1.7}
+/* MENU */
+.mlist{border-bottom:1.5px solid var(--ink)}
+.mi{display:flex;align-items:center;padding:18px 20px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .12s;gap:14px}
+.mi:last-child{border-bottom:none}
+.mi:active{background:var(--bg2)}
+.mico{width:40px;height:40px;border:1.5px solid var(--ink);border-radius:11px;display:grid;place-items:center;font-size:19px;flex-shrink:0}
+.mtxt{flex:1}.mtxt h3{font-size:14.5px;font-weight:700;font-family:var(--mono);letter-spacing:-.3px}
+.mtxt p{font-size:12px;color:var(--ink3);margin-top:2px}
+.mbdg{background:var(--ink);color:#fff;font-size:9px;font-weight:700;font-family:var(--mono);padding:3px 7px;border-radius:4px;letter-spacing:.5px}
+.marr{font-size:20px;color:var(--ink3);font-family:var(--mono)}
 
-/* ── PREMIUM PAGE ── */
-#pg-premium{padding-bottom:30px}
-.prem-hero{background:linear-gradient(135deg,#130a38,#1e1060,#100830);padding:24px 18px 20px;text-align:center;border-bottom:1px solid var(--bd2)}
-.prem-hero h2{font-size:22px;font-weight:900}
-.prem-hero h2 span{background:linear-gradient(90deg,var(--g),var(--p2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.prem-hero p{font-size:12px;color:var(--m2);margin-top:5px}
-#premStatus{margin-top:12px}
+/* FOOTER */
+.hfoot{padding:22px 20px;border-top:1.5px solid var(--ink);margin-top:auto}
+.hfoot p{font-size:12px;font-family:var(--mono);color:var(--ink3);line-height:1.7}
+.hfoot a{color:var(--ink);text-decoration:none;font-weight:700}
 
-.page-body{padding:14px 16px}
-.st{font-size:10.5px;font-weight:900;color:var(--m2);text-transform:uppercase;letter-spacing:2px;margin:18px 0 10px;display:flex;align-items:center;gap:8px}
-.st::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bd2),transparent)}
+/* BACK BAR */
+.bbar{display:flex;align-items:center;gap:12px;padding:13px 20px 11px;border-bottom:1.5px solid var(--ink);position:sticky;top:0;background:var(--bg);z-index:50}
+.bk{width:36px;height:36px;border:1.5px solid var(--ink);border-radius:10px;display:grid;place-items:center;cursor:pointer;font-size:15px;font-family:var(--mono);font-weight:700;transition:all .12s}
+.bk:active{background:var(--ink);color:#fff}
+.btit{font-family:var(--mono);font-size:14.5px;font-weight:700;letter-spacing:-.3px}
+.ptag{margin-left:auto;font-size:10px;font-family:var(--mono);font-weight:700;color:#fff;background:var(--ink);padding:3px 9px;border-radius:4px;letter-spacing:1px}
 
-/* Plans */
-.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.plan{background:var(--c1);border:1px solid var(--bd);border-radius:16px;padding:14px 12px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden}
-.plan:active{transform:scale(.96)}
-.plan.hot{background:linear-gradient(135deg,#190d44,#231060);border-color:rgba(245,158,11,.5)}
-.plan.hot::after{content:'🔥 BEST';position:absolute;top:7px;right:-17px;background:linear-gradient(135deg,var(--g),var(--g2));color:#000;font-size:7px;font-weight:900;padding:3px 22px;transform:rotate(35deg)}
-.pname{font-size:11px;font-weight:700;color:var(--m2);margin-bottom:3px}
-.pprice{font-size:23px;font-weight:900;line-height:1}
-.pprice sup{font-size:12px;vertical-align:super}
-.pdesc{font-size:10px;color:var(--p3);font-weight:700;margin-top:3px}
+/* SEC */
+.pb{}
+.sec{padding:22px 20px;border-bottom:1.5px solid var(--ink)}
+.sec:last-child{border-bottom:none}
+.seh{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
 
-/* Features */
-.flist{display:flex;flex-direction:column;gap:7px}
-.fi{background:var(--c1);border:1px solid var(--bd);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:10px}
-.fic{font-size:19px;width:30px;text-align:center;flex-shrink:0}
-.ftx h4{font-size:12.5px;font-weight:800}
-.ftx p{font-size:10.5px;color:var(--m2);margin-top:1px}
-.fbdg{background:rgba(124,58,237,.18);color:var(--p3);font-size:9px;font-weight:800;padding:2px 7px;border-radius:100px;border:1px solid var(--bd2);flex-shrink:0}
+/* STREAM */
+.pbox{background:var(--ink);aspect-ratio:16/9;position:relative;overflow:hidden}
+video{width:100%;height:100%;object-fit:contain;display:none}
+.vph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--ink);color:#fff}
+.vph-ico{font-size:46px;opacity:.35}
+.vph p{font-size:11.5px;opacity:.45;text-align:center;padding:0 24px;font-family:var(--mono);line-height:1.6}
+.vld{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:13px;background:var(--ink)}
+.ldr{width:38px;height:38px;border:3px solid rgba(255,255,255,.15);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+.ldt{font-size:11px;color:rgba(255,255,255,.45);font-family:var(--mono)}
+.sctrls{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1.5px solid var(--ink)}
+.sc{padding:13px 8px;border:none;border-right:1px solid var(--bd);background:var(--bg);font-size:12px;font-weight:700;font-family:var(--mono);cursor:pointer;text-align:center;transition:background .12s}
+.sc:last-child{border-right:none}
+.sc:active,.sc.acc{background:var(--ink);color:#fff}
+.spm-c{margin:18px 20px;border:1.5px solid var(--ink);border-radius:14px;padding:18px}
+.spm-c h3{font-family:var(--mono);font-size:13.5px;font-weight:700;margin-bottom:7px}
+.spm-c p{font-size:12.5px;color:var(--ink2);line-height:1.65}
+.how-c{margin:0 20px 18px;border:1px solid var(--bd);border-radius:12px;padding:16px;background:var(--bg2)}
+.how-c h4{font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:7px;letter-spacing:1px}
+.how-c p{font-size:12px;color:var(--ink2);line-height:1.8}
 
-/* Refer section */
-.refer-hero{background:linear-gradient(135deg,#160e48,#1e1060);border:1px solid rgba(168,85,247,.3);border-radius:18px;padding:20px 16px;text-align:center}
-.rcount{font-size:46px;font-weight:900;color:var(--p2);line-height:1}
-.rlbl{font-size:11.5px;color:var(--m2);margin-top:4px}
-.pbar{background:rgba(255,255,255,.06);border-radius:100px;height:8px;margin:11px 0 5px;overflow:hidden}
-.pfill{height:100%;background:linear-gradient(90deg,var(--p),var(--p2));border-radius:100px;transition:width .6s ease}
-.ptxt{font-size:10.5px;color:var(--m2);text-align:center}
-.link-box{background:var(--c1);border:1px solid var(--bd);border-radius:13px;padding:12px 14px;margin:10px 0;display:flex;align-items:center;gap:9px}
-.lurl{flex:1;font-size:11px;color:var(--m2);word-break:break-all}
-.cpybtn{background:var(--p);color:white;border:none;border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+/* PREMIUM */
+.pbanner{padding:30px 20px 26px;border-bottom:1.5px solid var(--ink);background:var(--ink);color:#fff}
+.pbanner h2{font-family:var(--mono);font-size:32px;font-weight:700;line-height:1.1;letter-spacing:-1.5px;margin-bottom:5px}
+.pbanner h2 span{color:rgba(255,255,255,.38)}
+.pbanner p{font-size:13px;color:rgba(255,255,255,.55);margin-top:5px}
+#pst{margin-top:11px;font-size:12px;font-family:var(--mono);color:rgba(255,255,255,.5)}
 
-/* Trial */
-.trial-card{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(52,211,153,.05));border:1px solid rgba(16,185,129,.28);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden}
-.trial-card::after{content:'1 BAAR ONLY';position:absolute;top:7px;right:-16px;background:var(--gr);color:#000;font-size:6.5px;font-weight:900;padding:3px 20px;transform:rotate(35deg)}
-.trial-card:active{transform:scale(.97)}
-.trial-card.used{opacity:.5;cursor:not-allowed}
-.trial-card.used::after{content:'KHATAM';background:var(--r)}
+/* TRIAL */
+.trow{display:flex;align-items:center;border:1.5px solid var(--ink);border-radius:13px;padding:15px;cursor:pointer;gap:13px;position:relative;overflow:hidden;transition:background .12s}
+.trow:active{background:var(--bg2)}.trow.used{opacity:.45;cursor:not-allowed}
+.tico{font-size:26px;flex-shrink:0}
+.ttxt h4{font-family:var(--mono);font-size:13.5px;font-weight:700}
+.ttxt p{font-size:11px;color:var(--ink3);margin-top:2px}
+.tbdg{margin-left:auto;flex-shrink:0;background:var(--grn);color:#fff;font-size:9px;font-weight:700;font-family:var(--mono);padding:4px 8px;border-radius:5px;letter-spacing:.5px}
 
-/* EARN PAGE */
-#pg-earn{padding-bottom:30px}
-.earn-hero{background:linear-gradient(135deg,#081a10,#0f3020);padding:22px 18px 18px;text-align:center;border-bottom:1px solid rgba(16,185,129,.25)}
-.earn-hero h2{font-size:21px;font-weight:900;color:var(--gr2)}
-.earn-hero p{font-size:12px;color:rgba(255,255,255,.65);margin-top:5px}
+/* PLANS GRID */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--bd);border-bottom:1.5px solid var(--ink)}
+.pc{padding:18px 15px;border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);position:relative}
+.pc:nth-child(2n){border-right:none}
+.pc:nth-last-child(-n+2){border-bottom:none}
+.pc.hot{background:var(--ink);color:#fff}
+.pn{font-size:10.5px;font-family:var(--mono);font-weight:700;color:var(--ink3);margin-bottom:4px}
+.pc.hot .pn{color:rgba(255,255,255,.45)}
+.pp{font-family:var(--mono);font-size:27px;font-weight:700;letter-spacing:-1.5px;line-height:1}
+.pp sup{font-size:13px;vertical-align:super}
+.pd{font-size:10.5px;color:var(--ink3);margin-top:3px;font-weight:500}
+.pc.hot .pd{color:rgba(255,255,255,.45)}
+.hotpill{position:absolute;top:9px;right:9px;background:#fff;color:var(--ink);font-size:8px;font-weight:700;font-family:var(--mono);padding:3px 7px;border-radius:4px;letter-spacing:.5px}
+.pbuy{margin-top:10px;width:100%;background:var(--bg2);border:1.5px solid var(--ink);border-radius:8px;padding:8px;font-size:11.5px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;gap:5px}
+.pc.hot .pbuy{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:#fff}
+.pbuy:active{background:var(--ink);color:#fff}
+.pc.hot .pbuy:active{background:rgba(255,255,255,.3)}
 
-.step-card{background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;gap:13px;align-items:flex-start}
-.step-num{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--p2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0;margin-top:1px}
-.step-txt h4{font-size:13px;font-weight:800;margin-bottom:3px}
-.step-txt p{font-size:11.5px;color:var(--m2);line-height:1.6}
-.step-txt code{background:rgba(124,58,237,.15);border:1px solid var(--bd);border-radius:6px;padding:2px 6px;font-size:11px;color:var(--p3);font-family:monospace}
+/* REFER */
+.rblk{border:1.5px solid var(--ink);border-radius:14px;padding:18px}
+.rnum{font-family:var(--mono);font-size:46px;font-weight:700;letter-spacing:-2px;line-height:1}
+.rsub{font-size:12px;color:var(--ink3);margin-top:4px}
+.rbar{background:var(--bg3);border-radius:2px;height:4px;margin:12px 0 5px;overflow:hidden}
+.rfill{height:100%;background:var(--ink);border-radius:2px;transition:width .8s ease}
+.rtxt{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+.rlink{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:9px 12px;margin:11px 0}
+.rurl{flex:1;font-size:10px;color:var(--ink2);word-break:break-all;font-family:var(--mono)}
+.cpb{background:var(--ink);color:#fff;border:none;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;flex-shrink:0;transition:all .12s}
+.cpb:active{transform:scale(.9)}
 
-.gplan{background:linear-gradient(135deg,#1a0d44,#251560);border:1px solid rgba(245,158,11,.4);border-radius:16px;padding:16px;cursor:pointer;transition:transform .15s;margin-bottom:9px}
-.gplan:active{transform:scale(.97)}
-.gplan-top{display:flex;justify-content:space-between;align-items:center}
-.gplan-price{font-size:26px;font-weight:900}
-.gplan-price sup{font-size:13px;vertical-align:super}
-.gplan-name{font-size:12px;font-weight:700;color:var(--m2);margin-bottom:3px}
-.gplan-desc{font-size:11px;color:var(--g);font-weight:600;margin-top:3px}
+/* FEATS */
+.ftbl{border-top:1px solid var(--bd)}
+.fr{display:flex;align-items:center;padding:13px 0;border-bottom:1px solid var(--bd);gap:11px}
+.fr:last-child{border-bottom:none}
+.fck{font-size:17px;flex-shrink:0;width:26px;text-align:center}
+.fn{font-size:13px;font-weight:600}
+.fo{font-size:11px;color:var(--ink3);margin-top:1px}
+.ftag{margin-left:auto;flex-shrink:0;background:var(--ink);color:#fff;font-size:8.5px;font-weight:700;font-family:var(--mono);padding:3px 7px;border-radius:4px;letter-spacing:.5px}
 
-/* PAYMENT MODAL */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:flex-end;backdrop-filter:blur(6px)}
-.overlay.on{display:flex}
-.modal{background:var(--c2);border-radius:22px 22px 0 0;padding:20px 18px 44px;width:100%;border:1px solid var(--bd2);border-bottom:none;animation:su .25s ease;max-height:93vh;overflow-y:auto}
-@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.mhd{width:36px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 16px}
-.mtit{font-size:16px;font-weight:900;text-align:center;margin-bottom:3px}
-.msub{font-size:11.5px;color:var(--m2);text-align:center;margin-bottom:14px}
-.pay-top{display:flex;gap:10px;margin-bottom:13px;align-items:stretch}
-.qrbox{background:white;border-radius:12px;padding:6px;width:90px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.qrbox img{width:78px;height:78px;object-fit:contain}
-.ubox{flex:1;background:var(--c3);border:1.5px dashed var(--p2);border-radius:12px;padding:11px 13px}
-.ulbl{font-size:10px;color:var(--m2);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
-.uval{font-size:13.5px;font-weight:800;color:var(--p3);word-break:break-all;line-height:1.4}
-.ucpy{margin-top:7px;background:rgba(124,58,237,.2);border:1px solid var(--bd2);color:var(--p3);border-radius:7px;padding:4px 11px;font-size:11px;font-weight:700;cursor:pointer;display:inline-block}
-.infobox{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22);border-radius:11px;padding:10px 13px;margin-bottom:13px;font-size:11px;line-height:1.8;color:#fde68a}
-.frow{margin-bottom:11px}
-.frow label{font-size:10px;font-weight:800;color:var(--m2);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
-input[type=text]{width:100%;background:var(--c3);border:1px solid var(--bd2);border-radius:11px;color:var(--t);font-size:13px;padding:11px 13px;font-family:inherit;outline:none;transition:border-color .2s}
-input[type=text]:focus{border-color:var(--p2)}
-input::placeholder{color:var(--m)}
-.flbl{width:100%;background:var(--c3);border:1.5px dashed var(--bd2);border-radius:11px;color:var(--m2);font-size:12px;padding:12px;text-align:center;cursor:pointer;display:block;transition:border-color .2s}
-.flbl:hover{border-color:var(--p2)}
-.fprev{margin-top:7px;border-radius:9px;overflow:hidden;display:none}
-.fprev img{width:100%;max-height:140px;object-fit:cover;border-radius:9px}
-.btn{width:100%;border:none;border-radius:13px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;transition:transform .15s,opacity .15s}
-.btn:active{transform:scale(.97)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.btnp{background:linear-gradient(135deg,var(--p),var(--p2));color:white}
-.btno{background:var(--c2);border:1px solid var(--bd2);color:var(--t);margin-top:8px;font-size:12.5px;padding:11px}
+/* EARN */
+.ebanner{padding:30px 20px;border-bottom:1.5px solid var(--ink)}
+.ebanner h2{font-family:var(--mono);font-size:30px;font-weight:700;letter-spacing:-1.5px;line-height:1.1}
+.ebanner p{font-size:13px;color:var(--ink2);margin-top:10px;line-height:1.65}
+.slist{border-bottom:1.5px solid var(--ink)}
+.sitm{display:flex;gap:13px;padding:16px 20px;border-bottom:1px solid var(--bd);align-items:flex-start}
+.sitm:last-child{border-bottom:none}
+.sn2{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--ink);display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
+.st2 h4{font-size:13px;font-weight:700;font-family:var(--mono);margin-bottom:2px}
+.st2 p{font-size:12px;color:var(--ink2);line-height:1.65}
+.st2 code{background:var(--bg3);border:1px solid var(--bd2);border-radius:5px;padding:2px 6px;font-size:11px;font-family:var(--mono)}
+.gpc{margin:18px 20px;border:1.5px solid var(--ink);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .12s}
+.gpc:active{background:var(--bg2)}
+.gph{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--bd)}
+.gph.dk{background:var(--ink);color:#fff;border-bottom-color:rgba(255,255,255,.1)}
+.gpn{font-family:var(--mono);font-size:10.5px;font-weight:700;opacity:.5;margin-bottom:3px}
+.gpp2{font-family:var(--mono);font-size:28px;font-weight:700;letter-spacing:-1.5px}
+.gpp2 sup{font-size:13px}
+.gpf{padding:11px 18px;display:flex;align-items:center;justify-content:space-between;background:var(--bg2)}
+.gpd{font-size:12px;color:var(--ink2);font-weight:500}
+.gpbuy{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:8px 15px;font-size:12px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all .12s}
+.gpbuy:active{transform:scale(.95)}
 
-/* HELP FLOATING BUTTON */
-.help-fab{position:fixed;bottom:24px;right:18px;width:46px;height:46px;background:linear-gradient(135deg,var(--p),var(--p2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;z-index:100;box-shadow:0 4px 16px rgba(124,58,237,.5);transition:transform .2s}
-.help-fab:active{transform:scale(.9)}
+/* MODAL */
+.mov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:flex-end;backdrop-filter:blur(4px)}
+.mov.on{display:flex}
+.mod{background:var(--bg);border-radius:20px 20px 0 0;width:100%;border-top:1.5px solid var(--ink);animation:mu .25s cubic-bezier(.25,.46,.45,.94);max-height:93vh;overflow-y:auto}
+@keyframes mu{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mnav{display:flex;align-items:center;padding:14px 18px 12px;border-bottom:1.5px solid var(--ink);position:sticky;top:0;background:var(--bg);z-index:10}
+.mdrag{width:36px;height:4px;background:var(--bd2);border-radius:2px;margin-right:auto}
+.mtit{font-family:var(--mono);font-size:13.5px;font-weight:700;flex:1;text-align:center}
+.mcl{width:32px;height:32px;border:1.5px solid var(--ink);border-radius:8px;display:grid;place-items:center;cursor:pointer;font-size:14px;font-family:var(--mono);transition:all .12s;margin-left:auto}
+.mcl:active{background:var(--ink);color:#fff}
+.mbody{padding:18px}
+.urow{display:flex;gap:11px;margin-bottom:14px}
+.qrb{background:var(--bg);border:1.5px solid var(--ink);border-radius:11px;padding:7px;width:86px;flex-shrink:0;display:grid;place-items:center}
+.qrb img{width:72px;height:72px;object-fit:contain}
+.ubox{flex:1;background:var(--bg2);border:1.5px solid var(--ink);border-radius:11px;padding:13px}
+.ulbl{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px}
+.uval{font-family:var(--mono);font-size:13.5px;font-weight:700;word-break:break-all;line-height:1.4}
+.ucp{margin-top:8px;display:inline-block;border:1.5px solid var(--ink);border-radius:7px;padding:4px 11px;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all .12s}
+.ucp:active{background:var(--ink);color:#fff}
+.istrip{border:1.5px solid var(--ink);border-radius:11px;padding:13px;margin-bottom:14px;background:var(--bg2);font-size:12px;line-height:1.85;font-family:var(--mono);color:var(--ink2)}
+.istrip b{color:var(--ink)}
+.fg{margin-bottom:13px}
+.fg label{display:block;font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px}
+input[type=text]{width:100%;background:var(--bg);border:1.5px solid var(--ink);border-radius:10px;padding:12px 13px;font-size:13px;font-family:var(--ff);outline:none;color:var(--ink);transition:box-shadow .15s}
+input[type=text]:focus{box-shadow:0 0 0 3px rgba(0,0,0,.08)}
+input::placeholder{color:var(--ink3)}
+.flbl{width:100%;display:block;border:1.5px dashed var(--bd2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;font-size:13px;color:var(--ink3);font-family:var(--ff);transition:border-color .15s}
+.flbl:hover{border-color:var(--ink);color:var(--ink)}
+.sprev{display:none;margin-top:8px;border-radius:9px;overflow:hidden;border:1.5px solid var(--bd)}
+.sprev img{width:100%;max-height:140px;object-fit:cover}
+.bfull{width:100%;border:1.5px solid var(--ink);border-radius:11px;padding:13px;font-size:14px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-.2px}
+.bfull:active{transform:scale(.98)}.bfull:disabled{opacity:.4;cursor:not-allowed}
+.bdk{background:var(--ink);color:#fff}
+.blt{background:var(--bg);color:var(--ink);margin-top:8px}
 
-/* HELP POPUP */
-.help-popup{position:fixed;bottom:80px;right:18px;width:min(320px,calc(100vw - 36px));background:var(--c2);border:1px solid var(--bd2);border-radius:18px;padding:16px;z-index:101;box-shadow:0 8px 32px rgba(0,0,0,.5);display:none;animation:popIn .2s ease}
-.help-popup.on{display:block}
-@keyframes popIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.help-popup h4{font-size:13px;font-weight:800;margin-bottom:10px}
-textarea{width:100%;background:var(--c3);border:1px solid var(--bd2);border-radius:10px;color:var(--t);font-size:12.5px;padding:10px 12px;font-family:inherit;outline:none;resize:none;height:80px;transition:border-color .2s}
-textarea:focus{border-color:var(--p2)}
-textarea::placeholder{color:var(--m)}
+/* HELP */
+.hfab{position:fixed;bottom:24px;right:20px;width:44px;height:44px;background:var(--ink);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:17px;font-family:var(--mono);font-weight:700;cursor:pointer;z-index:100;box-shadow:0 4px 14px rgba(0,0,0,.2);transition:transform .15s}
+.hfab:active{transform:scale(.9)}
+.hpop{position:fixed;bottom:78px;right:20px;width:min(290px,calc(100vw - 40px));background:var(--bg);border:1.5px solid var(--ink);border-radius:14px;padding:16px;z-index:101;display:none;box-shadow:0 8px 28px rgba(0,0,0,.12);animation:pp .18s ease}
+.hpop.on{display:block}
+@keyframes pp{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.hpop h4{font-family:var(--mono);font-size:13px;font-weight:700;margin-bottom:10px}
+textarea{width:100%;background:var(--bg2);border:1.5px solid var(--ink);border-radius:9px;padding:10px 12px;font-size:12.5px;font-family:var(--ff);outline:none;resize:none;height:78px;color:var(--ink)}
+.hcnt{display:block;text-align:center;margin-top:8px;font-size:11.5px;color:var(--ink);text-decoration:none;font-family:var(--mono);font-weight:700}
 
-/* UTILS */
-.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:white;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px}
-@keyframes sp{to{transform:rotate(360deg)}}
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:rgba(18,18,46,.97);backdrop-filter:blur(14px);border:1px solid var(--bd2);border-radius:100px;padding:9px 20px;font-size:12px;font-weight:700;opacity:0;transition:all .25s;z-index:300;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* TOAST */
+.toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;border-radius:8px;padding:10px 18px;font-size:12.5px;font-weight:700;font-family:var(--mono);opacity:0;transition:all .22s;z-index:300;white-space:nowrap;pointer-events:none;max-width:90vw;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.spi{width:13px;height:13px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px}
+/* Typing effect */
+.type-h{border-right:3px solid var(--ink);white-space:nowrap;overflow:hidden;display:inline-block;animation:crsr .7s step-end infinite}
+@keyframes crsr{0%,100%{border-color:var(--ink)}50%{border-color:transparent}}
+/* Shining effect */
+.shine-h{color:var(--ink3);position:relative;display:inline-block;background:linear-gradient(90deg,var(--ink3) 0%,var(--ink) 40%,var(--ink3) 60%,var(--ink3) 100%);background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:sh2 2.5s linear infinite}
+@keyframes sh2{0%{background-position:200% 0}100%{background-position:-200% 0}}
 </style>
 </head>
 <body>
 
-<!-- ══ HOME ══ -->
-<div class="pg on" id="pg-home">
-  <div class="home-brand">
-    <div style="font-size:46px;margin-bottom:8px">🎬</div>
-    <h1>AsBhai Bot</h1>
-    <p>Movies • Downloads • Stream • Earn</p>
-    <div id="hbadge" class="home-badge"><span class="dot-live"></span><span id="hbadge-txt">Loading...</span></div>
+<!-- HOME -->
+<div class="pg on" id="home">
+  <nav class="nav">
+    <div class="nlogo"><div class="nico">🎬</div><span class="nname">AsBhaiDrop</span></div>
+    <div class="nstat"><span class="ldot"></span><span id="stxt">Loading</span></div>
+  </nav>
+  <div class="hero">
+    <div class="htag"><span class="ldot" style="width:6px;height:6px"></span>Telegram Movie Bot</div>
+    <h1><span id="h1a" class="type-h"></span><br><span id="h1b" class="shine-h">Instantly.</span></h1>
+    <p id="herop">Group mein movie naam type karo — seedha PM mein file milegi. No hassle.</p>
+    <div class="hcta">
+      <button class="bprim" onclick="go('prem')">💎 <span id="h1">Premium Lo</span> →</button>
+      <button class="bout" onclick="go('earn')">💰 <span id="h2">Earn Karo</span></button>
+    </div>
   </div>
+  <div class="stats">
+    <div class="si"><span class="sn" id="stu">—</span><span class="sl">USERS</span></div>
+    <div class="si"><span class="sn" id="stf">—</span><span class="sl">FILES</span></div>
+    <div class="si"><span class="sn" id="stp">—</span><span class="sl">PREMIUM</span></div>
+  </div>
+  <div class="lrow">
+    <button class="lb on" onclick="sL('hi')" id="lhi">🇮🇳 Hindi</button>
+    <button class="lb" onclick="sL('en')" id="len">🇬🇧 English</button>
+  </div>
+  <div class="mlist">
+    <div class="mi" onclick="go('stream')"><div class="mico">▶️</div><div class="mtxt"><h3 id="m1">Stream & Download</h3><p id="m1s">Browser mein seedha dekho ya download karo</p></div><div class="mbdg">PREMIUM</div><span class="marr">›</span></div>
+    <div class="mi" onclick="go('prem')"><div class="mico">💎</div><div class="mtxt"><h3 id="m2">Premium Plans</h3><p id="m2s">No verify, no ads, unlimited results</p></div><span class="marr">›</span></div>
+    <div class="mi" onclick="go('earn')"><div class="mico">💰</div><div class="mtxt"><h3 id="m3">Paise Kamao</h3><p id="m3s">Group shortlink se har search pe earning</p></div><span class="marr">›</span></div>
+  </div>
+  <div class="hfoot">
+    <p>© 2025 <a href="https://t.me/asbhaibsr">@asbhaibsr</a> &nbsp;·&nbsp; <a href="https://t.me/asbhai_bsr">@asbhai_bsr</a><br>Ye bot sirf legal content ke liye hai.</p>
+  </div>
+</div>
 
-  <div class="big-btns">
-    <div class="big-btn stream" onclick="goPage('pg-stream')">
-      <div class="big-ico">▶️</div>
-      <div class="big-txt">
-        <h2>Stream & Download</h2>
-        <p>Movies browser mein seedha dekho ya download karo — Premium feature</p>
+<!-- STREAM -->
+<div class="pg" id="stream">
+  <div class="bbar"><div class="bk" onclick="goH()">←</div><div class="btit">▶️ Stream</div><div class="ptag">PREMIUM</div></div>
+  <div class="pbox">
+    <video id="vid" controls playsinline></video>
+    <div class="vph" id="vph"><div class="vph-ico">🎬</div><p id="vpht">Group mein search karo<br>phir Stream button dabao</p></div>
+    <div class="vld" id="vld"><div class="ldr"></div><div class="ldt">Loading...</div></div>
+  </div>
+  <div class="sctrls">
+    <button class="sc" onclick="doFull()">⛶ Full</button>
+    <button class="sc" onclick="doSpd()">⚡<span id="spv">1×</span></button>
+    <button class="sc" onclick="doPiP()">📺 PiP</button>
+    <button class="sc acc" onclick="doDl()">⬇️ <span id="tdl">DL</span></button>
+  </div>
+  <div id="spm" style="display:none">
+    <div class="spm-c"><h3>🔒 Premium Feature</h3><p>Stream aur download ke liye Premium chahiye.</p></div>
+    <div style="padding:0 20px 18px"><button class="bfull bdk" onclick="go('prem')">💎 Premium Lo →</button></div>
+  </div>
+  <div class="how-c" id="show">
+    <h4>HOW TO USE</h4>
+    <p id="showt">1️⃣ Group mein movie naam type karo<br>2️⃣ Bot PM mein file bhejega<br>3️⃣ File ke niche ▶️ Stream button dabao<br>4️⃣ Yahan video play hogi!</p>
+  </div>
+</div>
+
+<!-- PREMIUM -->
+<div class="pg" id="prem">
+  <div class="bbar"><div class="bk" onclick="goH()">←</div><div class="btit">💎 Premium</div></div>
+  <div class="pbanner"><h2>AsBhai<br><span>Premium.</span></h2><p id="psub">Sab kuch unlimited — koi verify nahi, koi wait nahi</p><div id="pst">—</div></div>
+  <div class="pb">
+    <div class="sec"><div class="seh">FREE TRIAL</div>
+      <div class="trow" id="tc" onclick="claimTrial()">
+        <div class="tico">🆓</div>
+        <div class="ttxt"><h4 id="tth">Free Trial — 5 Minute</h4><p id="ttp">Sirf 1 baar • Koi payment nahi</p></div>
+        <div class="tbdg" id="tbdg">1× FREE</div>
       </div>
     </div>
-    <div class="big-btn premium" onclick="goPage('pg-premium')">
-      <div class="big-ico">💎</div>
-      <div class="big-txt">
-        <h2>Premium Lo</h2>
-        <p>No verify, no ads, 10 results, stream karo — puri azaadi</p>
+    <div style="padding:20px 20px 0"><div class="seh" style="margin-bottom:0">PLANS — CLICK BUY TO PURCHASE</div></div>
+    <div class="pgrid" id="pgrid"></div>
+    <div class="sec"><div class="seh">REFER & EARN FREE PREMIUM</div>
+      <div class="rblk">
+        <div class="rnum" id="rc">0</div>
+        <div class="rsub">Har 10 refer = 15 din FREE Premium</div>
+        <div class="rbar"><div class="rfill" id="rf" style="width:0"></div></div>
+        <div class="rtxt" id="rtxt">0/10 refers</div>
+        <div class="rlink"><div class="rurl" id="rurl">—</div><button class="cpb" onclick="cpRef()">COPY</button></div>
+        <button class="bfull bdk" onclick="shRef()">📤 Share Refer Link</button>
       </div>
     </div>
-    <div class="big-btn earn" onclick="goPage('pg-earn')">
-      <div class="big-ico">💰</div>
-      <div class="big-txt">
-        <h2>Paise Kamao</h2>
-        <p>Apne group mein shortlink lagao aur har search se earning karo</p>
+    <div class="sec"><div class="seh">WHAT YOU GET</div>
+      <div class="ftbl">
+        <div class="fr"><div class="fck">🚫</div><div><div class="fn">No Force Join</div><div class="fo">Koi channel join nahi</div></div></div>
+        <div class="fr"><div class="fck">🔗</div><div><div class="fn">No Shortlink</div><div class="fo">Direct file — zero ads</div></div></div>
+        <div class="fr"><div class="fck">📦</div><div><div class="fn">10 Results</div><div class="fo">Free se double</div></div><div class="ftag">2×</div></div>
+        <div class="fr"><div class="fck">▶️</div><div><div class="fn">Stream + Download</div><div class="fo">Browser mein seedha play</div></div><div class="ftag">NEW</div></div>
+        <div class="fr"><div class="fck">💬</div><div><div class="fn">PM Search</div><div class="fo">Bot PM mein directly search</div></div></div>
+        <div class="fr"><div class="fck">🌐</div><div><div class="fn">Language Filter</div><div class="fo">Hindi, English, Tamil +</div></div></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ══ STREAM PAGE ══ -->
-<div class="pg" id="pg-stream">
-  <div class="back-bar">
-    <div class="back-btn" onclick="goHome()">←</div>
-    <div class="back-title">▶️ Stream & Download</div>
-  </div>
-  <div class="stream-player">
-    <video id="vp" controls playsinline webkit-playsinline></video>
-    <div class="ph" id="ph">
-      <div class="ph-ico">🎬</div>
-      <p>Group mein movie search karo<br>Stream/Download button dabao</p>
+<!-- EARN -->
+<div class="pg" id="earn">
+  <div class="bbar"><div class="bk" onclick="goH()">←</div><div class="btit">💰 Earn</div></div>
+  <div class="ebanner"><h2>Bot Se<br>Kamaai.</h2><p id="esub">Group mein shortlink lagao aur har search se earning karo. Bilkul free setup.</p></div>
+  <div class="pb">
+    <div class="slist">
+      <div class="sitm"><div class="sn2">1</div><div class="st2"><h4>Group Premium Lo</h4><p>Niche se plan kharido. ₹300/mahina — shortlink full access milega.</p></div></div>
+      <div class="sitm"><div class="sn2">2</div><div class="st2"><h4>Shortlink Account Banao</h4><p><strong>modijiurl.com</strong> par account banao. API Key lo.</p></div></div>
+      <div class="sitm"><div class="sn2">3</div><div class="st2"><h4>Bot Ko Admin Banao</h4><p>@AsBhaiDropBot ko group mein add karo aur admin banao.</p></div></div>
+      <div class="sitm"><div class="sn2">4</div><div class="st2"><h4>Shortlink Set Karo</h4><p><code>/gshortlink API_KEY modijiurl.com 6 Label</code></p></div></div>
+      <div class="sitm"><div class="sn2">5</div><div class="st2"><h4>Earning Shuru! 💸</h4><p>Har user verify karega aapki shortlink se. Paise directly aapke account mein.</p></div></div>
     </div>
-    <div id="streamLoading" style="display:none;position:absolute;inset:0;background:#000;align-items:center;justify-content:center;flex-direction:column;gap:10px">
-      <div style="width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:white;border-radius:50%;animation:sp .8s linear infinite"></div>
-      <p style="font-size:12px;color:rgba(255,255,255,.6)">File load ho rahi hai...</p>
+    <div style="padding:18px 20px 4px"><div class="seh">GROUP PREMIUM PLANS</div></div>
+    <div class="gpc" onclick="openGP({id:'group_1m',name:'1 Mahina',days:30,price:300})">
+      <div class="gph"><div><div class="gpn">GROUP PREMIUM</div><div class="gpp2"><sup>₹</sup>300</div></div><div style="font-size:36px">🏆</div></div>
+      <div class="gpf"><div class="gpd">1 Mahina — Kamaai shuru karo!</div><button class="gpbuy" onclick="event.stopPropagation();openGP({id:'group_1m',name:'1 Mahina',days:30,price:300})">BUY →</button></div>
     </div>
-  </div>
-  <div class="stream-ctrls">
-    <button class="sc-btn" onclick="doFull()">⛶ Full</button>
-    <button class="sc-btn" onclick="doSpd()">⚡ <span id="spv">1x</span></button>
-    <button class="sc-btn" onclick="doPip()">📺 PiP</button>
-    <button class="sc-btn dl" onclick="doDl()">⬇️ Download</button>
-  </div>
-  <!-- Premium required message -->
-  <div id="streamPremMsg" style="display:none;padding:16px">
-    <div class="sinfo-card">
-      <h3 style="color:var(--g2)">🔒 Premium Feature</h3>
-      <p>Stream aur download ke liye Premium chahiye.<br>
-      Group mein search karo → file ke niche Stream/Download button aayega.</p>
+    <div class="gpc" onclick="openGP({id:'group_2m',name:'2 Mahine',days:60,price:550})">
+      <div class="gph dk"><div><div class="gpn">GROUP PREMIUM</div><div class="gpp2"><sup>₹</sup>550</div></div><div style="font-size:36px">💎</div></div>
+      <div class="gpf"><div class="gpd">2 Mahine — Best Value 🔥</div><button class="gpbuy" onclick="event.stopPropagation();openGP({id:'group_2m',name:'2 Mahine',days:60,price:550})">BUY →</button></div>
     </div>
-    <button class="btn btnp" style="margin-top:10px" onclick="goPage('pg-premium')">💎 Premium Lo</button>
+    <div style="height:20px"></div>
   </div>
-  <!-- How to use -->
-  <div id="streamHowTo" class="stream-info">
-    <div class="sinfo-card">
-      <h3>📱 Kaise Use Karein</h3>
-      <p>
-        1️⃣ Bot ke group mein movie naam type karo<br>
-        2️⃣ File milne par bot PM mein bhejega<br>
-        3️⃣ File ke niche <b>▶️ Stream</b> ya <b>⬇️ Download</b> button dabao<br>
-        4️⃣ Mini App mein video play hogi!
-      </p>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="mov" id="pm" onclick="mOut(event)">
+  <div class="mod">
+    <div class="mnav"><div class="mdrag"></div><div class="mtit" id="mtit">Payment</div><div class="mcl" onclick="cMod()">✕</div></div>
+    <div class="mbody">
+      <div class="urow">
+        <div class="qrb"><img src="https://envs.sh/GdE.jpg" alt="QR" onerror="this.parentElement.innerHTML='<div style=font-size:9px;color:#888;text-align:center;padding:12px>QR</div>'"></div>
+        <div class="ubox"><div class="ulbl">UPI ID</div><div class="uval">arsadsaifi8272@ibl</div><div class="ucp" onclick="cpUPI()">COPY</div></div>
+      </div>
+      <div class="istrip" id="minfo">1. UPI ID par <b id="mamt">₹—</b> bhejo<br>2. Transaction ID note karo<br>3. Niche form fill karo → Submit<br>4. 1-2 ghante mein activate ⚡</div>
+      <div class="fg"><label>Transaction ID *</label><input type="text" id="txn" placeholder="UPI Ref No. ya TXN ID"></div>
+      <div class="fg" id="gfield" style="display:none">
+        <label>Group ID / Link *</label><input type="text" id="ginp" placeholder="@groupusername">
+        <p style="font-size:11px;color:var(--ink3);margin-top:5px">Group username ya invite link dalo</p>
+      </div>
+      <div class="fg">
+        <label>Screenshot (Optional)</label>
+        <label class="flbl" for="ssf" id="sslbl">📷 Screenshot attach karo</label>
+        <input type="file" id="ssf" accept="image/*" style="display:none" onchange="pvSS(this)">
+        <div class="sprev" id="sprev"><img id="simg" src="" alt=""></div>
+      </div>
+      <button class="bfull bdk" id="sbtn" onclick="subPay()">SUBMIT PAYMENT →</button>
+      <button class="bfull blt" onclick="ctOwner()">💬 Contact @asbhaibsr</button>
     </div>
   </div>
 </div>
 
-<!-- ══ PREMIUM PAGE ══ -->
-<div class="pg" id="pg-premium">
-  <div class="back-bar">
-    <div class="back-btn" onclick="goHome()">←</div>
-    <div class="back-title">💎 Premium</div>
-  </div>
-  <div class="prem-hero">
-    <h2>AsBhai <span>Premium</span></h2>
-    <p>Sab kuch unlimited — koi verify nahi, koi ads nahi</p>
-    <div id="premStatus" style="margin-top:12px;font-size:12px;color:var(--m2)">Loading...</div>
-  </div>
-
-  <div class="page-body">
-    <!-- Trial -->
-    <div class="trial-card" id="trialCard" onclick="claimTrial()">
-      <div style="font-size:30px">🆓</div>
-      <div>
-        <div style="font-size:13.5px;font-weight:800;color:var(--gr2)">Free Trial — 5 Minute</div>
-        <div style="font-size:11.5px;color:rgba(255,255,255,.6);margin-top:2px">Sirf 1 baar milega — koi payment nahi!</div>
-      </div>
-    </div>
-
-    <div class="st">💎 Premium Plans</div>
-    <div class="pgrid" id="pgrid" style="margin-bottom:14px"></div>
-
-    <!-- Refer -->
-    <div class="st">🔗 Refer Karke Free Premium Lo</div>
-    <div class="refer-hero">
-      <div style="font-size:11px;color:var(--m2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Aapke Total Refers</div>
-      <div class="rcount" id="rc">—</div>
-      <div class="rlbl">Har 10 refer = 15 din FREE Premium 💎</div>
-      <div class="pbar"><div class="pfill" id="pf" style="width:0"></div></div>
-      <div class="ptxt" id="pt">Loading...</div>
-      <div class="link-box" style="margin-top:12px">
-        <div class="lurl" id="rl">—</div>
-        <button class="cpybtn" onclick="cpyRL()">📋 Copy</button>
-      </div>
-      <button class="btn btnp" style="margin-top:8px" onclick="shareRL()">📤 Share Karo</button>
-    </div>
-
-    <div class="st">✨ Kya Milega Premium Mein</div>
-    <div class="flist">
-      <div class="fi"><div class="fic">🚫</div><div class="ftx"><h4>Force Join Nahi</h4><p>Koi channel join karne ki zaroorat nahi</p></div></div>
-      <div class="fi"><div class="fic">🔗</div><div class="ftx"><h4>Shortlink Nahi</h4><p>Direct file — zero ads, zero wait</p></div></div>
-      <div class="fi"><div class="fic">📦</div><div class="ftx"><h4>10 Results Per Search</h4><p>Free se zyada options</p></div><div class="fbdg">2x</div></div>
-      <div class="fi"><div class="fic">▶️</div><div class="ftx"><h4>Stream & Download</h4><p>Browser mein seedha dekho</p></div><div class="fbdg">NEW</div></div>
-      <div class="fi"><div class="fic">💬</div><div class="ftx"><h4>PM mein Search</h4><p>Bot PM mein seedha search karo</p></div></div>
-      <div class="fi"><div class="fic">⚡</div><div class="ftx"><h4>Priority Request</h4><p>Aapki request pehle process hogi</p></div></div>
-    </div>
-  </div>
+<!-- HELP -->
+<div class="hfab" id="hfab" onclick="tgH()">?</div>
+<div class="hpop" id="hpop">
+  <h4>HELP</h4>
+  <textarea id="hmsg" placeholder="Problem likhein..."></textarea>
+  <button class="bfull bdk" style="margin-top:8px;padding:11px;font-size:13px" id="hbtn" onclick="sHelp()">SEND →</button>
+  <a href="https://t.me/asbhaibsr" target="_blank" class="hcnt">@asbhaibsr ko directly message karo</a>
 </div>
-
-<!-- ══ EARN PAGE ══ -->
-<div class="pg" id="pg-earn">
-  <div class="back-bar">
-    <div class="back-btn" onclick="goHome()">←</div>
-    <div class="back-title">💰 Paise Kamao</div>
-  </div>
-  <div class="earn-hero">
-    <h2>💰 Bot Se Paise Kamao!</h2>
-    <p>Apne Telegram group mein shortlink lagao — har search se earning karo</p>
-  </div>
-
-  <div class="page-body">
-    <div class="st">📋 Step-by-Step Guide</div>
-
-    <div class="step-card">
-      <div class="step-num">1</div>
-      <div class="step-txt">
-        <h4>Pehle Group Premium Lo</h4>
-        <p>Niche se Group Premium plan choose karo. ₹300 mein 1 mahina — shortlink lagane ka haq milega.</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-num">2</div>
-      <div class="step-txt">
-        <h4>Shortlink Account Banao</h4>
-        <p><strong>modijiurl.com</strong> ya kisi bhi shortlink site par free account banao. Wahan se API Key lo.</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-num">3</div>
-      <div class="step-txt">
-        <h4>Bot Ko Group Mein Add Karo</h4>
-        <p>Owner approve karne ke baad <strong>@AsBhaiDropBot</strong> ko apne group mein add karo aur admin banao.</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-num">4</div>
-      <div class="step-txt">
-        <h4>Shortlink Set Karo</h4>
-        <p>Group mein ye command chalao:<br>
-        <code>/gshortlink API_KEY modijiurl.com 6 ModiJi</code><br>
-        (6 = kitne ghante baad dobara verify karna hoga)</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-num">5</div>
-      <div class="step-txt">
-        <h4>Paise Kamana Shuru! 💸</h4>
-        <p>Ab jab bhi koi user group mein movie search karega, <strong>aapki shortlink</strong> se verify karega. Har click = aapki earning!</p>
-      </div>
-    </div>
-
-    <div class="st">🏆 Group Premium Plans</div>
-    <div class="gplan" onclick="openGroupPay({id:'group_1m',name:'1 Mahina',days:30,price:300})">
-      <div class="gplan-top">
-        <div>
-          <div class="gplan-name">Group Premium</div>
-          <div class="gplan-price"><sup>₹</sup>300</div>
-          <div class="gplan-desc">1 Mahina — Kamaai shuru karo!</div>
-        </div>
-        <div style="font-size:38px">🏆</div>
-      </div>
-    </div>
-    <div class="gplan" onclick="openGroupPay({id:'group_2m',name:'2 Mahine',days:60,price:550})">
-      <div class="gplan-top">
-        <div>
-          <div class="gplan-name">Group Premium</div>
-          <div class="gplan-price"><sup>₹</sup>550</div>
-          <div class="gplan-desc">2 Mahine — Best Value 🔥</div>
-        </div>
-        <div style="font-size:38px">💎</div>
-      </div>
-    </div>
-
-    <div class="st">❓ Aksar Puche Sawaal</div>
-    <div style="background:var(--c1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;font-size:12px;color:var(--m2);line-height:1.9">
-      <b style="color:var(--t)">Kitna kama sakte hain?</b><br>
-      Shortlink rates depend karti hain — ₹20-₹200 per 1000 views tak.<br><br>
-      <b style="color:var(--t)">Kitne groups mein laga sakte hain?</b><br>
-      Ek Group Premium = ek group. Zyada groups ke liye zyada plans lo.<br><br>
-      <b style="color:var(--t)">Kitne ghante baad shortlink dobara aayegi?</b><br>
-      Aap khud set karo — 1 ghante se 720 ghante tak.<br><br>
-      <b style="color:var(--t)">Payment kab milegi?</b><br>
-      Shortlink site direct aapke account mein bhejti hai.
-    </div>
-    <div style="height:10px"></div>
-  </div>
-</div>
-
-<!-- ══ PAYMENT MODAL ══ -->
-<div class="overlay" id="pm" onclick="pmOut(event)">
-  <div class="modal">
-    <div class="mhd"></div>
-    <div class="mtit" id="mT">💎 Premium Kharidein</div>
-    <div class="msub" id="mS">Aaj hi activate karo</div>
-    <div class="pay-top">
-      <div class="qrbox">
-        <img src="https://envs.sh/GdE.jpg" alt="QR" onerror="this.parentElement.innerHTML='<div style=\'text-align:center;color:#888;font-size:10px;padding:8px\'>QR<br>Load<br>Error</div>'">
-      </div>
-      <div class="ubox">
-        <div class="ulbl">UPI ID par bhejo</div>
-        <div class="uval">arsadsaifi8272@ibl</div>
-        <div class="ucpy" onclick="cpyUpi()">📋 Copy UPI</div>
-      </div>
-    </div>
-    <div class="infobox" id="mInfo">
-      1️⃣ UPI ID par <b id="mAmt">₹—</b> bhejo<br>
-      2️⃣ Transaction ID note karo<br>
-      3️⃣ Niche form fill karke Submit karo<br>
-      4️⃣ 1-2 ghante mein activate! ⚡
-    </div>
-    <div class="frow">
-      <label>Transaction ID *</label>
-      <input type="text" id="txn" placeholder="Jaise: 4231xxxxxx ya UPI Ref No.">
-    </div>
-    <div id="groupIdField" style="display:none" class="frow">
-      <label>Group ID ya Link *</label>
-      <input type="text" id="groupIdInp" placeholder="@groupusername ya t.me/joinchat/xxx">
-      <div style="font-size:10px;color:var(--m2);margin-top:4px;line-height:1.6">Group link ya username do — owner approve karega phir bot add karo</div>
-    </div>
-    <div class="frow">
-      <label>Screenshot (Optional)</label>
-      <label class="flbl" for="ssf" id="ssl">📷 Screenshot attach karo</label>
-      <input type="file" id="ssf" accept="image/*" style="display:none" onchange="prevSS(this)">
-      <div class="fprev" id="fpr"><img id="fpi" src="" alt=""></div>
-    </div>
-    <button class="btn btnp" id="subBtn" onclick="submitPay()">✅ Submit Payment Request</button>
-    <button class="btn btno" onclick="openContact()">💬 Direct Contact @asbhaibsr</button>
-  </div>
-</div>
-
-<!-- ══ HELP FAB ══ -->
-<div class="help-fab" onclick="toggleHelp()" id="helpFab">🆘</div>
-<div class="help-popup" id="helpPopup">
-  <h4>🆘 Help chahiye?</h4>
-  <textarea id="hm" placeholder="Problem likhein — bot issue, payment, kuch bhi..."></textarea>
-  <button class="btn btnp" style="margin-top:8px;padding:10px;font-size:13px" onclick="sendHelp()" id="hbtn">📤 Send</button>
-  <a href="https://t.me/asbhaibsr" target="_blank" style="display:block;text-align:center;margin-top:8px;font-size:12px;color:var(--p3)">Ya directly @asbhaibsr ko message karo</a>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-// ── CONFIG ──
+/* © 2025 @asbhaibsr | @asbhai_bsr — COPYRIGHT PROTECTED
+   Removing owner credits causes bot malfunction.
+   Contact @asbhaibsr for license. */
+const _CR={o:'@asbhaibsr',ch:'@asbhai_bsr'};
+function _ck(){const f=document.querySelector('.hfoot');if(!f||!f.textContent.includes(_CR.o)){console.error('[AsBhai] Copyright violation! Contact: '+_CR.o);document.title='⚠️ License — '+_CR.o;}}
+setInterval(_ck,5000);_ck();
+
+const BASE=window.location.origin.replace('http://','https://');
+const UPI='arsadsaifi8272@ibl';
 const PLANS=[
-  {id:"10days", name:"10 Din", days:10, price:50,  desc:"Best Starter", hot:false},
-  {id:"30days", name:"30 Din", days:30, price:150, desc:"Most Popular", hot:true},
-  {id:"60days", name:"60 Din", days:60, price:200, desc:"Great Value",  hot:false},
-  {id:"150days",name:"150 Din",days:150,price:500, desc:"Super Saver", hot:false},
-  {id:"365days",name:"1 Saal", days:365,price:800, desc:"Best Deal 🔥",hot:false},
+  {id:'10days',name:'10 Din',days:10,price:50,desc:'Starter'},
+  {id:'30days',name:'30 Din',days:30,price:150,desc:'Popular 🔥',hot:true},
+  {id:'60days',name:'60 Din',days:60,price:200,desc:'Great Value'},
+  {id:'150days',name:'150 Din',days:150,price:500,desc:'Super Saver'},
+  {id:'365days',name:'1 Saal',days:365,price:800,desc:'Best Deal'},
 ];
-const UPI="arsadsaifi8272@ibl";
-// BASE URL — always use current origin (Koyeb pe automatically sahi hoga)
-const BASE = window.location.origin.replace('http://', 'https://');
-
-// ── TELEGRAM ──
 const tg=window.Telegram?.WebApp;
-try{
-  if(tg){
-    tg.ready();
-    tg.expand();
-    if(tg.setHeaderColor) tg.setHeaderColor('#07071a');
-    if(tg.setBackgroundColor) tg.setBackgroundColor('#07071a');
-  }
-}catch(e){console.log('TG init err:', e);}
+try{if(tg){tg.ready();tg.expand();}}catch(e){}
 const UID=tg?.initDataUnsafe?.user?.id||null;
-const FNAME=tg?.initDataUnsafe?.user?.first_name||'User';
+const FN=tg?.initDataUnsafe?.user?.first_name||'User';
+let L=localStorage.getItem('abl')||'hi';
+const TX={
+  hi:{sf:'Free',sp:'Premium ✓',st:'Trial',s:'Stream & Download',ss:'Browser mein seedha dekho',p:'Premium Plans',ps:'No verify, no ads, unlimited',e:'Paise Kamao',es:'Shortlink se earning karo',tth:'Free Trial — 5 Minute',ttp:'Sirf 1 baar • Koi payment nahi',dl:'DL'},
+  en:{sf:'Free',sp:'Premium ✓',st:'Trial',s:'Stream & Download',ss:'Watch in browser or download',p:'Premium Plans',ps:'No verify, no ads, unlimited',e:'Earn Money',es:'Add shortlink and earn',tth:'Free Trial — 5 Minutes',ttp:'Only 1 time • No payment',dl:'DL'}
+};
+function sL(l){L=l;localStorage.setItem('abl',l);document.getElementById('lhi').classList.toggle('on',l==='hi');document.getElementById('len').classList.toggle('on',l==='en');apL();}
+function apL(){const t=TX[L];const s=(i,v)=>{const e=document.getElementById(i);if(e)e.textContent=v};s('m1',t.s);s('m1s',t.ss);s('m2',t.p);s('m2s',t.ps);s('m3',t.e);s('m3s',t.es);s('tth',t.tth);s('ttp',t.ttp);s('tdl',t.dl);}
+let isPrem=false,trialUsed=false,selPlan=null,curVid=null,curDl=null;
+const spds=[.5,.75,1,1.25,1.5,2];let spIdx=2;
 
-// ── STATE ──
-let isPrem=false,trialUsed=false,selPlan=null,curVid=null;
-let spds=[0.5,0.75,1,1.25,1.5,2],spIdx=2;
-
-// ── INIT ──
 async function init(){
-  renderPlans();
-  if(!UID){setHomeBadge(false,false,null);loadRef(0);return;}
+  apL();renderPlans();
+  if(!UID){document.getElementById('stxt').textContent=TX[L].sf;return;}
   try{
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-    const r=await fetch(`${BASE}/api/user_status/${UID}`, {signal: controller.signal});
-    clearTimeout(timeoutId);
-    if(!r.ok)throw new Error('Server ' + r.status);
+    const r=await Promise.race([fetch(`${BASE}/api/user_status/${UID}`),new Promise((_,j)=>setTimeout(()=>j('to'),7000))]);
     const d=await r.json();
-    isPrem=d.is_premium||false;
-    trialUsed=d.trial_used||false;
-    setHomeBadge(isPrem,d.is_trial||false,d.expiry||null);
+    isPrem=d.is_premium||false;trialUsed=d.trial_used||false;
+    document.getElementById('stxt').textContent=isPrem?TX[L].sp:d.is_trial?TX[L].st:TX[L].sf;
     loadRef(d.refer_count||0);
-    if(trialUsed)markTrial();
-    const ps = document.getElementById('premStatus');
-    if(ps){
-      if(isPrem){
-        ps.innerHTML=`<span style="color:var(--g2);font-weight:800">✅ Premium Active${d.expiry?' — '+d.expiry:''}</span>`;
-      } else {
-        ps.innerHTML=`<span style="color:var(--m2)">Free User — Premium lo!</span>`;
-      }
-    }
-  }catch(err){
-    console.log('Status fetch err:', err.message);
-    setHomeBadge(false,false,null);
-    loadRef(0);
-    const ps=document.getElementById('premStatus');
-    if(ps) ps.textContent='Bot se /mystats type karo';
-  }
-  checkStream();
+    if(trialUsed)markTU();
+    const ps=document.getElementById('pst');
+    if(ps)ps.innerHTML=isPrem?`<b style="font-family:var(--mono)">✅ PREMIUM${d.expiry?' — '+d.expiry:''}</b>`:'—';
+    if(d.total_users)document.getElementById('stu').textContent=fN(d.total_users);
+    if(d.total_files)document.getElementById('stf').textContent=fN(d.total_files);
+    if(d.premium_count)document.getElementById('stp').textContent=fN(d.premium_count);
+  }catch{document.getElementById('stxt').textContent=TX[L].sf;}
+  chkStream();
 }
+function fN(n){return n>=1000?Math.floor(n/1000)+'K+':n;}
 
-function setHomeBadge(prem,isTrial,expiry){
-  const b=document.getElementById('hbadge');
-  const t=document.getElementById('hbadge-txt');
-  if(prem&&!isTrial){
-    b.style.background='rgba(245,158,11,.14)';b.style.borderColor='rgba(245,158,11,.4)';b.style.color='var(--g2)';
-    b.querySelector('.dot-live').style.background='var(--g2)';b.querySelector('.dot-live').style.boxShadow='0 0 7px var(--g2)';
-    t.textContent='Premium Active ✨';
-  }else if(isTrial){
-    b.style.color='var(--gr2)';t.textContent='Trial Active (5 min)';
-  }else{
-    t.textContent='Free User';
-  }
-}
-
-// ── PLANS ──
 function renderPlans(){
-  const g=document.getElementById('pgrid');
-  if(!g)return;
+  const g=document.getElementById('pgrid');if(!g)return;g.innerHTML='';
   PLANS.forEach(p=>{
     const d=document.createElement('div');
-    d.className='plan'+(p.hot?' hot':'');
-    d.innerHTML=`<div class="pname">${p.name}</div><div class="pprice"><sup>₹</sup>${p.price}</div><div class="pdesc">${p.desc}</div>`;
-    d.onclick=()=>openPM({...p,isGroup:false});
+    d.className='pc'+(p.hot?' hot':'');
+    const pj=JSON.stringify(p);
+    d.innerHTML=`${p.hot?'<div class="hotpill">BEST</div>':''}<div class="pn">${p.name}</div><div class="pp"><sup>₹</sup>${p.price}</div><div class="pd">${p.desc}</div><button class="pbuy" onclick="event.stopPropagation();oPay(${encodeURIComponent(pj)})">BUY →</button>`;
     g.appendChild(d);
   });
 }
 
-// ── REFER ──
-function loadRef(count){
-  const rc=document.getElementById('rc');
-  const pf=document.getElementById('pf');
-  const pt=document.getElementById('pt');
-  const rl=document.getElementById('rl');
-  if(!rc)return;
-  rc.textContent=count;
-  const pct=(count%10)*10;
-  pf.style.width=pct+'%';
-  const done=count%10===0&&count>0?10:count%10;
-  const need=10-(count%10===0?10:count%10);
-  pt.textContent=`${done}/10 — ${need===10?'10 aur':''+need+' aur'} chahiye`;
-  rl.textContent=UID?`https://t.me/AsBhaiDropBot?start=ref_${UID}`:'Telegram se kholo';
+function loadRef(c){
+  document.getElementById('rc').textContent=c;
+  document.getElementById('rf').style.width=((c%10)*10)+'%';
+  const n=10-(c%10===0&&c>0?10:c%10);
+  document.getElementById('rtxt').textContent=`${c%10===0&&c>0?10:c%10}/10 — ${n} aur chahiye`;
+  const ru=document.getElementById('rurl');if(ru)ru.textContent=UID?`https://t.me/AsBhaiDropBot?start=ref_${UID}`:'Telegram se kholo';
 }
-function cpyRL(){
-  const t=document.getElementById('rl')?.textContent;
-  if(!t||!UID){toast('❌ Telegram se kholo');return;}
-  cpy(t,'✅ Refer link copy ho gaya!');
-}
-function shareRL(){
-  if(!UID){toast('❌ Telegram se kholo');return;}
-  const l=document.getElementById('rl').textContent;
-  const u=`https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent('🎬 Free movies download karo is bot se!')}`;
-  tg?tg.openTelegramLink(u):window.open(u,'_blank');
-}
+function cpRef(){const t=document.getElementById('rurl')?.textContent;if(!t||!UID){toast('❌ Telegram se kholo');return;}cp(t,'✅ Refer link copied!');}
+function shRef(){if(!UID){toast('❌ Telegram se kholo');return;}const l=document.getElementById('rurl').textContent;const u=`https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent('🎬 Free movies!')}`;tg?tg.openTelegramLink(u):window.open(u,'_blank');}
 
-// ── TRIAL ──
 async function claimTrial(){
-  if(trialUsed){toast('❌ Trial pehle le chuke ho!');return;}
-  if(!UID){toast('❌ Telegram se kholo');return;}
-  const tc=document.getElementById('trialCard');
-  tc.style.opacity='.55';tc.style.pointerEvents='none';
-  try{
-    const r=await fetch(`${BASE}/api/claim_trial`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({user_id:UID})
-    });
-    const d=await r.json();
-    if(d.ok){trialUsed=true;markTrial();toast('🆓 Trial shuru! Bot PM check karo!');}
-    else{toast('❌ '+(d.error||d.message||'Error'));tc.style.opacity='';tc.style.pointerEvents='';}
-  }catch(e){
-    toast('❌ '+(e.message||'Server error'));
-    tc.style.opacity='';tc.style.pointerEvents='';
-  }
+  if(trialUsed){toast('❌ Trial already used!');return;}if(!UID){toast('❌ Telegram se kholo');return;}
+  const tc=document.getElementById('tc');tc.style.opacity='.5';tc.style.pointerEvents='none';
+  try{const r=await fetch(`${BASE}/api/claim_trial`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:UID})});const d=await r.json();if(d.ok){trialUsed=true;markTU();toast('🆓 Trial shuru! Bot PM check karo!');}else{toast('❌ '+(d.error||'Error'));tc.style.opacity='';tc.style.pointerEvents='';}}
+  catch(e){toast('❌ Error');tc.style.opacity='';tc.style.pointerEvents='';}
 }
-function markTrial(){
-  const tc=document.getElementById('trialCard');
-  if(!tc)return;
-  tc.classList.add('used');
-  tc.querySelector('div:nth-child(2)>div:first-child').textContent='Trial Khatam ✓';
-  tc.querySelector('div:nth-child(2)>div:last-child').textContent='Premium lo — unlimited use karo';
-  tc.onclick=()=>toast('❌ Trial khatam!');
-}
+function markTU(){const tc=document.getElementById('tc');if(!tc)return;tc.classList.add('used');tc.onclick=()=>toast('❌ Trial khatam!');const h=tc.querySelector('.ttxt h4'),p=tc.querySelector('.ttxt p'),b=document.getElementById('tbdg');if(h)h.textContent='Trial Khatam';if(p)p.textContent='Premium lo — unlimited';if(b){b.textContent='USED';b.style.background='var(--red)';}}
 
-// ── PAY MODAL ──
-function openPM(plan){
-  selPlan=plan;
-  document.getElementById('mT').textContent=`💎 ${plan.name} — ₹${plan.price}`;
-  document.getElementById('mS').textContent=`${plan.days} din ka Premium`;
-  document.getElementById('mAmt').textContent=`₹${plan.price}`;
-  document.getElementById('txn').value='';
-  document.getElementById('fpr').style.display='none';
-  document.getElementById('ssl').textContent='📷 Screenshot attach karo';
-  document.getElementById('subBtn').disabled=false;
-  document.getElementById('subBtn').textContent='✅ Submit Payment Request';
-  document.getElementById('groupIdField').style.display='none';
-  document.getElementById('mInfo').innerHTML=
-    `1️⃣ UPI ID par <b>₹${plan.price}</b> bhejo<br>2️⃣ Transaction ID note karo<br>3️⃣ Niche form fill karke Submit karo<br>4️⃣ 1-2 ghante mein activate! ⚡`;
+function oPay(pj){
+  const plan=JSON.parse(decodeURIComponent(pj));
+  selPlan={...plan,isGroup:false};
+  document.getElementById('mtit').textContent=`${plan.name} — ₹${plan.price}`;
+  document.getElementById('mamt').textContent=`₹${plan.price}`;
+  document.getElementById('txn').value='';document.getElementById('sprev').style.display='none';document.getElementById('sslbl').textContent='📷 Screenshot attach karo';
+  const sb=document.getElementById('sbtn');sb.disabled=false;sb.textContent='SUBMIT PAYMENT →';
+  document.getElementById('gfield').style.display='none';
+  document.getElementById('minfo').innerHTML=`1. UPI ID par <b>₹${plan.price}</b> bhejo<br>2. TXN ID note karo<br>3. Form fill karo → Submit<br>4. 1-2 ghante mein activate ⚡`;
   document.getElementById('pm').classList.add('on');
 }
-
-function openGroupPay(plan){
+function openGP(plan){
   selPlan={...plan,isGroup:true};
-  document.getElementById('mT').textContent=`🏘 Group Premium — ${plan.name}`;
-  document.getElementById('mS').textContent=`Apni shortlink lagao — ${plan.days} din`;
-  document.getElementById('mAmt').textContent=`₹${plan.price}`;
-  document.getElementById('txn').value='';
-  document.getElementById('fpr').style.display='none';
-  document.getElementById('ssl').textContent='📷 Screenshot attach karo (optional)';
-  document.getElementById('subBtn').disabled=false;
-  document.getElementById('subBtn').textContent='✅ Submit Group Premium Request';
-  const gf=document.getElementById('groupIdField');
-  gf.style.display='block';
-  document.getElementById('groupIdInp').value='';
-  document.getElementById('mInfo').innerHTML=
-    `1️⃣ UPI ID par <b>₹${plan.price}</b> bhejo<br>2️⃣ TXN ID note karo<br>3️⃣ Group ID/Link dalo<br>4️⃣ Submit karo → Owner approve karega → Bot add karo → Kamao! 💸`;
+  document.getElementById('mtit').textContent=`Group ${plan.name} — ₹${plan.price}`;
+  document.getElementById('mamt').textContent=`₹${plan.price}`;
+  document.getElementById('txn').value='';document.getElementById('sprev').style.display='none';document.getElementById('sslbl').textContent='📷 Screenshot (optional)';
+  const sb=document.getElementById('sbtn');sb.disabled=false;sb.textContent='SUBMIT GROUP PREMIUM →';
+  document.getElementById('gfield').style.display='block';document.getElementById('ginp').value='';
+  document.getElementById('minfo').innerHTML=`1. UPI ID par <b>₹${plan.price}</b> bhejo<br>2. TXN ID note karo<br>3. Group ID/Link dalo → Submit<br>4. Owner approve → Earn! 💸`;
   document.getElementById('pm').classList.add('on');
 }
+function cMod(){document.getElementById('pm').classList.remove('on');}
+function mOut(e){if(e.target.id==='pm')cMod();}
+function cpUPI(){cp(UPI,'✅ UPI ID copied!');}
+function pvSS(inp){if(!inp.files||!inp.files[0])return;const r=new FileReader();r.onload=e=>{document.getElementById('simg').src=e.target.result;document.getElementById('sprev').style.display='block';document.getElementById('sslbl').textContent='✅ '+inp.files[0].name.slice(0,22);};r.readAsDataURL(inp.files[0]);}
 
-function pmOut(e){if(e.target.id==='pm')document.getElementById('pm').classList.remove('on');}
-function cpyUpi(){cpy(UPI,'✅ UPI ID copy ho gaya!');}
-
-function prevSS(inp){
-  if(!inp.files||!inp.files[0])return;
-  const r=new FileReader();
-  r.onload=e=>{
-    document.getElementById('fpi').src=e.target.result;
-    document.getElementById('fpr').style.display='block';
-    document.getElementById('ssl').textContent='✅ Screenshot: '+inp.files[0].name.slice(0,20);
-  };
-  r.readAsDataURL(inp.files[0]);
+async function subPay(){
+  if(!selPlan)return;if(!UID){toast('❌ Telegram se kholo');return;}
+  const txn=document.getElementById('txn').value.trim();if(!txn){toast('❌ TXN ID bharo!');document.getElementById('txn').focus();return;}
+  if(selPlan.isGroup){const gi=document.getElementById('ginp');if(!gi||!gi.value.trim()){toast('❌ Group ID bharo!');gi?.focus();return;}}
+  const sb=document.getElementById('sbtn');sb.disabled=true;sb.innerHTML='<span class="spi"></span>Submitting...';
+  let ss='';const sf=document.getElementById('ssf');if(sf.files&&sf.files[0]){try{ss=await new Promise(r=>{const rd=new FileReader();rd.onload=e=>r(e.target.result);rd.readAsDataURL(sf.files[0]);});}catch{}}
+  try{const res=await fetch(`${BASE}/api/submit_payment`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:UID,name:FN,plan_id:selPlan.id,amount:selPlan.price,txn_id:txn,screenshot:ss,group_id:selPlan.isGroup?(document.getElementById('ginp')?.value||''):null})});const d=await res.json();if(d.ok){cMod();toast(selPlan.isGroup?'✅ Group Premium request submit!':'✅ Submit! 1-2 ghante mein activate.');}else{toast('❌ '+(d.error||'Submit fail'));sb.disabled=false;sb.textContent='SUBMIT PAYMENT →';}}
+  catch(e){toast('❌ Server error');sb.disabled=false;sb.textContent='SUBMIT PAYMENT →';}
 }
+function ctOwner(){cMod();const u='https://t.me/asbhaibsr';tg?tg.openTelegramLink(u):window.open(u,'_blank');}
 
-async function submitPay(){
-  if(!selPlan)return;
-  if(!UID){toast('❌ Telegram se kholo');return;}
-  const txn=document.getElementById('txn').value.trim();
-  if(!txn){toast('❌ Transaction ID bharo!');document.getElementById('txn').focus();return;}
-  if(selPlan.isGroup){
-    const gi=document.getElementById('groupIdInp');
-    if(!gi||!gi.value.trim()){toast('❌ Group ID ya Link bharo!');gi?.focus();return;}
+function chkStream(){const p=new URLSearchParams(window.location.search),uid=p.get('uid'),mid=p.get('mid');if(!uid||!mid)return;go('stream');const hw=document.getElementById('show');if(!isPrem){document.getElementById('spm').style.display='block';if(hw)hw.style.display='none';return;}if(hw)hw.style.display='none';loadVid(`${BASE}/stream_file/${mid}?uid=${uid}`,`${BASE}/download/${mid}?uid=${uid}`);}
+function loadVid(su,du){curVid=su;curDl=du||su;const v=document.getElementById('vid'),ph=document.getElementById('vph'),ld=document.getElementById('vld');v.style.display='none';ph.style.display='none';if(ld)ld.style.display='flex';v.src=su;v.load();v.onloadstart=()=>{v.style.display='block';if(ld)ld.style.display='none';};v.oncanplay=()=>{if(ld)ld.style.display='none';v.play().catch(()=>{});};v.onerror=()=>{v.style.display='none';ph.style.display='flex';if(ld)ld.style.display='none';const m=ph.querySelector('p');if(m)m.textContent='❌ Stream error — Download button try karo';toast('⬇️ Download button use karo');};}
+function doFull(){const v=document.getElementById('vid');if(!curVid){toast('❌ Koi video nahi');return;}(v.requestFullscreen||v.webkitRequestFullscreen)?.call(v);}
+function doSpd(){spIdx=(spIdx+1)%spds.length;document.getElementById('vid').playbackRate=spds[spIdx];document.getElementById('spv').textContent=spds[spIdx]+'×';}
+function doPiP(){const v=document.getElementById('vid');if(!curVid)return;if(document.pictureInPictureEnabled)v.requestPictureInPicture?.().catch(()=>{});}
+function doDl(){const u=curDl||curVid;if(!u){toast('❌ Koi video nahi');return;}window.open(u,'_blank');toast('⬇️ Download starting...');}
+
+function tgH(){document.getElementById('hpop').classList.toggle('on');}
+document.addEventListener('click',e=>{const f=document.getElementById('hfab'),p=document.getElementById('hpop');if(!f?.contains(e.target)&&!p?.contains(e.target))p?.classList.remove('on');});
+async function sHelp(){const msg=document.getElementById('hmsg').value.trim();if(msg.length<4){toast('❌ Thoda likho!');return;}const btn=document.getElementById('hbtn');btn.disabled=true;btn.innerHTML='<span class="spi"></span>';try{await fetch(`${BASE}/api/help`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:UID,name:FN,message:msg})});document.getElementById('hmsg').value='';document.getElementById('hpop').classList.remove('on');toast('✅ Sent!');}catch{const u=`https://t.me/asbhaibsr?text=${encodeURIComponent('Help: '+msg)}`;tg?tg.openTelegramLink(u):window.open(u,'_blank');document.getElementById('hpop').classList.remove('on');}finally{btn.disabled=false;btn.textContent='SEND →';}}
+
+function go(id){document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));document.getElementById(id)?.classList.add('on');window.scrollTo({top:0,behavior:'smooth'});document.getElementById('hpop')?.classList.remove('on');}
+function goH(){go('home');}
+let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3000);}
+function cp(txt,msg){if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>toast(msg||'✅ Copied!')).catch(()=>fb(txt,msg));}else fb(txt,msg);}
+function fb(txt,msg){const ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast(msg||'✅ Copied!');}
+// Typing effect
+function typeEffect(el, text, speed=80) {
+  let i=0; el.textContent='';
+  function type(){
+    if(i<text.length){ el.textContent+=text[i++]; setTimeout(type,speed); }
+    else { el.style.borderRight='none'; } // cursor remove after done
   }
-  const sb=document.getElementById('subBtn');
-  sb.disabled=true;sb.innerHTML='<span class="spin"></span>Submit ho raha hai...';
-  let ss='';
-  const sf=document.getElementById('ssf');
-  if(sf.files&&sf.files[0]){
-    try{ss=await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(sf.files[0]);});}catch{}
-  }
-  try{
-    const res=await fetch(`${BASE}/api/submit_payment`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        user_id:UID,name:FNAME,
-        plan_id:selPlan.id,amount:selPlan.price,
-        txn_id:txn,screenshot:ss,
-        group_id:selPlan.isGroup?(document.getElementById('groupIdInp')?.value||''):null,
-        group_link:selPlan.isGroup?(document.getElementById('groupIdInp')?.value||''):null
-      })
-    });
-    const d=await res.json();
-    if(d.ok){
-      document.getElementById('pm').classList.remove('on');
-      toast(selPlan.isGroup?'✅ Group Premium request submit! Owner approve karega.':'✅ Request submit! 1-2 ghante mein activate hoga.');
-    }else{
-      toast('❌ '+(d.error||'Submit fail!'));
-      sb.disabled=false;sb.textContent=selPlan.isGroup?'✅ Submit Group Premium Request':'✅ Submit Payment Request';
-    }
-  }catch(e){
-    toast('❌ Server error: '+e.message);
-    sb.disabled=false;sb.textContent='✅ Submit Payment Request';
-  }
+  type();
 }
+setTimeout(()=>{ const el=document.getElementById('h1a'); if(el) typeEffect(el,'Movies',100); }, 300);
 
-function openContact(){
-  document.getElementById('pm').classList.remove('on');
-  const u='https://t.me/asbhaibsr';
-  tg?tg.openTelegramLink(u):window.open(u,'_blank');
-}
-
-// ── STREAM ──
-function checkStream(){
-  const p=new URLSearchParams(window.location.search);
-  const uid=p.get('uid'),mid=p.get('mid');
-  if(!uid||!mid)return;
-  goPage('pg-stream');
-  if(!isPrem){
-    const sg=document.getElementById('streamPremMsg');
-    if(sg) sg.style.display='block';
-    return;
-  }
-  // Correct stream URL — aiohttp server
-  const streamUrl=`${BASE}/stream_file/${mid}?uid=${uid}`;
-  const downloadUrl=`${BASE}/download/${mid}?uid=${uid}`;
-  loadVid(streamUrl, downloadUrl, mid);
-}
-
-let curDownload=null;
-async function loadVid(streamUrl, downloadUrl, mid){
-  curVid=streamUrl;
-  curDownload=downloadUrl||streamUrl;
-  const vp=document.getElementById('vp');
-  const ph=document.getElementById('ph');
-  const loadingEl=document.getElementById('streamLoading');
-
-  // Loading dikho
-  ph.style.display='none';
-  if(loadingEl) loadingEl.style.display='flex';
-
-  try{
-    // Pehle URL resolve karo — redirect follow karo
-    vp.src=streamUrl;
-    vp.style.display='block';
-    if(loadingEl) loadingEl.style.display='none';
-
-    vp.oncanplay=()=>{
-      vp.play().catch(()=>toast('▶️ Play button dabao'));
-    };
-    vp.onerror=()=>{
-      vp.style.display='none';
-      ph.style.display='flex';
-      ph.querySelector('p').textContent='File stream nahi ho sakti — Download try karo';
-      if(loadingEl) loadingEl.style.display='none';
-      toast('⬇️ Download button use karo');
-    };
-  }catch(e){
-    ph.style.display='flex';
-    if(loadingEl) loadingEl.style.display='none';
-    toast('❌ '+e.message);
-  }
-}
-function doFull(){
-  const v=document.getElementById('vp');
-  if(!v.src||!curVid){toast('❌ Koi video nahi');return;}
-  (v.requestFullscreen||v.webkitRequestFullscreen).call(v);
-}
-function doSpd(){
-  spIdx=(spIdx+1)%spds.length;
-  document.getElementById('vp').playbackRate=spds[spIdx];
-  document.getElementById('spv').textContent=spds[spIdx]+'x';
-}
-function doPip(){
-  const v=document.getElementById('vp');
-  if(!curVid){toast('❌ Koi video nahi');return;}
-  if(document.pictureInPictureEnabled)v.requestPictureInPicture?.().catch(()=>toast('PiP unsupported'));
-}
-function doDl(){
-  const dlUrl = curDownload || curVid;
-  if(!dlUrl){toast('❌ Koi video nahi — group mein search karo');return;}
-  window.open(dlUrl, '_blank');
-  toast('⬇️ Download shuru ho rahi hai...');
-}
-
-// ── NAV ──
-function goPage(id){
-  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
-  window.scrollTo({top:0,behavior:'smooth'});
-  // Hide help popup
-  document.getElementById('helpPopup').classList.remove('on');
-}
-function goHome(){goPage('pg-home');}
-
-// ── HELP ──
-function toggleHelp(){
-  const hp=document.getElementById('helpPopup');
-  hp.classList.toggle('on');
-}
-// Close help on outside click
-document.addEventListener('click',e=>{
-  const fab=document.getElementById('helpFab');
-  const popup=document.getElementById('helpPopup');
-  if(!fab.contains(e.target)&&!popup.contains(e.target)){
-    popup.classList.remove('on');
-  }
-});
-
-async function sendHelp(){
-  const msg=document.getElementById('hm').value.trim();
-  if(!msg||msg.length<6){toast('❌ Thoda likho!');return;}
-  const btn=document.getElementById('hbtn');
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
-  try{
-    const r=await fetch(`${BASE}/api/help`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({user_id:UID,name:FNAME,message:msg})});
-    const d=await r.json();
-    document.getElementById('hm').value='';
-    document.getElementById('helpPopup').classList.remove('on');
-    toast(d.ok?'✅ Message bhej diya!':'✅ Bheja gaya!');
-  }catch{
-    const u=`https://t.me/asbhaibsr?text=${encodeURIComponent('Help: '+msg)}`;
-    tg?tg.openTelegramLink(u):window.open(u,'_blank');
-    document.getElementById('helpPopup').classList.remove('on');
-  }finally{btn.disabled=false;btn.textContent='📤 Send';}
-}
-
-// ── UTILS ──
-let toastT;
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3000);
-}
-function cpy(text,msg){
-  navigator.clipboard?.writeText(text).then(()=>toast(msg)).catch(()=>{
-    const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';
-    document.body.appendChild(ta);ta.select();document.execCommand('copy');
-    document.body.removeChild(ta);toast(msg||'✅ Copy ho gaya!');
-  });
-}
-
-// ── START ──
 init();
 </script>
 </body>
