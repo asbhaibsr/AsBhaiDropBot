@@ -562,20 +562,22 @@ async def verify_check(client, message, prem=False):
             if str(sl["_id"]) == sl_id: break
             done_count += 1
 
-    step_text = f"Step {done_count+1}/{total}: **{sl_label}**" if total > 1 else f"**{sl_label}**"
-    time_text = f"Har **{hours} ghante** baad" if hours < 24 else "**Har din 1 baar**"
+    step_text = f"Step {done_count+1}/{total}: {sl_label}" if total > 1 else sl_label
+    time_text = f"Har {hours} ghante baad" if hours < 24 else "Har din ek baar"
 
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"🔗 {step_text} — Verify Karo", url=short)],
-        [InlineKeyboardButton("💎 Premium — Kabhi Verify Nahi", callback_data="buy_premium")]
+        [InlineKeyboardButton("💎 Premium lo — verify kabhi nahi", callback_data="buy_premium")]
     ])
+    msgs = [
+        f"Bhai ek kaam karna hoga pehle 🙏\n\nNeeche link dabao, shortlink khatam karo, wapas aao!\n⏰ {time_text} karna hoga.\n\nYa seedha premium le lo, phir ye sab nahi!",
+        f"Ek minute ruko! 🤚\n\nPehle ye shortlink complete karo:\n⏰ {time_text} — ek baar karna hai.\n\nPremium lo to kabhi nahi karna padega!",
+        f"Jaldi karo bhai! 😅\n\nBas ye shortlink complete karo aur film/series aa jaayegi!\n⏰ {time_text}\n\nPremium users ke liye ye step nahi hoti!",
+    ]
+    import random
     msg = await message.reply(
-        f"🔐 **Verification Baaki Hai** ({done_count+1}/{total})\n\n"
-        f"👇 Neeche link dabao → shortlink solve karo → verify!\n"
-        f"⏰ {time_text} karna hoga.\n\n"
-        f"💎 Premium lo — kabhi verify nahi!",
-        reply_markup=kb,
-        parse_mode=enums.ParseMode.MARKDOWN
+        random.choice(msgs),
+        reply_markup=kb
     )
     asyncio.create_task(del_later(msg, 300))
     return False
@@ -632,14 +634,16 @@ async def del_later(msg, secs):
     except: pass
 
 async def send_log(text):
+    """Log silently — koi crash nahi"""
+    if not LOG_CHANNEL or not bot: return
     try:
-        await bot.send_message(LOG_CHANNEL, text, disable_web_page_preview=True)
+        await bot.send_message(int(LOG_CHANNEL), text, disable_web_page_preview=True)
     except FloodWait as e:
-        await asyncio.sleep(e.value)
-        try: await bot.send_message(LOG_CHANNEL, text, disable_web_page_preview=True)
+        await asyncio.sleep(min(e.value, 10))
+        try: await bot.send_message(int(LOG_CHANNEL), text, disable_web_page_preview=True)
         except: pass
-    except Exception as e:
-        logger.warning(f"log failed: {e}")
+    except Exception:
+        pass  # Log fail hone pe crash nahi
 
 # ═══════════════════════════════════════
 #  SEARCH
@@ -702,12 +706,15 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
         fsize = get_file_size(file_msg)
         size_text = f"📦 Size: {fsize}\n" if fsize else ""
 
-        clean_cap = (
-            f"🗂 **{fname}**\n\n"
-            f"{size_text}"
-            f"⏳ **{mins} min** baad delete hogi!\n"
-            f"📌 Abhi save ya forward kar lo!"
-        )
+        # Human style captions — random se choose karo
+        import random
+        caps = [
+            f"🗂 {fname}\n\n{size_text}Bhai save kar lo jaldi — {mins} min mein delete ho jaayegi! 📌",
+            f"🎬 {fname}\n\n{size_text}Aa gayi! Seedha save karo ya forward karo — {mins} min ka time hai! ⏰",
+            f"📥 {fname}\n\n{size_text}Enjoy karo! Bas {mins} min baad file chali jaayegi, pehle save karo! 🙏",
+            f"🎯 {fname}\n\n{size_text}Le lo bhai! {mins} min baad delete. Abhi save ya forward karo! 📲",
+        ]
+        clean_cap = random.choice(caps)
 
         # Premium users ke liye stream + download buttons
         kb = None
