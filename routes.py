@@ -229,7 +229,15 @@ async def stream_file_handler(request: aio_web.Request):
         "Content-Length": str(req_length),
         "Content-Disposition": f'inline; filename="{file_name}"',
         "Accept-Ranges": "bytes",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "Range, Content-Type",
+        "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
     }
+
+    # Handle OPTIONS preflight
+    if request.method == "OPTIONS":
+        return aio_web.Response(headers=headers)
 
     status = 206 if range_header else 200
     response = aio_web.StreamResponse(status=status, headers=headers)
@@ -291,6 +299,7 @@ async def download_handler(request: aio_web.Request):
         "Content-Length": str(req_length),
         "Content-Disposition": f'attachment; filename="{file_name}"',
         "Accept-Ranges": "bytes",
+        "Access-Control-Allow-Origin": "*",
     }
 
     response = aio_web.StreamResponse(status=200, headers=headers)
