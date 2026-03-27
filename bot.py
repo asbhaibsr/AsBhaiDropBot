@@ -555,43 +555,57 @@ async def search_handler(client, message: Message):
         await wait_msg.delete()
         me = await client.get_me()
 
-        # ── File buttons banao ──
+        # ── Pagination setup ──
+        # Total results se pages calculate karo
+        all_found = found  # already limited to `limit`
+        page = 0
+        page_size = 5  # ek page pe 5 files
+        total_pages = max(1, (len(all_found) + page_size - 1) // page_size)
+        page_found = all_found[:page_size]
+
+        # Safe query key for callbacks (spaces → _, max 20 chars)
+        qkey = re.sub(r'[^a-zA-Z0-9_]', '_', query)[:18]
+        # Cache results for pagination
+        _result_cache[f"{uid}_{qkey}"] = all_found
+
+        # ── File buttons for page 0 ──
         file_buttons = []
-        for idx, fmsg in enumerate(found):
+        for idx, fmsg in enumerate(page_found):
             fname = get_file_name(fmsg)
             fname_clean = re.sub(r'[@#]\w+', '', fname)
             fname_clean = re.sub(r'_+', ' ', fname_clean).strip()
-            fname_show = fname_clean[:38] if fname_clean else f"File {idx+1}"
+            fname_show = fname_clean[:36] if fname_clean else f"File {idx+1}"
             fsize = get_file_size(fmsg)
             size_text = f" [{fsize}]" if fsize else ""
             final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
-            file_buttons.append([
-                InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)
-            ])
+            file_buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
 
-        # ── Filter buttons — Language / Season / Episode / Send All ──
-        # Premium users free use kar sakte hain, free users ko premium prompt
-        filter_row1 = [
-            InlineKeyboardButton("🌐 Language",  callback_data=f"flang_{uid}_{query}"),
-            InlineKeyboardButton("📺 Season",    callback_data=f"fseason_{uid}_{query}"),
-            InlineKeyboardButton("🎬 Episode",   callback_data=f"fepisode_{uid}_{query}"),
-        ]
-        filter_row2 = [
-            InlineKeyboardButton("📤 Send All",  callback_data=f"fsendall_{uid}_{query[:20]}"),
-        ]
+        # ── Pagination row ──
+        nav_row = []
+        if total_pages > 1:
+            nav_row.append(InlineKeyboardButton(f"1/{total_pages}", callback_data="noop"))
+            nav_row.append(InlineKeyboardButton("▶️ Next", callback_data=f"rpage_{uid}_{qkey}_1"))
+            file_buttons.append(nav_row)
 
-        all_buttons = file_buttons + [filter_row1, filter_row2]
-        kb = InlineKeyboardMarkup(all_buttons)
+        # ── Filter buttons — Premium only ──
+        file_buttons.append([
+            InlineKeyboardButton("🌐 Lang",    callback_data=f"flang_{uid}_{qkey}"),
+            InlineKeyboardButton("📺 Season",  callback_data=f"fseason_{uid}_{qkey}"),
+            InlineKeyboardButton("🎬 Episode", callback_data=f"fepisode_{uid}_{qkey}"),
+            InlineKeyboardButton("📤 All",     callback_data=f"fsendall_{uid}_{qkey}"),
+        ])
 
+        kb = InlineKeyboardMarkup(file_buttons)
         t = gs.get("auto_delete_time", 300)
         mins = t // 60
-        count_text = len(found)
+        count_text = len(all_found)
+        page_info = f" (1/{total_pages})" if total_pages > 1 else ""
 
         result_text = (
             f"🔍 {message.from_user.mention}\n\n"
-            f"╔══ 🎯 **{count_text} Result{'s' if count_text > 1 else ''}** ══╗\n\n"
-            f"👇 File ka button dabao → PM mein file aayegi!\n"
-            f"🌐 Language / 📺 Season / 🎬 Episode filter karo\n"
+            f"╔══ 🎯 **{count_text} Result{'s' if count_text > 1 else ''}{page_info}** ══╗\n\n"
+            f"👇 File choose karo → PM mein file milegi!\n"
+            f"🌐 Lang 📺 Season 🎬 Ep 📤 All — Premium filters\n"
             f"⏳ Ye message {mins} min baad delete hoga."
         )
 
@@ -1886,18 +1900,24 @@ async def broadcast(client, message: Message):
 
     if target in ["groups","all"]:
         group_ids = []
+        # Premium groups exclude karo
+        prem_group_ids = set()
+        async for pg in group_prem_col.find({"status": "approved"}, {"chat_id": 1}):
+            if pg.get("chat_id"): prem_group_ids.add(pg["chat_id"])
+
         async for doc in groups_col.find({}, {"chat_id": 1}):
-            if doc.get("chat_id"):
-                group_ids.append(doc["chat_id"])
+            cid = doc.get("chat_id")
+            if cid and cid not in prem_group_ids:
+                group_ids.append(cid)
 
         for cid in group_ids:
             total += 1
             try:
                 await client.send_message(cid, text)
                 done += 1
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.12)
             except FloodWait as e:
-                await asyncio.sleep(e.value + 1)
+                await asyncio.sleep(min(e.value, 30))
                 try:
                     await client.send_message(cid, text)
                     done += 1
@@ -1905,7 +1925,6 @@ async def broadcast(client, message: Message):
             except (ChatWriteForbidden, PeerIdInvalid):
                 failed += 1
                 deleted += 1
-                # Bot removed from group — data clean karo
                 await groups_col.delete_one({"chat_id": cid})
                 await group_settings_col.delete_one({"chat_id": cid})
                 await group_prem_col.delete_one({"chat_id": cid})
@@ -1916,7 +1935,7 @@ async def broadcast(client, message: Message):
 
             if total % 20 == 0:
                 try:
-                    await sm.edit(f"📡 Broadcasting... {total} done")
+                    await sm.edit(f"📡 Broadcasting... {total} done | ✅{done} ❌{failed}")
                 except: pass
 
     await sm.edit(
@@ -2043,17 +2062,55 @@ async def ping(client, message: Message):
 @bot.on_message(filters.command("setcommands") & filters.user(ADMINS))
 async def set_commands(client, message: Message):
     from pyrogram.types import BotCommand
-    commands = [
+    # User commands
+    user_cmds = [
         BotCommand("start",       "Bot shuru karo"),
         BotCommand("help",        "Help aur guide dekho"),
-        BotCommand("premium",     "Premium plans aur status"),
-        BotCommand("mystats",     "Apni stats dekho"),
-        BotCommand("referlink",   "Refer link — 10 refer = 15 din free"),
-        BotCommand("request",     "File request karo"),
+        BotCommand("premium",     "Premium plans aur status dekho"),
+        BotCommand("mystats",     "Apni stats — downloads, refers, expiry"),
+        BotCommand("referlink",   "Refer link lo — 10 refer = 15 din free premium"),
+        BotCommand("request",     "Movie/file request karo"),
     ]
-    await client.set_bot_commands(commands)
-    cmds_text = "\n".join(f"/{c.command} — {c.description}" for c in commands)
-    await message.reply(f"✅ **Bot Commands Set Ho Gayi!**\n\n{cmds_text}")
+    # Admin commands (owner only scope)
+    admin_cmds = [
+        BotCommand("addpremium",      "User ko premium do"),
+        BotCommand("removepremium",   "User ka premium hatao"),
+        BotCommand("ban",             "User ko ban karo"),
+        BotCommand("unban",           "User ko unban karo"),
+        BotCommand("broadcast",       "Sab users/groups ko message bhejo"),
+        BotCommand("stats",           "Bot stats dekho"),
+        BotCommand("requests",        "File requests list dekho"),
+        BotCommand("notify",          "User ko notify karo"),
+        BotCommand("ping",            "Bot ping check karo"),
+        BotCommand("settings",        "Bot settings dekho/badlo"),
+        BotCommand("setdelete",       "Auto delete time set karo"),
+        BotCommand("setlimit",        "Daily download limit set karo"),
+        BotCommand("setresults",      "Results count set karo"),
+        BotCommand("maintenance",     "Maintenance mode on/off"),
+        BotCommand("shortlink",       "Shortlink on/off"),
+        BotCommand("addshortlink",    "New shortlink add karo"),
+        BotCommand("removeshortlink", "Shortlink remove karo"),
+        BotCommand("shortlinks",      "Shortlinks list dekho"),
+        BotCommand("forcesub",        "Force sub on/off"),
+        BotCommand("fsub",            "Force sub channels manage karo"),
+        BotCommand("setcommands",     "Bot commands set karo"),
+        BotCommand("gsettings",       "Group settings manage karo"),
+        BotCommand("gshortlink",      "Group shortlink add karo"),
+        BotCommand("gshortlinkremove","Group shortlink remove karo"),
+        BotCommand("gshortlinks",     "Group shortlinks list dekho"),
+    ]
+    await client.set_bot_commands(user_cmds)
+    # Admin commands separately (owner scope)
+    try:
+        from pyrogram.types import BotCommandScopeChat
+        for admin_id in ADMINS:
+            try:
+                await client.set_bot_commands(user_cmds + admin_cmds, scope=BotCommandScopeChat(chat_id=admin_id))
+            except: pass
+    except: pass
+    all_cmds = user_cmds + admin_cmds
+    cmds_text = "\n".join(f"/{c.command} — {c.description}" for c in all_cmds)
+    await message.reply(f"✅ Bot Commands Set Ho Gayi!\n\n📋 User commands: {len(user_cmds)}\n👑 Admin commands: {len(admin_cmds)}\n\n{cmds_text}", parse_mode=enums.ParseMode.DISABLED)
 
 # ═══════════════════════════════════════
 #  GROUP PREMIUM — Group owner commands
@@ -2216,6 +2273,84 @@ LANGUAGES = [
     ("🎪 Kannada", "kannada"), ("🎠 Punjabi", "punjabi"),
 ]
 
+
+# ═══════════════════════════════════════
+#  RESULT PAGINATION CALLBACK
+# ═══════════════════════════════════════
+# Store search results temporarily in memory
+_result_cache = {}  # {uid_qkey: [found_msgs]}
+
+@bot.on_callback_query(filters.regex(r"^noop$"))
+async def noop_cb(client, query: CallbackQuery):
+    await query.answer()
+
+@bot.on_callback_query(filters.regex(r"^rpage_"))
+async def result_page_cb(client, query: CallbackQuery):
+    """Result pages — next/prev"""
+    parts = query.data.split("_", 3)
+    if len(parts) < 4:
+        await query.answer("❌ Error", show_alert=True); return
+    uid = int(parts[1])
+    qkey = parts[2]
+    page = int(parts[3])
+
+    if query.from_user.id != uid and query.from_user.id not in ADMINS:
+        await query.answer("❌ Ye aapka search nahi!", show_alert=True); return
+
+    # Cache se results lo
+    cache_key = f"{uid}_{qkey}"
+    found = _result_cache.get(cache_key)
+    if not found:
+        # Re-search
+        query_text = qkey.replace("_", " ")
+        s = await get_settings()
+        prem = await is_premium(uid)
+        limit = 10 if prem else s.get("free_results", 5)
+        found = await do_search(query_text, limit=limit)
+        if not found:
+            await query.answer("😕 Results expired, dobara search karo", show_alert=True); return
+        _result_cache[cache_key] = found
+
+    page_size = 5
+    total_pages = max(1, (len(found) + page_size - 1) // page_size)
+    page = max(0, min(page, total_pages - 1))
+    page_found = found[page * page_size:(page + 1) * page_size]
+
+    me = await client.get_me()
+    buttons = []
+    for idx, fmsg in enumerate(page_found):
+        fname = get_file_name(fmsg)
+        fname_clean = re.sub(r'[@#]\w+', '', fname)
+        fname_clean = re.sub(r'_+', ' ', fname_clean).strip()
+        fname_show = fname_clean[:36] if fname_clean else f"File {page*page_size+idx+1}"
+        fsize = get_file_size(fmsg)
+        size_text = f" [{fsize}]" if fsize else ""
+        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
+
+    # Navigation row
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("◀️ Prev", callback_data=f"rpage_{uid}_{qkey}_{page-1}"))
+    nav.append(InlineKeyboardButton(f"{page+1}/{total_pages}", callback_data="noop"))
+    if page < total_pages - 1:
+        nav.append(InlineKeyboardButton("▶️ Next", callback_data=f"rpage_{uid}_{qkey}_{page+1}"))
+    if nav: buttons.append(nav)
+
+    # Filter buttons
+    buttons.append([
+        InlineKeyboardButton("🌐 Lang",    callback_data=f"flang_{uid}_{qkey}"),
+        InlineKeyboardButton("📺 Season",  callback_data=f"fseason_{uid}_{qkey}"),
+        InlineKeyboardButton("🎬 Episode", callback_data=f"fepisode_{uid}_{qkey}"),
+        InlineKeyboardButton("📤 All",     callback_data=f"fsendall_{uid}_{qkey}"),
+    ])
+
+    try:
+        await query.message.edit_reply_markup(InlineKeyboardMarkup(buttons))
+    except:
+        pass
+    await query.answer(f"Page {page+1}/{total_pages}")
+
 @bot.on_callback_query(filters.regex(r"^flang_"))
 async def lang_filter_cb(client, query: CallbackQuery):
     parts = query.data.split("_", 2)
@@ -2304,34 +2439,32 @@ async def lang_select_cb(client, query: CallbackQuery):
 async def season_filter_cb(client, query: CallbackQuery):
     parts = query.data.split("_", 2)
     uid = int(parts[1]) if len(parts) > 1 else 0
-    search_q = parts[2] if len(parts) > 2 else ""
+    qkey = parts[2] if len(parts) > 2 else ""
+    search_q = qkey.replace("_", " ").strip()
 
     prem = await is_premium(query.from_user.id)
     if not prem and query.from_user.id not in ADMINS:
-        await query.answer(
-            "💎 Season filter ke liye Premium chahiye!\nBot PM mein /premium type karo.",
-            show_alert=True
-        )
+        await query.answer("💎 Season filter sirf Premium users ke liye!", show_alert=True)
         return
 
     # Season buttons — S01 to S20 (page 1), more on next page + Full Season
     season_buttons = []
-    season_buttons.append([InlineKeyboardButton("📦 Full Season", callback_data=f"season_{uid}_full season_{search_q[:15]}")])
+    season_buttons.append([InlineKeyboardButton("📦 Full Season", callback_data=f"season_{uid}_fullseason_{qkey}")])
     # S01-S05
-    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{search_q[:15]}") for i in range(1,6)])
+    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{qkey}") for i in range(1,6)])
     # S06-S10
-    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{search_q[:15]}") for i in range(6,11)])
+    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{qkey}") for i in range(6,11)])
     # S11-S15
-    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{search_q[:15]}") for i in range(11,16)])
+    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{qkey}") for i in range(11,16)])
     # S16-S20
-    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{search_q[:15]}") for i in range(16,21)])
+    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{qkey}") for i in range(16,21)])
     # More seasons button
     season_buttons.append([
-        InlineKeyboardButton("▶️ S21-S40", callback_data=f"spage_{uid}_21_{search_q[:15]}"),
-        InlineKeyboardButton("▶️ S41-S60", callback_data=f"spage_{uid}_41_{search_q[:15]}"),
-        InlineKeyboardButton("▶️ S61-S100", callback_data=f"spage_{uid}_61_{search_q[:15]}"),
+        InlineKeyboardButton("▶️ S21-S40", callback_data=f"spage_{uid}_21_{qkey}"),
+        InlineKeyboardButton("▶️ S41-S60", callback_data=f"spage_{uid}_41_{qkey}"),
+        InlineKeyboardButton("▶️ S61-S100", callback_data=f"spage_{uid}_61_{qkey}"),
     ])
-    season_buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+    season_buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")])
 
     await query.message.edit_reply_markup(InlineKeyboardMarkup(season_buttons))
     await query.answer("Season choose karo:", show_alert=False)
@@ -2382,29 +2515,27 @@ async def season_select_cb(client, query: CallbackQuery):
 async def episode_filter_cb(client, query: CallbackQuery):
     parts = query.data.split("_", 2)
     uid = int(parts[1]) if len(parts) > 1 else 0
-    search_q = parts[2] if len(parts) > 2 else ""
+    qkey = parts[2] if len(parts) > 2 else ""
+    search_q = qkey.replace("_", " ").strip()
 
     prem = await is_premium(query.from_user.id)
     if not prem and query.from_user.id not in ADMINS:
-        await query.answer(
-            "💎 Episode filter ke liye Premium chahiye!\nBot PM mein /premium type karo.",
-            show_alert=True
-        )
+        await query.answer("💎 Episode filter sirf Premium users ke liye!", show_alert=True)
         return
 
     # Episode buttons — E01 to E20 (page 1), next pages for more
     ep_buttons = []
-    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{search_q[:15]}") for i in range(1, 6)])
-    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{search_q[:15]}") for i in range(6, 11)])
-    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{search_q[:15]}") for i in range(11, 16)])
-    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{search_q[:15]}") for i in range(16, 21)])
+    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{qkey}") for i in range(1, 6)])
+    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{qkey}") for i in range(6, 11)])
+    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{qkey}") for i in range(11, 16)])
+    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{qkey}") for i in range(16, 21)])
     ep_buttons.append([
         InlineKeyboardButton("▶️ E21-E40",  callback_data=f"epage_{uid}_21_{search_q[:15]}"),
         InlineKeyboardButton("▶️ E41-E60",  callback_data=f"epage_{uid}_41_{search_q[:15]}"),
         InlineKeyboardButton("▶️ E61-E80",  callback_data=f"epage_{uid}_61_{search_q[:15]}"),
-        InlineKeyboardButton("▶️ E81-E100", callback_data=f"epage_{uid}_81_{search_q[:15]}"),
+        InlineKeyboardButton("▶️ E81-E100", callback_data=f"epage_{uid}_81_{qkey}"),
     ])
-    ep_buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+    ep_buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")])
 
     await query.message.edit_reply_markup(InlineKeyboardMarkup(ep_buttons))
     await query.answer("Episode number choose karo:", show_alert=False)
@@ -2448,14 +2579,12 @@ async def ep_select_cb(client, query: CallbackQuery):
 async def sendall_cb(client, query: CallbackQuery):
     parts = query.data.split("_", 2)
     uid = int(parts[1]) if len(parts) > 1 else 0
-    search_q = parts[2] if len(parts) > 2 else ""
+    qkey = parts[2] if len(parts) > 2 else ""
+    search_q = qkey.replace("_", " ").strip()
 
     prem = await is_premium(query.from_user.id)
     if not prem and query.from_user.id not in ADMINS:
-        await query.answer(
-            "💎 Send All ke liye Premium chahiye!\nBot PM mein /premium type karo.",
-            show_alert=True
-        )
+        await query.answer("💎 Send All sirf Premium users ke liye!", show_alert=True)
         return
 
     if query.from_user.id != uid and query.from_user.id not in ADMINS:
@@ -2463,7 +2592,8 @@ async def sendall_cb(client, query: CallbackQuery):
 
     await query.answer("📤 Sab files bhej raha hoon PM mein...", show_alert=False)
 
-    found = await do_search(search_q, limit=10)
+    cache_key = f"{uid}_{qkey}"
+    found = _result_cache.get(cache_key) or await do_search(search_q, limit=10)
     if not found:
         await query.answer("😕 Koi file nahi mili!", show_alert=True); return
 
@@ -2551,7 +2681,8 @@ async def filter_back_cb(client, query: CallbackQuery):
     """Filter back — original results dikho"""
     parts = query.data.split("_", 2)
     uid = int(parts[1]) if len(parts) > 1 else 0
-    search_q = parts[2] if len(parts) > 2 else ""
+    qkey = parts[2] if len(parts) > 2 else ""
+    search_q = qkey.replace("_", " ").strip()
 
     if query.from_user.id != uid and query.from_user.id not in ADMINS:
         await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
@@ -2575,11 +2706,12 @@ async def filter_back_cb(client, query: CallbackQuery):
         buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
 
     filter_row1 = [
-        InlineKeyboardButton("🌐 Language", callback_data=f"flang_{uid}_{search_q[:20]}"),
-        InlineKeyboardButton("📺 Season",   callback_data=f"fseason_{uid}_{search_q[:20]}"),
-        InlineKeyboardButton("🎬 Episode",  callback_data=f"fepisode_{uid}_{search_q[:20]}"),
+        InlineKeyboardButton("🌐 Lang",    callback_data=f"flang_{uid}_{qkey}"),
+        InlineKeyboardButton("📺 Season",  callback_data=f"fseason_{uid}_{qkey}"),
+        InlineKeyboardButton("🎬 Episode", callback_data=f"fepisode_{uid}_{qkey}"),
+        InlineKeyboardButton("📤 All",     callback_data=f"fsendall_{uid}_{qkey}"),
     ]
-    filter_row2 = [InlineKeyboardButton("📤 Send All", callback_data=f"fsendall_{uid}_{search_q[:20]}")]
+    filter_row2 = []
     buttons += [filter_row1, filter_row2]
 
     await query.message.edit_text(
@@ -2667,6 +2799,149 @@ async def inline_search(client, query):
 # ═══════════════════════════════════════
 #  SCHEDULER — Cleanup
 # ═══════════════════════════════════════
+
+
+# ═══════════════════════════════════════
+#  ADMIN PANEL
+# ═══════════════════════════════════════
+@bot.on_message(filters.command("admin") & filters.user(ADMINS) & filters.private)
+async def admin_panel(client, message: Message):
+    """Full admin control panel"""
+    s = await get_settings()
+    total_users = await users_col.count_documents({})
+    total_groups = await groups_col.count_documents({})
+    prem_users = await premium_col.count_documents({"expiry": {"$gt": now()}})
+    pending_pay = await payments_col.count_documents({"status": "pending"})
+    pending_req = await requests_col.count_documents({})
+    banned_count = await banned_col.count_documents({})
+
+    text = (
+        f"👑 Admin Panel\n"
+        f"{'─'*25}\n"
+        f"👤 Users: {total_users}\n"
+        f"👥 Groups: {total_groups}\n"
+        f"💎 Premium: {prem_users}\n"
+        f"🚫 Banned: {banned_count}\n"
+        f"{'─'*25}\n"
+        f"📩 Pending payments: {pending_pay}\n"
+        f"📋 Pending requests: {pending_req}\n"
+        f"{'─'*25}\n"
+        f"🔧 Maintenance: {'ON' if s.get('maintenance') else 'OFF'}\n"
+        f"🔗 Shortlink: {'ON' if s.get('shortlink_enabled') else 'OFF'}\n"
+        f"📢 Force sub: {'ON' if s.get('force_sub') else 'OFF'}\n"
+        f"⏳ Auto delete: {s.get('auto_delete_time', 300)//60} min\n"
+        f"📦 Free results: {s.get('free_results', 5)}\n"
+        f"💎 Prem results: {s.get('premium_results', 10)}\n"
+        f"📥 Daily limit: {s.get('daily_limit', 10)}"
+    )
+
+    kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🔧 Maintenance ON" if not s.get('maintenance') else "🔧 Maintenance OFF",
+                                 callback_data="ap_toggle_maintenance"),
+            InlineKeyboardButton("🔗 SL ON" if not s.get('shortlink_enabled') else "🔗 SL OFF",
+                                 callback_data="ap_toggle_shortlink"),
+        ],
+        [
+            InlineKeyboardButton("📢 FSub ON" if not s.get('force_sub') else "📢 FSub OFF",
+                                 callback_data="ap_toggle_forcesub"),
+            InlineKeyboardButton("📩 Payments", callback_data="ap_payments"),
+        ],
+        [
+            InlineKeyboardButton("📊 Full Stats", callback_data="ap_stats"),
+            InlineKeyboardButton("📋 Requests", callback_data="ap_requests"),
+        ],
+        [
+            InlineKeyboardButton("📡 Broadcast Users", callback_data="ap_bc_users"),
+            InlineKeyboardButton("📡 Broadcast Groups", callback_data="ap_bc_groups"),
+        ],
+        [
+            InlineKeyboardButton("🔄 Refresh", callback_data="ap_refresh"),
+        ],
+    ])
+    await message.reply(text, reply_markup=kb)
+
+@bot.on_callback_query(filters.regex(r"^ap_"))
+async def admin_panel_cb(client, query: CallbackQuery):
+    if query.from_user.id not in ADMINS:
+        await query.answer("❌ Sirf owner!", show_alert=True)
+        return
+    data = query.data
+
+    if data == "ap_toggle_maintenance":
+        s = await get_settings()
+        new_val = not s.get("maintenance", False)
+        await update_setting("maintenance", new_val)
+        await query.answer(f"🔧 Maintenance: {'ON' if new_val else 'OFF'}")
+        await admin_panel(client, query.message)
+        return
+
+    if data == "ap_toggle_shortlink":
+        s = await get_settings()
+        new_val = not s.get("shortlink_enabled", True)
+        await update_setting("shortlink_enabled", new_val)
+        await query.answer(f"🔗 Shortlink: {'ON' if new_val else 'OFF'}")
+        await admin_panel(client, query.message)
+        return
+
+    if data == "ap_toggle_forcesub":
+        s = await get_settings()
+        new_val = not s.get("force_sub", True)
+        await update_setting("force_sub", new_val)
+        await query.answer(f"📢 Force sub: {'ON' if new_val else 'OFF'}")
+        await admin_panel(client, query.message)
+        return
+
+    if data == "ap_payments":
+        total = await payments_col.count_documents({})
+        pending = await payments_col.count_documents({"status": "pending"})
+        approved = await payments_col.count_documents({"status": "approved"})
+        rejected = await payments_col.count_documents({"status": "rejected"})
+        await query.answer()
+        await query.message.reply(
+            f"💳 Payments\n{'─'*20}\n"
+            f"Total: {total}\nPending: {pending}\nApproved: {approved}\nRejected: {rejected}"
+        )
+        return
+
+    if data == "ap_stats":
+        await query.answer()
+        await stats_cmd(client, query.message)
+        return
+
+    if data == "ap_requests":
+        await query.answer()
+        # Create fake message object for show_requests
+        class FakeMsg:
+            def __init__(self, m):
+                self.chat = m.chat
+                self.from_user = m.from_user
+                self.command = ["requests"]
+                async def reply(self, *a, **k): return await m.reply(*a, **k)
+            reply = query.message.reply
+        await show_requests(client, type('M', (), {'chat': query.message.chat, 'from_user': query.from_user, 'command': ['requests'], 'reply': query.message.reply})())
+        return
+
+    if data == "ap_bc_users":
+        await query.answer()
+        await query.message.reply(
+            "📡 Users broadcast:\n\n`/broadcast users <message>`\n\nYa seedha reply karein:"
+        )
+        return
+
+    if data == "ap_bc_groups":
+        await query.answer()
+        await query.message.reply(
+            "📡 Groups broadcast:\n\n`/broadcast groups <message>`"
+        )
+        return
+
+    if data == "ap_refresh":
+        await query.answer("🔄 Refreshed!")
+        await admin_panel(client, query.message)
+        return
+
+    await query.answer()
 
 def start_bot():
     """
