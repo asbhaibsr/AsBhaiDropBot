@@ -174,12 +174,22 @@ async def start_handler(client, message: Message):
                         hours = sl_doc.get("hours", 24)
                         await mark_sl_verified(uid, sl_id, sl_label)
                         verify_count = await verify_log_col.count_documents({"user_id": uid, "shortlink_id": sl_id})
+                        uname = message.from_user.username
+                        display_name = message.from_user.first_name or "User"
+                        # Convert to small caps style: Nᴀᴍᴇ
+                        def to_smallcaps(text):
+                            sc = str.maketrans(
+                                'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+                                'ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ'
+                            )
+                            return text.translate(sc)
+                        sc_name = to_smallcaps(display_name[:20])
                         await send_log(
-                            f"✅ **Shortlink Verified**\n\n"
-                            f"👤 {message.from_user.mention} (`{uid}`)\n"
-                            f"🔗 {sl_label}\n"
-                            f"🔢 #{verify_count}\n"
-                            f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
+                            f"#VerifyShortlink\n\n"
+                            f"ɪᴅ - {uid}\n\n"
+                            f"Nᴀᴍᴇ - {sc_name}\n\n"
+                            f"sʜᴏʀᴛʟɪɴᴋ - {sl_label}\n"
+                            f"ᴛɪᴍᴇ - {now_ist().strftime('%d %b %H:%M')} IST"
                         )
                 except Exception as e:
                     logger.error(f"sl verify log error: {e}")
@@ -187,10 +197,17 @@ async def start_handler(client, message: Message):
             else:
                 # env_default ya legacy — date-based mark karo
                 await mark_verified(uid)
+                uname2 = message.from_user.username
+                dn2 = message.from_user.first_name or "User"
+                def sc2(t):
+                    sc = str.maketrans('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz','ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ')
+                    return t.translate(sc)
                 await send_log(
-                    f"✅ **Verified**\n\n"
-                    f"👤 {message.from_user.mention} (`{uid}`)\n"
-                    f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
+                    f"#VerifyShortlink\n\n"
+                    f"ɪᴅ - {uid}\n\n"
+                    f"Nᴀᴍᴇ - {sc2(dn2[:20])}\n\n"
+                    f"sʜᴏʀᴛʟɪɴᴋ - Env Default\n"
+                    f"ᴛɪᴍᴇ - {now_ist().strftime('%d %b %H:%M')} IST"
                 )
 
             # Check baaki shortlinks hain?
@@ -587,12 +604,17 @@ async def search_handler(client, message: Message):
             nav_row.append(InlineKeyboardButton("▶️ Next", callback_data=f"rpage_{uid}_{qkey}_1"))
             file_buttons.append(nav_row)
 
-        # ── Filter buttons — Premium only ──
+        # ── Filter buttons — 2 per row, Send All at bottom ──
         file_buttons.append([
-            InlineKeyboardButton("🌐 Lang",    callback_data=f"flang_{uid}_{qkey}"),
-            InlineKeyboardButton("📺 Season",  callback_data=f"fseason_{uid}_{qkey}"),
-            InlineKeyboardButton("🎬 Episode", callback_data=f"fepisode_{uid}_{qkey}"),
-            InlineKeyboardButton("📤 All",     callback_data=f"fsendall_{uid}_{qkey}"),
+            InlineKeyboardButton("🌐 Language", callback_data=f"flang_{uid}_{qkey}"),
+            InlineKeyboardButton("📺 Season",   callback_data=f"fseason_{uid}_{qkey}"),
+        ])
+        file_buttons.append([
+            InlineKeyboardButton("🎬 Episode",  callback_data=f"fepisode_{uid}_{qkey}"),
+            InlineKeyboardButton("🔙 Back",     callback_data=f"fback_{uid}_{qkey}"),
+        ])
+        file_buttons.append([
+            InlineKeyboardButton("📤 Send All (Premium)", callback_data=f"fsendall_{uid}_{qkey}"),
         ])
 
         kb = InlineKeyboardMarkup(file_buttons)
@@ -1938,13 +1960,14 @@ async def broadcast(client, message: Message):
                     await sm.edit(f"📡 Broadcasting... {total} done | ✅{done} ❌{failed}")
                 except: pass
 
+    # Stats ko bhi update karo — deleted users/groups show nahi hone chahiye
     await sm.edit(
-        f"📡 **Broadcast Complete!**\n\n"
-        f"📊 Total: **{total}**\n"
-        f"✅ Success: **{done}**\n"
-        f"❌ Failed: **{failed}**\n"
-        f"🚫 Blocked/Left: **{blocked}**\n"
-        f"🗑 Data Cleaned: **{deleted}**"
+        f"📡 Broadcast Complete!\n\n"
+        f"Total: {total}\n"
+        f"✅ Success: {done}\n"
+        f"❌ Failed: {failed}\n"
+        f"🚫 Blocked/Left: {blocked}\n"
+        f"🗑 Data Cleaned: {deleted} (stats se bhi hataye)"
     )
 
 @bot.on_message(filters.command("help"))
@@ -1954,16 +1977,27 @@ async def help_cmd(client, message: Message):
     if miniapp_url:
         buttons.insert(0, [InlineKeyboardButton("🌐 Mini App", web_app=WebAppInfo(url=miniapp_url))])
     await message.reply(
-        "📖 **Bot Guide**\n\n"
-        "**Kaise use karein:**\n"
+        "📖 Bot Guide\n"
+        "━━━━━━━━━━━━━━━━\n\n"
+        "Kaise use karein:\n"
         "1️⃣ Channel join karo\n"
-        "2️⃣ Daily 1 baar verify karo (shortlink)\n"
-        "3️⃣ Group mein naam type karo\n"
-        "4️⃣ Button milega → click → PM mein file! 📥\n\n"
-        "⚠️ File kuch der baad delete hogi — save kar lo!\n\n"
-        "💎 **Premium** = No verify + 10 results + stream!\n"
-        "🔗 **10 Refer** = 15 din free premium!\n\n"
-        "/premium | /mystats | /referlink | /request <naam>",
+        "2️⃣ Group mein movie naam type karo\n"
+        "3️⃣ Button milega — click karo\n"
+        "4️⃣ PM mein file aa jaayegi 📥\n\n"
+        "File kuch der baad delete hogi — save kar lo!\n\n"
+        "━━━━━━━━━━━━━━━━\n"
+        "Commands:\n"
+        "/premium — Plans & status\n"
+        "/mystats — Teri stats\n"
+        "/referlink — Refer link\n"
+        "/request naam — File request karo\n\n"
+        "Admin Commands:\n"
+        "/admin — Admin panel\n"
+        "/addpremium id days — Premium do\n"
+        "/broadcast users/groups msg\n"
+        "/stats — Bot stats\n"
+        "/settings — Settings\n"
+        "/setcommands — Commands set karo",
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
@@ -2337,12 +2371,17 @@ async def result_page_cb(client, query: CallbackQuery):
         nav.append(InlineKeyboardButton("▶️ Next", callback_data=f"rpage_{uid}_{qkey}_{page+1}"))
     if nav: buttons.append(nav)
 
-    # Filter buttons
+    # Filter buttons — 2 per row
     buttons.append([
-        InlineKeyboardButton("🌐 Lang",    callback_data=f"flang_{uid}_{qkey}"),
-        InlineKeyboardButton("📺 Season",  callback_data=f"fseason_{uid}_{qkey}"),
-        InlineKeyboardButton("🎬 Episode", callback_data=f"fepisode_{uid}_{qkey}"),
-        InlineKeyboardButton("📤 All",     callback_data=f"fsendall_{uid}_{qkey}"),
+        InlineKeyboardButton("🌐 Language", callback_data=f"flang_{uid}_{qkey}"),
+        InlineKeyboardButton("📺 Season",   callback_data=f"fseason_{uid}_{qkey}"),
+    ])
+    buttons.append([
+        InlineKeyboardButton("🎬 Episode",  callback_data=f"fepisode_{uid}_{qkey}"),
+        InlineKeyboardButton("🔙 Back",     callback_data=f"fback_{uid}_{qkey}"),
+    ])
+    buttons.append([
+        InlineKeyboardButton("📤 Send All (Premium)", callback_data=f"fsendall_{uid}_{qkey}"),
     ])
 
     try:
@@ -2705,14 +2744,19 @@ async def filter_back_cb(client, query: CallbackQuery):
         final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
         buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
 
-    filter_row1 = [
-        InlineKeyboardButton("🌐 Lang",    callback_data=f"flang_{uid}_{qkey}"),
-        InlineKeyboardButton("📺 Season",  callback_data=f"fseason_{uid}_{qkey}"),
-        InlineKeyboardButton("🎬 Episode", callback_data=f"fepisode_{uid}_{qkey}"),
-        InlineKeyboardButton("📤 All",     callback_data=f"fsendall_{uid}_{qkey}"),
+    buttons += [
+        [
+            InlineKeyboardButton("🌐 Language", callback_data=f"flang_{uid}_{qkey}"),
+            InlineKeyboardButton("📺 Season",   callback_data=f"fseason_{uid}_{qkey}"),
+        ],
+        [
+            InlineKeyboardButton("🎬 Episode",  callback_data=f"fepisode_{uid}_{qkey}"),
+            InlineKeyboardButton("🔙 Back",     callback_data=f"fback_{uid}_{qkey}"),
+        ],
+        [
+            InlineKeyboardButton("📤 Send All (Premium)", callback_data=f"fsendall_{uid}_{qkey}"),
+        ],
     ]
-    filter_row2 = []
-    buttons += [filter_row1, filter_row2]
 
     await query.message.edit_text(
         f"🔍 **{len(found)} Results** — {search_q}\n\n👇 File ka button dabao:",
