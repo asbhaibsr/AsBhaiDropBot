@@ -170,7 +170,7 @@ async def stream_page_handler(request):
     """Stream page — mini app serve karo"""
     return await home_handler(request)
 
-@routes.get(r"/stream_file/{msg_id:\d+}")
+@routes.get(r"/stream_file/{msg_id:\d+}", allow_head=True)
 async def stream_file_handler(request: aio_web.Request):
     """
     Unlimited size file streaming — TechVJ style.
@@ -243,40 +243,69 @@ async def stream_file_handler(request: aio_web.Request):
     response = aio_web.StreamResponse(status=status, headers=headers)
     await response.prepare(request)
 
-    # Userbot se stream karo — koi size limit nahi
+    # Advanced streaming — Pyrogram stream_media with offset support
     try:
         client_to_use = userbot if userbot else bot
-        bytes_to_skip = from_bytes
+        if not client_to_use:
+            return aio_web.json_response({"error": "No client available"}, status=503)
+
         bytes_written = 0
+        # Calculate chunk-aligned offset for Pyrogram
+        offset_kb = from_bytes // (1024 * 256)  # 256KB chunks alignment
+        first_chunk_cut = from_bytes - offset_kb * 1024 * 256
+        
+        chunk_num = 0
+        async for chunk in client_to_use.stream_media(file_msg, offset=offset_kb):
+            if not chunk:
+                break
+            # First chunk mein se starting bytes cut karo
+            if chunk_num == 0 and first_chunk_cut > 0:
+                chunk = chunk[first_chunk_cut:]
+            chunk_num += 1
 
-        async for chunk in client_to_use.stream_media(file_msg):
-            if bytes_to_skip > 0:
-                if len(chunk) <= bytes_to_skip:
-                    bytes_to_skip -= len(chunk)
-                    continue
-                else:
-                    chunk = chunk[bytes_to_skip:]
-                    bytes_to_skip = 0
-
+            # Only send what's needed
             remaining = req_length - bytes_written
+            if remaining <= 0:
+                break
             if len(chunk) > remaining:
                 chunk = chunk[:remaining]
+            if not chunk:
+                break
 
-            await response.write(chunk)
+            try:
+                await response.write(chunk)
+            except (ConnectionResetError, aio_web.ConnectionResetError):
+                break  # Client disconnected
             bytes_written += len(chunk)
 
             if bytes_written >= req_length:
                 break
 
-    except aio_web.ConnectionResetError:
-        pass  # User ne close kiya
+    except (aio_web.ConnectionResetError, ConnectionResetError):
+        pass  # User ne close kiya — normal hai
     except Exception as e:
-        logger.error(f"stream_file_handler error: {e}")
+        logger.error(f"stream error msg_id={msg_id}: {type(e).__name__}: {e}")
 
     try:
         await response.write_eof()
     except: pass
     return response
+
+
+@routes.get(r"/file_info/{msg_id:\d+}")
+async def file_info_handler(request: aio_web.Request):
+    """File metadata — mini app ke liye"""
+    msg_id = int(request.match_info["msg_id"])
+    info = await get_file_info(msg_id)
+    if not info:
+        return aio_web.json_response({"error": "File not found"}, status=404)
+    return aio_web.json_response({
+        "file_name": info["file_name"],
+        "file_size": info["file_size"],
+        "mime_type": info["mime_type"],
+        "stream_url": f"/stream_file/{msg_id}",
+        "download_url": f"/download/{msg_id}",
+    }, headers={"Access-Control-Allow-Origin": "*"})
 
 @routes.get(r"/download/{msg_id:\d+}")
 async def download_handler(request: aio_web.Request):
