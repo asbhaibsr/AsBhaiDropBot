@@ -2396,16 +2396,7 @@ async def lang_filter_cb(client, query: CallbackQuery):
     uid = int(parts[1]) if len(parts) > 1 else 0
     search_q = parts[2] if len(parts) > 2 else ""
 
-    prem = await is_premium(query.from_user.id)
-    if not prem and query.from_user.id not in ADMINS:
-        await query.answer(
-            "💎 Language filter ke liye Premium chahiye!\n"
-            "Bot PM mein /premium type karo.",
-            show_alert=True
-        )
-        return
-
-    # Language buttons
+    # Language buttons — sabke liye free
     kb_rows = []
     for i in range(0, len(LANGUAGES), 2):
         row = []
@@ -2434,7 +2425,8 @@ async def lang_select_cb(client, query: CallbackQuery):
     await query.answer(f"🔍 {lang_key.title()} results dhundh raha hoon...", show_alert=False)
 
     # Re-search with language filter
-    combined_q = f"{search_q} {lang_key}"
+    real_q = search_q.replace("_", " ").strip()
+    combined_q = f"{real_q} {lang_key}"
     found = await do_search(combined_q, limit=10)
     if not found:
         await query.message.edit_text(
@@ -2481,10 +2473,7 @@ async def season_filter_cb(client, query: CallbackQuery):
     qkey = parts[2] if len(parts) > 2 else ""
     search_q = qkey.replace("_", " ").strip()
 
-    prem = await is_premium(query.from_user.id)
-    if not prem and query.from_user.id not in ADMINS:
-        await query.answer("💎 Season filter sirf Premium users ke liye!", show_alert=True)
-        return
+    # Season — sabke liye
 
     # Season buttons — S01 to S20 (page 1), more on next page + Full Season
     season_buttons = []
@@ -2519,6 +2508,7 @@ async def season_select_cb(client, query: CallbackQuery):
         await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
 
     await query.answer(f"🔍 {season_key.upper()} dhundh raha hoon...", show_alert=False)
+    search_q = search_q.replace("_", " ").strip()
     combined_q = f"{search_q} {season_key}"
     found = await do_search(combined_q, limit=10)
 
@@ -2557,10 +2547,7 @@ async def episode_filter_cb(client, query: CallbackQuery):
     qkey = parts[2] if len(parts) > 2 else ""
     search_q = qkey.replace("_", " ").strip()
 
-    prem = await is_premium(query.from_user.id)
-    if not prem and query.from_user.id not in ADMINS:
-        await query.answer("💎 Episode filter sirf Premium users ke liye!", show_alert=True)
-        return
+    # Episode — sabke liye
 
     # Episode buttons — E01 to E20 (page 1), next pages for more
     ep_buttons = []
@@ -2621,10 +2608,7 @@ async def sendall_cb(client, query: CallbackQuery):
     qkey = parts[2] if len(parts) > 2 else ""
     search_q = qkey.replace("_", " ").strip()
 
-    prem = await is_premium(query.from_user.id)
-    if not prem and query.from_user.id not in ADMINS:
-        await query.answer("💎 Send All sirf Premium users ke liye!", show_alert=True)
-        return
+    # Send All — sabke liye free
 
     if query.from_user.id != uid and query.from_user.id not in ADMINS:
         await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
@@ -2665,9 +2649,7 @@ async def sendall_cb(client, query: CallbackQuery):
 @bot.on_callback_query(filters.regex(r"^spage_"))
 async def season_page_cb(client, query: CallbackQuery):
     """Season pagination — S21-S40, S41-S60, S61-S100"""
-    prem = await is_premium(query.from_user.id)
-    if not prem and query.from_user.id not in ADMINS:
-        await query.answer("💎 Season filter ke liye Premium chahiye!", show_alert=True); return
+    # Season page — free
     parts = query.data.split("_", 3)
     uid = int(parts[1]) if len(parts) > 1 else 0
     start = int(parts[2]) if len(parts) > 2 else 21
@@ -2692,9 +2674,7 @@ async def season_page_cb(client, query: CallbackQuery):
 @bot.on_callback_query(filters.regex(r"^epage_"))
 async def episode_page_cb(client, query: CallbackQuery):
     """Episode pagination — E21-E40, E41-E60, E61-E80, E81-E100"""
-    prem = await is_premium(query.from_user.id)
-    if not prem and query.from_user.id not in ADMINS:
-        await query.answer("💎 Episode filter ke liye Premium chahiye!", show_alert=True); return
+    # Episode page — free
     parts = query.data.split("_", 3)
     uid = int(parts[1]) if len(parts) > 1 else 0
     start = int(parts[2]) if len(parts) > 2 else 21
