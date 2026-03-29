@@ -633,17 +633,26 @@ async def del_later(msg, secs):
         except: pass
     except: pass
 
-async def send_log(text):
+async def send_log(text, reply_markup=None):
     """Log silently — koi crash nahi"""
     if not LOG_CHANNEL or not bot: return
     try:
-        await bot.send_message(int(LOG_CHANNEL), text, disable_web_page_preview=True)
+        await bot.send_message(
+            int(LOG_CHANNEL), text,
+            reply_markup=reply_markup,
+            disable_web_page_preview=True
+        )
     except FloodWait as e:
         await asyncio.sleep(min(e.value, 10))
-        try: await bot.send_message(int(LOG_CHANNEL), text, disable_web_page_preview=True)
-        except: pass
-    except Exception:
-        pass  # Log fail hone pe crash nahi
+        try:
+            await bot.send_message(
+                int(LOG_CHANNEL), text,
+                reply_markup=reply_markup,
+                disable_web_page_preview=True
+            )
+        except Exception: pass
+    except Exception as e:
+        logger.debug(f"send_log failed: {e}")
 
 # ═══════════════════════════════════════
 #  SEARCH
