@@ -53,7 +53,7 @@ from database import (
     set_clients as db_set_clients,
 )
 from routes import (
-    aio_app, routes, run_aiohttp_server, run_async,
+    aio_app, routes, run_aiohttp_server,
     set_clients as routes_set_clients,
 )
 
@@ -383,11 +383,20 @@ async def pm_search_handler(client, message: Message):
     found = await do_search(query_text, limit=limit)
 
     if not found:
+        google_q = query_text.replace(" ", "+")
+        filter_url = f"https://t.me/asfilter_bot?start={query_text.replace(" ","_")}"
+        google_url = f"https://www.google.com/search?q={google_q}+telegram+movie"
         await wait_msg.edit(
-            f"😕 **\'{query_text}\' nahi mila**\n\n"
-            f"• Sirf naam likhein\n"
-            f"• Spelling check karo\n\n"
-            f"📩 `/request {query_text}`"
+            f"😕 '{query_text}' yahan nahi mila\n\n"
+            f"Kya karein:\n"
+            f"1. Spelling check karo\n"
+            f"2. Sirf naam likhein (year mat)\n"
+            f"3. Niche ke buttons try karo",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url),
+            ],[
+                InlineKeyboardButton("🌍 Google mein dhundho", url=google_url),
+            ]])
         )
         return
 
@@ -559,12 +568,19 @@ async def search_handler(client, message: Message):
         found = await do_search(query, limit=limit)
 
         if not found:
+            google_q = query.replace(" ", "+")
+            filter_url = f"https://t.me/asfilter_bot?start={query.replace(" ","_")}"
+            google_url = f"https://www.google.com/search?q={google_q}+telegram+movie"
             edited = await wait_msg.edit(
-            f"😕 **'{query}' nahi mila**\n\n"
-            f"• Sirf naam likhein\n"
-            f"• Spelling check karo\n\n"
-            f"📩 `/request {query}`"
-        )
+                f"😕 '{query}' yahan nahi mila\n\n"
+                f"1. Spelling check karo\n"
+                f"2. Niche ke buttons try karo",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url),
+                ],[
+                    InlineKeyboardButton("🌍 Google mein dhundho", url=google_url),
+                ]])
+            )
             asyncio.create_task(del_later(edited, 300))
             return
 
@@ -1172,22 +1188,21 @@ async def cb_handler(client, query: CallbackQuery):
 
     elif data == "buy_premium":
         miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
-        buttons = [
-            [InlineKeyboardButton("📞 Contact @asbhaibsr", url="https://t.me/asbhaibsr")],
-            [InlineKeyboardButton("🔙 Back", callback_data="show_premium")]
-        ]
         if miniapp_url:
-            buttons.insert(0, [InlineKeyboardButton("🌐 Mini App mein Buy Karo", web_app=WebAppInfo(url=miniapp_url))])
-        await query.message.edit(
-            f"💳 **Premium Kharidein**\n\n"
-            f"**UPI ID:** `{UPI_ID}`\n\n"
-            f"1️⃣ UPI se payment karo\n"
-            f"2️⃣ Screenshot lo\n"
-            f"3️⃣ @asbhaibsr ko bhejo\n"
-            f"4️⃣ 1 ghante mein activate! ⚡\n\n"
-            f"Ya Mini App mein buy karo 👇",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+            await query.answer()
+            await query.message.edit(
+                "💎 Premium plans dekhne ke liye Mini App kholo!\n\n"
+                "Wahan sab plans hain:\n"
+                "Silver, Gold, Diamond, Elite + Group Premium\n\n"
+                "Plan choose karo → Pay karo → Owner verify karega!",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🌐 Mini App mein Plans Dekho", web_app=WebAppInfo(url=miniapp_url))
+                ],[
+                    InlineKeyboardButton("🔙 Back", callback_data="show_premium")
+                ]])
+            )
+        else:
+            await query.answer("Mini App unavailable", show_alert=True)
 
     elif data == "help":
         await query.message.edit(
@@ -2006,27 +2021,36 @@ async def premium_info(client, message: Message):
     uid = message.from_user.id
     prem = await is_premium(uid)
     exp = await get_premium_expiry(uid)
-    exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else "N/A"
+    exp_str = exp.astimezone(IST).strftime("%d %b %Y %H:%M") if exp else "—"
     miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+
+    if prem:
+        text = (
+            f"💎 Premium Active!\n\n"
+            f"Expiry: {exp_str}\n\n"
+            f"Enjoy karo:\n"
+            f"• No verify, no force join\n"
+            f"• 10 results per search\n"
+            f"• Stream + Download\n"
+            f"• PM Search\n\n"
+            f"Renew ke liye Mini App kholo!"
+        )
+    else:
+        text = (
+            f"💎 Premium nahi hai abhi\n\n"
+            f"Plans dekhne ke liye Mini App kholo.\n"
+            f"Wahan sab plans hain — choose karo, pay karo,\n"
+            f"owner verify karega, auto activate!\n\n"
+            f"🆓 10 Refer = 15 din FREE Premium!"
+        )
+
     buttons = []
-    if not prem:
-        if miniapp_url:
-            buttons.append([InlineKeyboardButton("🌐 Mini App mein Buy Karo", web_app=WebAppInfo(url=miniapp_url))])
-        buttons.append([InlineKeyboardButton("💰 Buy Premium", callback_data="buy_premium")])
-    buttons.append([InlineKeyboardButton("🔗 Refer & Earn (Free)", callback_data="refer_info")])
-    await message.reply(
-        f"💎 **Premium**\n\n"
-        f"Status: {'✅ Active — ' + exp_str if prem else '❌ Nahi'}\n\n"
-        f"• 🔓 Force join nahi\n"
-        f"• 🔗 Shortlink nahi\n"
-        f"• 📦 10 results\n"
-        f"• ∞ Unlimited\n"
-        f"• ▶️ Stream\n\n"
-        f"₹50/10din | ₹150/30din | ₹200/60din\n"
-        f"₹500/150din | ₹800/1saal\n\n"
-        f"🆓 **10 Refer = 15 din FREE!**",
-        reply_markup=InlineKeyboardMarkup(buttons) if buttons else None
-    )
+    if miniapp_url:
+        buttons.append([InlineKeyboardButton(
+            "💎 Mini App mein Plans Dekho" if not prem else "🌐 Mini App Kholo",
+            web_app=WebAppInfo(url=miniapp_url)
+        )])
+    await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons) if buttons else None)
 
 @bot.on_message(filters.command("mystats"))
 async def mystats(client, message: Message):
@@ -2429,12 +2453,19 @@ async def lang_select_cb(client, query: CallbackQuery):
     combined_q = f"{real_q} {lang_key}"
     found = await do_search(combined_q, limit=10)
     if not found:
-        await query.message.edit_text(
-            f"😕 **{lang_key.title()}** mein '{search_q}' nahi mila\n\n"
-            f"Alag language try karo ya `/request {search_q}` karo"
-        )
-        return
-
+            google_q = search_q.replace(" ", "+")
+            filter_url = f"https://t.me/asfilter_bot?start={search_q.replace(chr(32),chr(95))}"
+            google_url = f"https://www.google.com/search?q={google_q}+telegram"
+            await query.message.edit_text(
+                f"😕 {lang_key.title()} mein '{search_q}' nahi mila\n\n"
+                f"Niche se try karo:",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)
+                ],[
+                    InlineKeyboardButton("🌐 Google mein dhundho", url=google_url)
+                ]])
+            )
+            return
     me = await client.get_me()
     buttons = []
     for idx, fmsg in enumerate(found):
@@ -2513,7 +2544,17 @@ async def season_select_cb(client, query: CallbackQuery):
     found = await do_search(combined_q, limit=10)
 
     if not found:
-        await query.message.edit_text(f"😕 **{season_key.upper()}** mein '{search_q}' nahi mila\n\n`/request {search_q}` karo")
+        google_q = search_q.replace(" ","+")
+        filter_url = f"https://t.me/asfilter_bot?start={search_q.replace(chr(32),chr(95))}"
+        google_url = f"https://www.google.com/search?q={google_q}+telegram"
+        await query.message.edit_text(
+            f"😕 {season_key.upper()} mein '{search_q}' nahi mila\nNiche se try karo:",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)
+            ],[
+                InlineKeyboardButton("🌐 Google mein dhundho", url=google_url)
+            ]])
+        )
         return
 
     me = await client.get_me()
@@ -2581,7 +2622,17 @@ async def ep_select_cb(client, query: CallbackQuery):
     found = await do_search(combined_q, limit=5)
 
     if not found:
-        await query.message.edit_text(f"😕 **{ep_key.upper()}** mein nahi mila\n\n`/request {search_q}` karo")
+        google_q = search_q.replace(" ","+")
+        filter_url = f"https://t.me/asfilter_bot?start={search_q.replace(chr(32),chr(95))}"
+        google_url = f"https://www.google.com/search?q={google_q}+telegram"
+        await query.message.edit_text(
+            f"😕 {ep_key.upper()} mein '{search_q}' nahi mila\nNiche se try karo:",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)
+            ],[
+                InlineKeyboardButton("🌐 Google mein dhundho", url=google_url)
+            ]])
+        )
         return
 
     me = await client.get_me()
@@ -2823,6 +2874,145 @@ async def inline_search(client, query):
 # ═══════════════════════════════════════
 #  SCHEDULER — Cleanup
 # ═══════════════════════════════════════
+
+
+
+# ═══════════════════════════════════════
+#  GROUP PREMIUM STATS (/gstats)
+# ═══════════════════════════════════════
+@bot.on_message(filters.command("gstats") & filters.user(ADMINS))
+async def group_prem_stats(client, message: Message):
+    """Group premium status dekho by ID"""
+    args = message.command
+    if len(args) < 2:
+        # Show all premium groups
+        cursor = group_prem_col.find({"status": "approved"})
+        groups = await cursor.to_list(length=50)
+        if not groups:
+            await message.reply("📭 Koi group premium nahi abhi.")
+            return
+        text = "Premium Groups\n" + "="*22 + "\n\n"
+        for g in groups[:20]:
+            exp = make_aware(g["expiry"]) if g.get("expiry") else None
+            is_active = now() < exp if exp else False
+            status = "✅ Active" if is_active else "❌ Expired"
+            exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else "N/A"
+            text += status + ' | ' + str(g.get('chat_id','')) + ' | ' + exp_str + chr(10)
+        return
+
+    # Specific group ID
+    try:
+        g_id = int(args[1])
+    except ValueError:
+        await message.reply("❌ Group ID number dalo. Example: `/gstats -1001234567890`")
+        return
+
+    doc = await group_prem_col.find_one({"chat_id": g_id})
+    if not doc:
+        await message.reply(f"📭 Group `{g_id}` ko premium nahi mila abhi.")
+        return
+
+    exp = make_aware(doc["expiry"]) if doc.get("expiry") else None
+    is_active = now() < exp if exp else False
+    exp_str = exp.astimezone(IST).strftime("%d %b %Y %H:%M") if exp else "N/A"
+    days_left = (exp - now()).days if exp and is_active else 0
+
+    # Try to get group name
+    try:
+        chat = await client.get_chat(g_id)
+        chat_name = chat.title or "Unknown"
+    except Exception:
+        chat_name = "Unknown"
+
+    status_str = "Active" if is_active else "Expired"
+    text = (
+        status_str + " — Group Premium\n"
+        + "="*22 + "\n\n"
+        + "Group: " + chat_name + "\n"
+        + "ID: " + str(g_id) + "\n"
+        + "Owner: " + str(doc.get("owner_id","N/A")) + "\n"
+        + "Days: " + str(doc.get("days","?")) + " din\n"
+        + "Expiry: " + exp_str + "\n"
+        + "Bacha: " + str(days_left) + " din"
+    )
+    kb = None
+    if is_active:
+        kb = InlineKeyboardMarkup([[
+            InlineKeyboardButton("❌ Remove Group Premium", callback_data=f"grm_prem_{g_id}")
+        ]])
+    await message.reply(text, reply_markup=kb)
+
+@bot.on_callback_query(filters.regex(r"^grm_prem_") & filters.user(ADMINS))
+async def remove_group_prem_cb(client, query: CallbackQuery):
+    g_id = int(query.data.split("_")[2])
+    await group_prem_col.delete_one({"chat_id": g_id})
+    await query.message.edit_reply_markup(None)
+    await query.answer("✅ Group Premium remove kiya!", show_alert=True)
+    await query.message.reply(f"❌ Group `{g_id}` ka premium remove ho gaya.")
+
+
+# NEW GSTATS HANDLER
+@bot.on_message(filters.command("gstats") & filters.user(ADMINS))
+async def group_prem_stats(client, message: Message):
+    args = message.command
+    if len(args) >= 2:
+        try:
+            g_id = int(args[1])
+        except ValueError:
+            await message.reply("Example: /gstats -1001234567890")
+            return
+        doc = await group_prem_col.find_one({"chat_id": g_id})
+        if not doc:
+            await message.reply(f"Group {g_id} premium nahi hai.")
+            return
+        exp = make_aware(doc["expiry"]) if doc.get("expiry") else None
+        is_active = now() < exp if exp else False
+        exp_str = exp.astimezone(IST).strftime("%d %b %Y %H:%M") if exp else "N/A"
+        days_left = max(0, (exp - now()).days) if exp and is_active else 0
+        try:
+            chat = await client.get_chat(g_id)
+            chat_name = chat.title or "Unknown"
+        except Exception:
+            chat_name = str(g_id)
+        status = "Active" if is_active else "Expired"
+        text = (
+            f"Group Premium Status\n"
+            f"{'='*22}\n\n"
+            f"Status: {status}\n"
+            f"Group: {chat_name}\n"
+            f"ID: {g_id}\n"
+            f"Owner: {doc.get('owner_id','N/A')}\n"
+            f"Days: {doc.get('days','?')} din\n"
+            f"Expiry: {exp_str}\n"
+            f"Bacha: {days_left} din"
+        )
+        kb = None
+        if is_active:
+            kb = InlineKeyboardMarkup([[
+                InlineKeyboardButton("Remove Premium", callback_data=f"grmprem_{g_id}")
+            ]])
+        await message.reply(text, reply_markup=kb)
+    else:
+        cursor = group_prem_col.find({"status": "approved"})
+        groups = await cursor.to_list(length=50)
+        if not groups:
+            await message.reply("Koi group premium nahi abhi.")
+            return
+        lines = ["Premium Groups\n" + "="*20 + "\n"]
+        for g in groups[:20]:
+            exp = make_aware(g["expiry"]) if g.get("expiry") else None
+            is_active = now() < exp if exp else False
+            exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else "N/A"
+            st = "Active" if is_active else "Expired"
+            lines.append(f"{st} | {g['chat_id']} | {exp_str}")
+        await message.reply("\n".join(lines))
+
+@bot.on_callback_query(filters.regex(r"^grmprem_") & filters.user(ADMINS))
+async def rm_grp_prem_cb(client, query: CallbackQuery):
+    g_id = int(query.data.split("_")[1])
+    await group_prem_col.delete_one({"chat_id": g_id})
+    await query.message.edit_reply_markup(None)
+    await query.answer("Group Premium removed!", show_alert=True)
 
 
 # ═══════════════════════════════════════
