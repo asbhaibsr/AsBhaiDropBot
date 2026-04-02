@@ -384,7 +384,7 @@ async def pm_search_handler(client, message: Message):
 
     if not found:
         google_q = query_text.replace(" ", "+")
-        filter_url = f"https://t.me/asfilter_bot?start={query_text.replace(" ","_")}"
+        filter_url = "https://t.me/asfilter_bot?start=" + query_text.replace(" ", "_")
         google_url = f"https://www.google.com/search?q={google_q}+telegram+movie"
         await wait_msg.edit(
             f"😕 '{query_text}' yahan nahi mila\n\n"
@@ -569,7 +569,7 @@ async def search_handler(client, message: Message):
 
         if not found:
             google_q = query.replace(" ", "+")
-            filter_url = f"https://t.me/asfilter_bot?start={query.replace(" ","_")}"
+            filter_url = "https://t.me/asfilter_bot?start=" + query.replace(" ", "_")
             google_url = f"https://www.google.com/search?q={google_q}+telegram+movie"
             edited = await wait_msg.edit(
                 f"😕 '{query}' yahan nahi mila\n\n"
