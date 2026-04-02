@@ -761,6 +761,16 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
         if s.get("auto_delete"):
             asyncio.create_task(del_later(sent, t))
 
+        # Log the file send
+        try:
+            await send_log(
+                f"📤 File Sent\n\n"
+                f"👤 {user.mention} (`{user.id}`)\n"
+                f"🗂 {fname}\n"
+                f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
+            )
+        except: pass
+
         return True, fname
 
     except Exception as e:
