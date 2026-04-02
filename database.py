@@ -565,9 +565,15 @@ async def verify_check(client, message, prem=False):
     step_text = f"Step {done_count+1}/{total}: {sl_label}" if total > 1 else sl_label
     time_text = f"Har {hours} ghante baad" if hours < 24 else "Har din ek baar"
 
+    miniapp_url_v = f"{KOYEB_URL}/" if KOYEB_URL else None
+    prem_btn_label = "💎 Premium lo — verify kabhi nahi"
+    if miniapp_url_v:
+        prem_row = [InlineKeyboardButton(prem_btn_label, url=miniapp_url_v)]
+    else:
+        prem_row = [InlineKeyboardButton(prem_btn_label, callback_data="buy_premium")]
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"🔗 {step_text} — Verify Karo", url=short)],
-        [InlineKeyboardButton("💎 Premium lo — verify kabhi nahi", callback_data="buy_premium")]
+        [prem_row],
     ])
     msgs = [
         f"Bhai ek kaam karna hoga pehle 🙏\n\nNeeche link dabao, shortlink khatam karo, wapas aao!\n⏰ {time_text} karna hoga.\n\nYa seedha premium le lo, phir ye sab nahi!",
@@ -637,8 +643,9 @@ async def send_log(text, reply_markup=None):
     """Log silently — koi crash nahi"""
     if not LOG_CHANNEL or not bot: return
     try:
+        log_cid = int(str(LOG_CHANNEL).strip())
         await bot.send_message(
-            int(LOG_CHANNEL), text,
+            log_cid, text,
             reply_markup=reply_markup,
             disable_web_page_preview=True
         )
