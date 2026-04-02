@@ -134,7 +134,7 @@ async def start_handler(client, message: Message):
 
     if is_new:
         await send_log(
-            f"👤 **Naya User**\n"
+            f"👤 #NewUser\n"
             f"Name: {message.from_user.mention}\n"
             f"ID: `{uid}`\n"
             f"Referred by: `{referred_by or 'Direct'}`\n"
@@ -630,7 +630,7 @@ async def search_handler(client, message: Message):
             InlineKeyboardButton("🔙 Back",     callback_data=f"fback_{uid}_{qkey}"),
         ])
         file_buttons.append([
-            InlineKeyboardButton("📤 Send All (Premium)", callback_data=f"fsendall_{uid}_{qkey}"),
+            InlineKeyboardButton("📤 Send All", callback_data=f"fsendall_{uid}_{qkey}"),
         ])
 
         kb = InlineKeyboardMarkup(file_buttons)
@@ -2406,7 +2406,7 @@ async def result_page_cb(client, query: CallbackQuery):
         InlineKeyboardButton("🔙 Back",     callback_data=f"fback_{uid}_{qkey}"),
     ])
     buttons.append([
-        InlineKeyboardButton("📤 Send All (Premium)", callback_data=f"fsendall_{uid}_{qkey}"),
+        InlineKeyboardButton("📤 Send All", callback_data=f"fsendall_{uid}_{qkey}"),
     ])
 
     try:
@@ -2786,7 +2786,7 @@ async def filter_back_cb(client, query: CallbackQuery):
             InlineKeyboardButton("🔙 Back",     callback_data=f"fback_{uid}_{qkey}"),
         ],
         [
-            InlineKeyboardButton("📤 Send All (Premium)", callback_data=f"fsendall_{uid}_{qkey}"),
+            InlineKeyboardButton("📤 Send All", callback_data=f"fsendall_{uid}_{qkey}"),
         ],
     ]
 
@@ -2899,6 +2899,7 @@ async def group_prem_stats(client, message: Message):
             status = "✅ Active" if is_active else "❌ Expired"
             exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else "N/A"
             text += status + ' | ' + str(g.get('chat_id','')) + ' | ' + exp_str + chr(10)
+        await message.reply(text[:4000])
         return
 
     # Specific group ID
@@ -3014,6 +3015,76 @@ async def rm_grp_prem_cb(client, query: CallbackQuery):
     await group_prem_col.delete_one({"chat_id": g_id})
     await query.message.edit_reply_markup(None)
     await query.answer("Group Premium removed!", show_alert=True)
+
+
+
+# ═══════════════════════════════════════
+#  /REQUEST COMMAND
+# ═══════════════════════════════════════
+@bot.on_message(filters.command("request"))
+async def request_cmd(client, message: Message):
+    uid = message.from_user.id
+    args = message.command[1:]
+    if not args:
+        await message.reply(
+            "📩 Request karo:\n"
+            "Example: `/request Pushpa 2 2024`\n\n"
+            "Owner review karega aur add karega!"
+        )
+        return
+    query = " ".join(args)
+    from database import requests_col, now, send_log
+    # Check duplicate
+    existing = await requests_col.find_one({"user_id": uid, "query": query})
+    if existing:
+        await message.reply(f"✅ `{query}` pehle se request ho chuki hai! Wait karo.")
+        return
+    await requests_col.insert_one({
+        "user_id": uid,
+        "name": message.from_user.first_name or "User",
+        "query": query,
+        "status": "pending",
+        "time": now()
+    })
+    await message.reply(
+        f"✅ Request submit ho gayi!\n\n"
+        f"🎬 `{query}`\n\n"
+        f"Owner review karega. Jaldi milegi!"
+    )
+    # Log to channel
+    await send_log(
+        f"📩 #NewRequest\n\n"
+        f"👤 {message.from_user.mention} (`{uid}`)\n"
+        f"🎬 {query}\n"
+        f"🕐 {now_ist().strftime('%d %b %H:%M')} IST",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("✅ Done", callback_data=f"req_done_{uid}_{query[:20]}"),
+            InlineKeyboardButton("❌ Skip", callback_data=f"req_skip_{uid}"),
+        ]])
+    )
+
+@bot.on_callback_query(filters.regex(r"^req_done_") & filters.user(ADMINS))
+async def req_done_cb(client, query: CallbackQuery):
+    parts = query.data.split("_", 3)
+    req_uid = int(parts[2]) if len(parts) > 2 else 0
+    req_q = parts[3] if len(parts) > 3 else ""
+    await requests_col.update_one(
+        {"user_id": req_uid, "query": req_q},
+        {"$set": {"status": "done"}}
+    )
+    try:
+        await client.send_message(
+            req_uid,
+            f"✅ Aapki request `{req_q}` add ho gayi!\nAb search karke dekho!"
+        )
+    except: pass
+    await query.message.edit_reply_markup(None)
+    await query.answer("Done!", show_alert=False)
+
+@bot.on_callback_query(filters.regex(r"^req_skip_") & filters.user(ADMINS))
+async def req_skip_cb(client, query: CallbackQuery):
+    await query.message.edit_reply_markup(None)
+    await query.answer("Skipped", show_alert=False)
 
 
 # ═══════════════════════════════════════
