@@ -1188,21 +1188,22 @@ async def cb_handler(client, query: CallbackQuery):
 
     elif data == "buy_premium":
         miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+        await query.answer()
+        buttons = []
         if miniapp_url:
-            await query.answer()
+            # WebAppInfo only works in private — use URL button (works everywhere)
+            buttons.append([InlineKeyboardButton("🌐 Mini App mein Plans Dekho", url=miniapp_url)])
+        buttons.append([InlineKeyboardButton("🔙 Back", callback_data="show_premium")])
+        try:
             await query.message.edit(
-                "💎 Premium plans dekhne ke liye Mini App kholo!\n\n"
-                "Wahan sab plans hain:\n"
-                "Silver, Gold, Diamond, Elite + Group Premium\n\n"
-                "Plan choose karo → Pay karo → Owner verify karega!",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🌐 Mini App mein Plans Dekho", web_app=WebAppInfo(url=miniapp_url))
-                ],[
-                    InlineKeyboardButton("🔙 Back", callback_data="show_premium")
-                ]])
+                "💎 Premium ke liye Mini App kholo!\n\n"
+                "Silver ₹50 | Gold ₹150 | Diamond ₹200\n"
+                "Elite ₹800/saal | Group Premium bhi!\n\n"
+                "Choose karo → Pay karo → Active!",
+                reply_markup=InlineKeyboardMarkup(buttons)
             )
-        else:
-            await query.answer("Mini App unavailable", show_alert=True)
+        except Exception:
+            await query.answer("Mini App: " + (miniapp_url or "unavailable"), show_alert=True)
 
     elif data == "help":
         await query.message.edit(
@@ -2211,7 +2212,7 @@ async def group_shortlink_add(client, message: Message):
         miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
         kb = []
         if miniapp_url:
-            kb.append([InlineKeyboardButton("💰 Group Premium Lo", web_app=WebAppInfo(url=miniapp_url))])
+            kb.append([InlineKeyboardButton("💰 Group Premium Lo", url=miniapp_url)])
         kb.append([InlineKeyboardButton("💬 @asbhaibsr se lo", url="https://t.me/asbhaibsr")])
         await message.reply(
             "❌ **Group Premium Nahi Hai!**\n\n"
