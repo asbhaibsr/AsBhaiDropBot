@@ -14,6 +14,7 @@ import aiohttp
 
 from config import (
     MONGO_URI, OWNER_ID, ADMINS, IST, FILE_CHANNEL,
+    LOG_CHANNEL,
     FORCE_SUB_ID, FORCE_SUB_CHANNEL, SHORTLINK_API, SHORTLINK_URL,
     KOYEB_URL, DEFAULT_SETTINGS, GROUP_DEFAULTS,
     _shortlink_cache, _search_locks, _search_cooldown,
@@ -631,13 +632,17 @@ def get_file_size(msg):
     return f"{size:.1f} TB"
 
 async def del_later(msg, secs):
+    """Safely delete a message or list of messages after secs seconds"""
     await asyncio.sleep(secs)
-    try: await msg.delete()
-    except FloodWait as e:
-        await asyncio.sleep(e.value + 2)
-        try: await msg.delete()
+    msgs = msg if isinstance(msg, (list, tuple)) else [msg]
+    for m in msgs:
+        try:
+            await m.delete()
+        except FloodWait as e:
+            await asyncio.sleep(e.value + 2)
+            try: await m.delete()
+            except: pass
         except: pass
-    except: pass
 
 async def send_log(text, reply_markup=None):
     """Log silently — koi crash nahi"""
@@ -724,11 +729,13 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
 
         # Human style captions — random se choose karo
         import random
+        import random as _r
+        planet = _r.choice(["🌍","🌎","🌏","🪐","🌕","🌑","🌒","🌓","🌔","🌖","🌗","🌘"])
         caps = [
-            f"🗂 {fname}\n\n{size_text}Bhai save kar lo jaldi — {mins} min mein delete ho jaayegi! 📌",
-            f"🎬 {fname}\n\n{size_text}Aa gayi! Seedha save karo ya forward karo — {mins} min ka time hai! ⏰",
-            f"📥 {fname}\n\n{size_text}Enjoy karo! Bas {mins} min baad file chali jaayegi, pehle save karo! 🙏",
-            f"🎯 {fname}\n\n{size_text}Le lo bhai! {mins} min baad delete. Abhi save ya forward karo! 📲",
+            f"{planet} {fname}\n\n{size_text}Bhai save kar lo jaldi — {mins} min mein delete ho jaayegi! 📌",
+            f"🎬 {fname}\n\n{size_text}Aa gayi! {planet} Seedha save karo ya forward karo — {mins} min ka time hai! ⏰",
+            f"📥 {fname}\n\n{size_text}Enjoy karo! {planet} Bas {mins} min baad file chali jaayegi, pehle save karo! 🙏",
+            f"🎯 {fname}\n\n{size_text}{planet} Le lo bhai! {mins} min baad delete. Abhi save ya forward karo! 📲",
         ]
         clean_cap = random.choice(caps)
 
