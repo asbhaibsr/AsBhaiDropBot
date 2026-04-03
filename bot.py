@@ -7,6 +7,10 @@
 #  Imports
 # ═══════════════════════════════════════
 import os, re, time, random, string, asyncio, logging
+try:
+    import ujson as json
+except ImportError:
+    import json
 from datetime import datetime, timedelta
 from threading import Thread
 
@@ -362,13 +366,16 @@ async def pm_search_handler(client, message: Message):
     if len(query_text) < 2: return
 
     prem = await is_premium(uid)
-    if not prem:
+    if not prem and uid not in ADMINS:
+        # Free users ko PM search allow nahi — group mein jaao
+        miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+        btns = []
+        if miniapp_url:
+            btns.append([InlineKeyboardButton("💎 Premium Lo — PM Search Enable", url=miniapp_url)])
         await message.reply(
-            f"❌ **PM mein search sirf Premium users ke liye hai!**\n\n"
-            f"Group mein search karo:\n"
-            f"👉 @asfilter_group\n\n"
-            f"💎 Premium lo to yahan bhi search karo:\n"
-            f"/premium"
+            f"❌ PM mein search Premium users ke liye hai!\n\n"
+            f"Group mein search karo ya Premium lo:",
+            reply_markup=InlineKeyboardMarkup(btns) if btns else None
         )
         return
 
@@ -385,7 +392,7 @@ async def pm_search_handler(client, message: Message):
     if not found:
         google_q = query_text.replace(" ", "+")
         filter_url = "https://t.me/asfilter_bot?start=" + query_text.replace(" ", "_")
-        google_url = f"https://www.google.com/search?q={google_q}+telegram+movie"
+        google_url = f"https://www.google.com/search?q={google_q}+full+movie"
         await wait_msg.edit(
             f"😕 '{query_text}' yahan nahi mila\n\n"
             f"Kya karein:\n"
@@ -570,7 +577,7 @@ async def search_handler(client, message: Message):
         if not found:
             google_q = query.replace(" ", "+")
             filter_url = "https://t.me/asfilter_bot?start=" + query.replace(" ", "_")
-            google_url = f"https://www.google.com/search?q={google_q}+telegram+movie"
+            google_url = f"https://www.google.com/search?q={google_q}+full+movie"
             edited = await wait_msg.edit(
                 f"😕 '{query}' yahan nahi mila\n\n"
                 f"1. Spelling check karo\n"
@@ -639,12 +646,13 @@ async def search_handler(client, message: Message):
         count_text = len(all_found)
         page_info = f" (1/{total_pages})" if total_pages > 1 else ""
 
+        import random as _rr
+        p_emoji = _rr.choice(["🌍","🌎","🌏","🪐","🌕","🌑","🌒","🌓","🌔","🌖","🌗","🌘","⭐","🌟","💫","✨","🌠"])
         result_text = (
-            f"🔍 {message.from_user.mention}\n\n"
-            f"╔══ 🎯 **{count_text} Result{'s' if count_text > 1 else ''}{page_info}** ══╗\n\n"
-            f"👇 File choose karo → PM mein file milegi!\n"
-            f"🌐 Lang 📺 Season 🎬 Ep 📤 All — Premium filters\n"
-            f"⏳ Ye message {mins} min baad delete hoga."
+            f"{p_emoji} {message.from_user.mention}\n\n"
+            f"🎯 **{count_text} Result{'s' if count_text > 1 else ''}{page_info}** mile!\n\n"
+            f"👇 Button dabao — PM mein file aayegi!\n"
+            f"⏳ {mins} min baad delete hoga."
         )
 
         result_msg = await message.reply(result_text, reply_markup=kb)
@@ -1176,13 +1184,9 @@ async def cb_handler(client, query: CallbackQuery):
             f"• ▶️ Stream karo Mini App mein\n"
             f"• ⚡ Fast + Priority request\n"
             f"• 🎛 Results 5/7/10 customize karo\n\n"
-            f"**Pricing:**\n"
-            f"• ₹50 — 10 din\n"
-            f"• ₹150 — 30 din\n"
-            f"• ₹200 — 60 din\n"
-            f"• ₹500 — 150 din\n"
-            f"• ₹800 — 365 din\n\n"
-            f"🆓 **5 min Free Trial:** 2 baar",
+            f"Mini App mein sab plans hain.\n"
+            f"Wahan se kharido — owner approve karta hai!\n\n"
+            f"🆓 5 min Free Trial bhi milta hai!",
             reply_markup=kb
         )
 
@@ -2022,34 +2026,36 @@ async def premium_info(client, message: Message):
     uid = message.from_user.id
     prem = await is_premium(uid)
     exp = await get_premium_expiry(uid)
-    exp_str = exp.astimezone(IST).strftime("%d %b %Y %H:%M") if exp else "—"
+    exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else None
     miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
 
     if prem:
         text = (
             f"💎 Premium Active!\n\n"
             f"Expiry: {exp_str}\n\n"
-            f"Enjoy karo:\n"
-            f"• No verify, no force join\n"
+            f"Ab enjoy karo:\n"
+            f"• Koi verify nahi\n"
+            f"• Koi force join nahi\n"
             f"• 10 results per search\n"
             f"• Stream + Download\n"
-            f"• PM Search\n\n"
+            f"• PM mein bhi search\n\n"
             f"Renew ke liye Mini App kholo!"
         )
     else:
         text = (
-            f"💎 Premium nahi hai abhi\n\n"
-            f"Plans dekhne ke liye Mini App kholo.\n"
-            f"Wahan sab plans hain — choose karo, pay karo,\n"
-            f"owner verify karega, auto activate!\n\n"
-            f"🆓 10 Refer = 15 din FREE Premium!"
+            f"💎 Premium abhi nahi hai\n\n"
+            f"Mini App mein sab plans hain.\n"
+            f"Wahan choose karo → Pay karo\n"
+            f"Owner verify karega → Auto activate!\n\n"
+            f"🆓 10 Refer karo = 15 din FREE Premium!"
         )
 
     buttons = []
     if miniapp_url:
+        # URL button — works in both PM and group
         buttons.append([InlineKeyboardButton(
-            "💎 Mini App mein Plans Dekho" if not prem else "🌐 Mini App Kholo",
-            web_app=WebAppInfo(url=miniapp_url)
+            "🌐 Mini App — Plans Dekho" if not prem else "🌐 Mini App Kholo",
+            url=miniapp_url
         )])
     await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons) if buttons else None)
 
@@ -2113,11 +2119,24 @@ async def ping(client, message: Message):
     t = time.time()
     m = await message.reply("🏓")
     ms = round((time.time() - t) * 1000)
-    await m.edit(f"🏓 Pong! `{ms}ms`")
+    
+    # System stats with psutil
+    sys_txt = ""
+    if HAS_PSUTIL:
+        try:
+            cpu = psutil.cpu_percent(interval=0.1)
+            ram = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
+            sys_txt = (
+                f"\n\n🖥 CPU: {cpu}%"
+                f"\n💾 RAM: {ram.percent}% ({ram.used//1024//1024}MB/{ram.total//1024//1024}MB)"
+                f"\n💿 Disk: {disk.percent}% used"
+            )
+        except: pass
+    
+    await m.edit(f"🏓 Pong! {ms}ms{sys_txt}")
 
-# ═══════════════════════════════════════
-#  /SETCOMMANDS — Auto set bot commands
-# ═══════════════════════════════════════
+
 @bot.on_message(filters.command("setcommands") & filters.user(ADMINS))
 async def set_commands(client, message: Message):
     from pyrogram.types import BotCommand
@@ -2409,278 +2428,322 @@ async def result_page_cb(client, query: CallbackQuery):
         InlineKeyboardButton("📤 Send All", callback_data=f"fsendall_{uid}_{qkey}"),
     ])
 
+    page_header = f"🔍 Results — Page {page+1}/{total_pages}"
     try:
-        await query.message.edit_reply_markup(InlineKeyboardMarkup(buttons))
-    except:
-        pass
+        await query.message.edit_text(page_header, reply_markup=InlineKeyboardMarkup(buttons))
+    except Exception:
+        try:
+            await query.message.edit_reply_markup(InlineKeyboardMarkup(buttons))
+        except Exception as e:
+            logger.debug(f"rpage edit error: {e}")
     await query.answer(f"Page {page+1}/{total_pages}")
 
 @bot.on_callback_query(filters.regex(r"^flang_"))
 async def lang_filter_cb(client, query: CallbackQuery):
+    """Language filter button — show language options"""
     parts = query.data.split("_", 2)
     uid = int(parts[1]) if len(parts) > 1 else 0
-    search_q = parts[2] if len(parts) > 2 else ""
+    qkey = parts[2] if len(parts) > 2 else ""
 
-    # Language buttons — sabke liye free
-    kb_rows = []
+    await query.answer("Language choose karo:", show_alert=False)
+
+    rows = []
     for i in range(0, len(LANGUAGES), 2):
         row = []
         for lang_name, lang_key in LANGUAGES[i:i+2]:
             row.append(InlineKeyboardButton(
                 lang_name,
-                callback_data=f"lang_{uid}_{lang_key}_{search_q[:20]}"
+                callback_data=f"lang_{uid}_{lang_key}_{qkey}"
             ))
-        kb_rows.append(row)
-    kb_rows.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+        rows.append(row)
+    rows.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")])
+    try:
+        await query.message.edit_reply_markup(InlineKeyboardMarkup(rows))
+    except Exception as e:
+        logger.debug(f"lang_filter edit error: {e}")
 
-    await query.message.edit_reply_markup(InlineKeyboardMarkup(kb_rows))
-    await query.answer("Koi bhi language choose karo:", show_alert=False)
 
 @bot.on_callback_query(filters.regex(r"^lang_"))
 async def lang_select_cb(client, query: CallbackQuery):
+    """User selected a language — re-search with language filter"""
     parts = query.data.split("_", 3)
     uid = int(parts[1]) if len(parts) > 1 else 0
     lang_key = parts[2] if len(parts) > 2 else ""
-    search_q = parts[3] if len(parts) > 3 else ""
+    qkey = parts[3] if len(parts) > 3 else ""
+    search_q = qkey.replace("_", " ").strip()
 
     if query.from_user.id != uid and query.from_user.id not in ADMINS:
-        await query.answer("❌ Ye button aapke liye nahi!", show_alert=True)
+        await query.answer("❌ Ye aapka button nahi!", show_alert=True)
         return
 
-    await query.answer(f"🔍 {lang_key.title()} results dhundh raha hoon...", show_alert=False)
+    await query.answer(f"🔍 {lang_key.title()} mein dhundh raha hoon...", show_alert=False)
 
-    # Re-search with language filter
-    real_q = search_q.replace("_", " ").strip()
-    combined_q = f"{real_q} {lang_key}"
+    combined_q = f"{search_q} {lang_key}"
     found = await do_search(combined_q, limit=10)
+
     if not found:
-            google_q = search_q.replace(" ", "+")
-            filter_url = f"https://t.me/asfilter_bot?start={search_q.replace(chr(32),chr(95))}"
-            google_url = f"https://www.google.com/search?q={google_q}+telegram"
+        filter_url = "https://t.me/asfilter_bot?start=" + search_q.replace(" ", "_")
+        google_url = f"https://www.google.com/search?q={search_q.replace(' ','+')}+full+movie"
+        try:
             await query.message.edit_text(
-                f"😕 {lang_key.title()} mein '{search_q}' nahi mila\n\n"
-                f"Niche se try karo:",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)
-                ],[
-                    InlineKeyboardButton("🌐 Google mein dhundho", url=google_url)
-                ]])
+                f"😕 {lang_key.title()} mein '{search_q}' nahi mila\n\nDusri language try karo:",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)],
+                    [InlineKeyboardButton("🌐 Google mein dhundho", url=google_url)],
+                    [InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")],
+                ])
             )
-            return
+        except Exception as e:
+            logger.debug(f"lang_select no result edit error: {e}")
+        return
+
     me = await client.get_me()
     buttons = []
-    for idx, fmsg in enumerate(found):
+    for i, fmsg in enumerate(found):
         fname = get_file_name(fmsg)
-        fname_clean = re.sub(r'[@#]\w+', '', fname)
-        fname_clean = re.sub(r'_+', ' ', fname_clean).strip()
-        fname_show = fname_clean[:38] if fname_clean else f"File {idx+1}"
+        fname_clean = re.sub(r"[@#]\w+", "", re.sub(r"_+", " ", fname)).strip()
+        fname_show = fname_clean[:38] if fname_clean else f"File {i+1}"
         fsize = get_file_size(fmsg)
-        size_text = f" [{fsize}]" if fsize else ""
-        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
-        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
+        sz = f" [{fsize}]" if fsize else ""
+        link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", url=link)])
 
-    # Language selector — current language ✅
-    lang_row = []
-    for lang_name, lk in LANGUAGES[:4]:
-        tick = "✅ " if lk == lang_key else ""
-        lang_row.append(InlineKeyboardButton(tick + lang_name.split()[-1], callback_data=f"lang_{uid}_{lk}_{search_q[:15]}"))
-    buttons.append(lang_row)
-    lang_row2 = []
-    for lang_name, lk in LANGUAGES[4:]:
-        tick = "✅ " if lk == lang_key else ""
-        lang_row2.append(InlineKeyboardButton(tick + lang_name.split()[-1], callback_data=f"lang_{uid}_{lk}_{search_q[:15]}"))
-    buttons.append(lang_row2)
-    buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+    # Language selector row — show current with tick
+    lang_row1, lang_row2 = [], []
+    for j, (lname, lkey) in enumerate(LANGUAGES):
+        tick = "✅ " if lkey == lang_key else ""
+        btn = InlineKeyboardButton(tick + lname.split()[-1], callback_data=f"lang_{uid}_{lkey}_{qkey}")
+        if j < 4: lang_row1.append(btn)
+        else: lang_row2.append(btn)
+    if lang_row1: buttons.append(lang_row1)
+    if lang_row2: buttons.append(lang_row2)
+    buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")])
 
-    await query.message.edit_text(
-        f"🌐 **{lang_key.title()}** — {len(found)} Results\n\n"
-        f"👇 File ka button dabao:",
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    try:
+        await query.message.edit_text(
+            f"🌐 {lang_key.title()} — {len(found)} Results\n\n👇 File choose karo:",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    except Exception as e:
+        logger.debug(f"lang_select edit error: {e}")
+
 
 @bot.on_callback_query(filters.regex(r"^fseason_"))
 async def season_filter_cb(client, query: CallbackQuery):
+    """Season filter button — show season options"""
     parts = query.data.split("_", 2)
     uid = int(parts[1]) if len(parts) > 1 else 0
     qkey = parts[2] if len(parts) > 2 else ""
-    search_q = qkey.replace("_", " ").strip()
 
-    # Season — sabke liye
-
-    # Season buttons — S01 to S20 (page 1), more on next page + Full Season
-    season_buttons = []
-    season_buttons.append([InlineKeyboardButton("📦 Full Season", callback_data=f"season_{uid}_fullseason_{qkey}")])
-    # S01-S05
-    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{qkey}") for i in range(1,6)])
-    # S06-S10
-    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{qkey}") for i in range(6,11)])
-    # S11-S15
-    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{qkey}") for i in range(11,16)])
-    # S16-S20
-    season_buttons.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_s{i:02d}_{qkey}") for i in range(16,21)])
-    # More seasons button
-    season_buttons.append([
-        InlineKeyboardButton("▶️ S21-S40", callback_data=f"spage_{uid}_21_{qkey}"),
-        InlineKeyboardButton("▶️ S41-S60", callback_data=f"spage_{uid}_41_{qkey}"),
-        InlineKeyboardButton("▶️ S61-S100", callback_data=f"spage_{uid}_61_{qkey}"),
-    ])
-    season_buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")])
-
-    await query.message.edit_reply_markup(InlineKeyboardMarkup(season_buttons))
     await query.answer("Season choose karo:", show_alert=False)
+
+    rows = []
+    rows.append([InlineKeyboardButton("📦 Full Season", callback_data=f"season_{uid}_full_{qkey}")])
+    for start in range(1, 21, 5):
+        rows.append([InlineKeyboardButton(f"S{i:02d}", callback_data=f"season_{uid}_S{i:02d}_{qkey}") for i in range(start, start+5)])
+    rows.append([
+        InlineKeyboardButton("S21-S40 ▶", callback_data=f"spage_{uid}_21_{qkey}"),
+        InlineKeyboardButton("S41+ ▶", callback_data=f"spage_{uid}_41_{qkey}"),
+    ])
+    rows.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")])
+    try:
+        await query.message.edit_reply_markup(InlineKeyboardMarkup(rows))
+    except Exception as e:
+        logger.debug(f"season_filter edit error: {e}")
+
 
 @bot.on_callback_query(filters.regex(r"^season_"))
 async def season_select_cb(client, query: CallbackQuery):
+    """User selected a season — re-search"""
     parts = query.data.split("_", 3)
     uid = int(parts[1]) if len(parts) > 1 else 0
     season_key = parts[2] if len(parts) > 2 else ""
-    search_q = parts[3] if len(parts) > 3 else ""
+    qkey = parts[3] if len(parts) > 3 else ""
+    search_q = qkey.replace("_", " ").strip()
 
     if query.from_user.id != uid and query.from_user.id not in ADMINS:
-        await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
+        await query.answer("❌ Ye aapka button nahi!", show_alert=True)
+        return
 
     await query.answer(f"🔍 {season_key.upper()} dhundh raha hoon...", show_alert=False)
-    search_q = search_q.replace("_", " ").strip()
-    combined_q = f"{search_q} {season_key}"
+
+    if season_key.lower() == "full":
+        combined_q = f"{search_q} season"
+    else:
+        combined_q = f"{search_q} {season_key}"
     found = await do_search(combined_q, limit=10)
 
     if not found:
-        google_q = search_q.replace(" ","+")
-        filter_url = f"https://t.me/asfilter_bot?start={search_q.replace(chr(32),chr(95))}"
-        google_url = f"https://www.google.com/search?q={google_q}+telegram"
-        await query.message.edit_text(
-            f"😕 {season_key.upper()} mein '{search_q}' nahi mila\nNiche se try karo:",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)
-            ],[
-                InlineKeyboardButton("🌐 Google mein dhundho", url=google_url)
-            ]])
-        )
+        filter_url = "https://t.me/asfilter_bot?start=" + search_q.replace(" ", "_")
+        google_url = f"https://www.google.com/search?q={search_q.replace(' ','+')}+{season_key}+full+episode"
+        try:
+            await query.message.edit_text(
+                f"😕 {season_key.upper()} mein '{search_q}' nahi mila\n\nTry karo:",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)],
+                    [InlineKeyboardButton("🌐 Google mein dhundho", url=google_url)],
+                    [InlineKeyboardButton("🔙 Season Select", callback_data=f"fseason_{uid}_{qkey}")],
+                    [InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")],
+                ])
+            )
+        except: pass
         return
 
     me = await client.get_me()
     buttons = []
-    for idx, fmsg in enumerate(found):
+    for i, fmsg in enumerate(found):
         fname = get_file_name(fmsg)
-        fname_clean = re.sub(r'[@#]\w+', '', re.sub(r'_+', ' ', fname)).strip()
-        fname_show = fname_clean[:38] if fname_clean else f"File {idx+1}"
+        fname_clean = re.sub(r"[@#]\w+", "", re.sub(r"_+", " ", fname)).strip()
+        fname_show = fname_clean[:38] if fname_clean else f"File {i+1}"
         fsize = get_file_size(fmsg)
-        size_text = f" [{fsize}]" if fsize else ""
-        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
-        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
+        sz = f" [{fsize}]" if fsize else ""
+        link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", url=link)])
 
-    # Season selector row
-    s_row1 = [InlineKeyboardButton("📦 Full", callback_data=f"season_{uid}_full season_{search_q[:12]}")]
-    for i in range(1, 4):
-        tick = "✅" if f"s0{i}" == season_key else f"S0{i}"
-        s_row1.append(InlineKeyboardButton(tick, callback_data=f"season_{uid}_s0{i}_{search_q[:12]}"))
-    buttons.append(s_row1)
-    buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+    # Quick season navigation
+    s_row = []
+    cur = int(season_key[1:]) if season_key.startswith("S") and season_key[1:].isdigit() else 0
+    for sn in [max(1,cur-1), cur, min(50,cur+1)]:
+        tick = "✅" if sn == cur else f"S{sn:02d}"
+        s_row.append(InlineKeyboardButton(tick, callback_data=f"season_{uid}_S{sn:02d}_{qkey}"))
+    buttons.append(s_row)
+    buttons.append([
+        InlineKeyboardButton("📺 Season List", callback_data=f"fseason_{uid}_{qkey}"),
+        InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}"),
+    ])
 
-    await query.message.edit_text(
-        f"📺 **{season_key.upper()}** — {len(found)} Results\n\n👇 File choose karo:",
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    try:
+        await query.message.edit_text(
+            f"📺 {season_key.upper()} — {len(found)} Results\n\n👇 File choose karo:",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    except Exception as e:
+        logger.debug(f"season_select edit error: {e}")
+
 
 @bot.on_callback_query(filters.regex(r"^fepisode_"))
 async def episode_filter_cb(client, query: CallbackQuery):
+    """Episode filter — show episode options"""
     parts = query.data.split("_", 2)
     uid = int(parts[1]) if len(parts) > 1 else 0
     qkey = parts[2] if len(parts) > 2 else ""
-    search_q = qkey.replace("_", " ").strip()
 
-    # Episode — sabke liye
+    await query.answer("Episode choose karo:", show_alert=False)
 
-    # Episode buttons — E01 to E20 (page 1), next pages for more
-    ep_buttons = []
-    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{qkey}") for i in range(1, 6)])
-    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{qkey}") for i in range(6, 11)])
-    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{qkey}") for i in range(11, 16)])
-    ep_buttons.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_e{i:02d}_{qkey}") for i in range(16, 21)])
-    ep_buttons.append([
-        InlineKeyboardButton("▶️ E21-E40",  callback_data=f"epage_{uid}_21_{search_q[:15]}"),
-        InlineKeyboardButton("▶️ E41-E60",  callback_data=f"epage_{uid}_41_{search_q[:15]}"),
-        InlineKeyboardButton("▶️ E61-E80",  callback_data=f"epage_{uid}_61_{search_q[:15]}"),
-        InlineKeyboardButton("▶️ E81-E100", callback_data=f"epage_{uid}_81_{qkey}"),
+    rows = []
+    rows.append([InlineKeyboardButton("📦 All Episodes", callback_data=f"ep_{uid}_all_{qkey}")])
+    for start in range(1, 21, 5):
+        rows.append([InlineKeyboardButton(f"E{i:02d}", callback_data=f"ep_{uid}_E{i:02d}_{qkey}") for i in range(start, start+5)])
+    rows.append([
+        InlineKeyboardButton("E21-E40 ▶", callback_data=f"epage_{uid}_21_{qkey}"),
+        InlineKeyboardButton("E41+ ▶", callback_data=f"epage_{uid}_41_{qkey}"),
     ])
-    ep_buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")])
+    rows.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")])
+    try:
+        await query.message.edit_reply_markup(InlineKeyboardMarkup(rows))
+    except Exception as e:
+        logger.debug(f"ep_filter edit error: {e}")
 
-    await query.message.edit_reply_markup(InlineKeyboardMarkup(ep_buttons))
-    await query.answer("Episode number choose karo:", show_alert=False)
 
 @bot.on_callback_query(filters.regex(r"^ep_"))
 async def ep_select_cb(client, query: CallbackQuery):
+    """User selected episode — re-search"""
     parts = query.data.split("_", 3)
     uid = int(parts[1]) if len(parts) > 1 else 0
     ep_key = parts[2] if len(parts) > 2 else ""
-    search_q = parts[3] if len(parts) > 3 else ""
+    qkey = parts[3] if len(parts) > 3 else ""
+    search_q = qkey.replace("_", " ").strip()
 
     if query.from_user.id != uid and query.from_user.id not in ADMINS:
-        await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
+        await query.answer("❌ Ye aapka button nahi!", show_alert=True)
+        return
 
     await query.answer(f"🔍 {ep_key.upper()} dhundh raha hoon...", show_alert=False)
-    combined_q = f"{search_q} {ep_key}"
-    found = await do_search(combined_q, limit=5)
+
+    if ep_key.lower() == "all":
+        combined_q = f"{search_q} episode"
+    else:
+        combined_q = f"{search_q} {ep_key}"
+    found = await do_search(combined_q, limit=10)
 
     if not found:
-        google_q = search_q.replace(" ","+")
-        filter_url = f"https://t.me/asfilter_bot?start={search_q.replace(chr(32),chr(95))}"
-        google_url = f"https://www.google.com/search?q={google_q}+telegram"
-        await query.message.edit_text(
-            f"😕 {ep_key.upper()} mein '{search_q}' nahi mila\nNiche se try karo:",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)
-            ],[
-                InlineKeyboardButton("🌐 Google mein dhundho", url=google_url)
-            ]])
-        )
+        filter_url = "https://t.me/asfilter_bot?start=" + search_q.replace(" ", "_")
+        google_url = f"https://www.google.com/search?q={search_q.replace(' ','+')}+{ep_key}+watch"
+        try:
+            await query.message.edit_text(
+                f"😕 {ep_key.upper()} mein '{search_q}' nahi mila\n\nTry karo:",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)],
+                    [InlineKeyboardButton("🌐 Google mein dhundho", url=google_url)],
+                    [InlineKeyboardButton("🎬 Episode List", callback_data=f"fepisode_{uid}_{qkey}")],
+                    [InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}")],
+                ])
+            )
+        except: pass
         return
 
     me = await client.get_me()
     buttons = []
-    for idx, fmsg in enumerate(found):
+    for i, fmsg in enumerate(found):
         fname = get_file_name(fmsg)
-        fname_clean = re.sub(r'[@#]\w+', '', re.sub(r'_+', ' ', fname)).strip()
-        fname_show = fname_clean[:38] if fname_clean else f"File {idx+1}"
+        fname_clean = re.sub(r"[@#]\w+", "", re.sub(r"_+", " ", fname)).strip()
+        fname_show = fname_clean[:38] if fname_clean else f"File {i+1}"
         fsize = get_file_size(fmsg)
-        size_text = f" [{fsize}]" if fsize else ""
-        final_link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
-        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{size_text}", url=final_link)])
-    buttons.append([InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{search_q[:20]}")])
+        sz = f" [{fsize}]" if fsize else ""
+        link = f"https://t.me/{me.username}?start=getfile_{uid}_{fmsg.id}"
+        buttons.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", url=link)])
 
-    await query.message.edit_text(
-        f"🎬 **{ep_key.upper()}** — {len(found)} Results\n\n👇 File choose karo:",
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    # Quick episode navigation
+    ep_row = []
+    cur = int(ep_key[1:]) if ep_key.startswith("E") and ep_key[1:].isdigit() else 0
+    for en in [max(1,cur-1), cur, min(200,cur+1)]:
+        tick = "✅" if en == cur else f"E{en:02d}"
+        ep_row.append(InlineKeyboardButton(tick, callback_data=f"ep_{uid}_E{en:02d}_{qkey}"))
+    buttons.append(ep_row)
+    buttons.append([
+        InlineKeyboardButton("🎬 Episode List", callback_data=f"fepisode_{uid}_{qkey}"),
+        InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}"),
+    ])
+
+    try:
+        await query.message.edit_text(
+            f"🎬 {ep_key.upper()} — {len(found)} Results\n\n👇 File choose karo:",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    except Exception as e:
+        logger.debug(f"ep_select edit error: {e}")
+
 
 @bot.on_callback_query(filters.regex(r"^fsendall_"))
 async def sendall_cb(client, query: CallbackQuery):
+    """Send all results to user PM"""
     parts = query.data.split("_", 2)
     uid = int(parts[1]) if len(parts) > 1 else 0
     qkey = parts[2] if len(parts) > 2 else ""
     search_q = qkey.replace("_", " ").strip()
 
-    # Send All — sabke liye free
-
     if query.from_user.id != uid and query.from_user.id not in ADMINS:
-        await query.answer("❌ Ye button aapke liye nahi!", show_alert=True); return
+        await query.answer("❌ Ye aapka button nahi!", show_alert=True)
+        return
 
-    await query.answer("📤 Sab files bhej raha hoon PM mein...", show_alert=False)
+    await query.answer("📤 Sab files PM mein bhej raha hoon...", show_alert=False)
 
+    # Cache se lo ya re-search karo
     cache_key = f"{uid}_{qkey}"
     found = _result_cache.get(cache_key) or await do_search(search_q, limit=10)
     if not found:
-        await query.answer("😕 Koi file nahi mili!", show_alert=True); return
+        await query.answer("😕 Koi file nahi mili!", show_alert=True)
+        return
 
+    s = await get_settings()
+    t = s.get("auto_delete_time", 300)
     sent_count = 0
     for fmsg in found:
         try:
-            s = await get_settings()
-            t = s.get("auto_delete_time", 300)
             fname = get_file_name(fmsg)
-            cap = f"🗂 **{fname}**\n\n⏳ {t//60} min baad delete hogi!"
+            cap = f"🗂 {fname}\n\n⏳ {t//60} min baad delete hogi!"
             sent = await fmsg.copy(
-                chat_id=uid,
+                chat_id=query.from_user.id,
                 caption=cap,
                 parse_mode=enums.ParseMode.MARKDOWN
             )
@@ -2688,14 +2751,17 @@ async def sendall_cb(client, query: CallbackQuery):
             if s.get("auto_delete"):
                 asyncio.create_task(del_later(sent, t))
             sent_count += 1
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.4)
         except Exception as e:
-            logger.error(f"sendall error: {e}")
+            logger.error(f"sendall copy error: {e}")
 
-    await query.message.edit_text(
-        f"✅ **{sent_count} files** aapke PM mein bhej di!\n\n"
-        f"📌 Save kar lo — {t//60} min baad delete hongi."
-    )
+    try:
+        await query.message.edit_text(
+            f"✅ {sent_count} files aapke PM mein bhej di!\n"
+            f"📌 Save kar lo — {t//60} min baad delete hongi!"
+        )
+    except Exception as e:
+        logger.debug(f"sendall edit error: {e}")
 
 
 @bot.on_callback_query(filters.regex(r"^spage_"))
@@ -2819,9 +2885,10 @@ async def on_new_member(client, message: Message):
                 f"{link_text}"
             )
             await message.reply(
-                f"🗂 **AsBhai Drop Bot Aa Gaya!** 🎉\n\n"
-                f"Koi bhi file ka naam type karo!\n"
-                f"⚙️ Settings ke liye: `/gsettings`\n\n"
+                f"🌍 **AsBhai Drop Bot Aa Gaya!** 🎉\n\n"
+                f"Koi bhi movie/series ka naam type karo!\n"
+                f"🌎 Language, Season, Episode filter bhi hai!\n"
+                f"⚙️ Settings: `/gsettings`\n\n"
                 f"📢 {MAIN_CHANNEL} | 💎 /premium"
             )
         elif not member.is_bot:
