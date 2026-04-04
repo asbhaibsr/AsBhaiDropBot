@@ -393,12 +393,21 @@ async def api_submit_payment(request):
             try:
                 await bot.send_photo(int(OWNER_ID), tf_path, caption=msg_text, reply_markup=kb)
             except Exception:
-                pass
+                # Fallback: text PM
+                try:
+                    await bot.send_message(int(OWNER_ID), msg_text, reply_markup=kb)
+                except Exception: pass
             _os.unlink(tf_path)
         except Exception:
             await send_log(msg_text, kb)
     else:
         await send_log(msg_text, kb)
+        # Also PM to owner
+        try:
+            if bot and OWNER_ID:
+                await bot.send_message(int(OWNER_ID), msg_text, reply_markup=kb)
+        except Exception as e:
+            logger.debug(f"owner PM failed: {e}")
 
     return aio_web.json_response({"ok": True, "message": "Request submit ho gayi! 1-2 ghante mein activate hoga."})
 
