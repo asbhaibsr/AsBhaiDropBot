@@ -217,11 +217,75 @@ async def start_handler(client, message: Message):
             # Check baaki shortlinks hain?
             all_done, next_sl, _ = await get_user_verify_state(uid)
             if all_done:
-                await message.reply(
-                    f"✅ **Sab Verify Ho Gaya!** 🎉\n\n"
-                    f"Ab search karo group mein! 🗂\n"
-                    f"💎 Roz verify na karna ho: /premium"
-                )
+                # Check pending search — auto send result
+                user_doc = await users_col.find_one({"user_id": uid})
+                pending_q = user_doc.get("pending_search", "") if user_doc else ""
+                pending_chat = user_doc.get("pending_chat", 0) if user_doc else 0
+
+                if pending_q and pending_chat:
+                    # Clear pending search
+                    await users_col.update_one(
+                        {"user_id": uid},
+                        {"$unset": {"pending_search": "", "pending_chat": ""}}
+                    )
+                    # Auto-search and send results
+                    await message.reply(
+                        f"✅ Verify ho gaya! Ab '{pending_q}' ke results dhundh raha hoon... 🔍"
+                    )
+                    found = await do_search(pending_q, limit=10)
+                    if found:
+                        try:
+                            me_obj = await client.get_me()
+                            btns = []
+                            for i, fmsg in enumerate(found[:5]):
+                                fname = get_file_name(fmsg)
+                                fname_clean = re.sub(r'[@#]\w+', '', re.sub(r'_+', ' ', fname)).strip()
+                                fname_show = fname_clean[:38] if fname_clean else f"File {i+1}"
+                                fsize = get_file_size(fmsg)
+                                sz = f" [{fsize}]" if fsize else ""
+                                link = f"https://t.me/{me_obj.username}?start=getfile_{uid}_{fmsg.id}"
+                                btns.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", url=link)])
+                            import re as _re
+                            qkey = _re.sub(r'[^a-zA-Z0-9_]', '_', pending_q)[:18]
+                            _result_cache[f"{uid}_{qkey}"] = found
+                            btns.append([
+                                InlineKeyboardButton("🌐 Language", callback_data=f"flang_{uid}_{qkey}"),
+                                InlineKeyboardButton("📺 Season", callback_data=f"fseason_{uid}_{qkey}"),
+                            ])
+                            btns.append([
+                                InlineKeyboardButton("🎬 Episode", callback_data=f"fepisode_{uid}_{qkey}"),
+                                InlineKeyboardButton("🔙 Back", callback_data=f"fback_{uid}_{qkey}"),
+                            ])
+                            btns.append([InlineKeyboardButton("📤 Send All", callback_data=f"fsendall_{uid}_{qkey}")])
+                            s = await get_settings()
+                            t = s.get("auto_delete_time", 300)
+                            try:
+                                result = await client.send_message(
+                                    pending_chat,
+                                    f"🌍 {len(found)} results mile '{pending_q}' ke liye!\n\n👇 File choose karo:",
+                                    reply_markup=InlineKeyboardMarkup(btns)
+                                )
+                                asyncio.create_task(del_later(result, t))
+                            except Exception as e:
+                                logger.error(f"auto-search send error: {e}")
+                                await message.reply(f"✅ Verify done! Group mein '{pending_q}' likhein.")
+                        except Exception as e:
+                            logger.error(f"auto-search error: {e}")
+                            await message.reply(f"✅ Verify done! Group mein '{pending_q}' likhein.")
+                    else:
+                        filter_url = "https://t.me/asfilter_bot?start=" + pending_q.replace(" ", "_")
+                        await message.reply(
+                            f"✅ Verify ho gaya!\n\n'{pending_q}' nahi mila.\n\nTry karo:",
+                            reply_markup=InlineKeyboardMarkup([[
+                                InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url)
+                            ]])
+                        )
+                else:
+                    await message.reply(
+                        f"✅ **Sab Verify Ho Gaya!** 🎉\n\n"
+                        f"Ab search karo group mein! 🗂\n"
+                        f"💎 Roz verify na karna ho: /premium"
+                    )
             else:
                 next_label = next_sl.get("label", "Next Shortlink")
                 me2 = await client.get_me()
@@ -556,8 +620,12 @@ async def search_handler(client, message: Message):
                 return
 
         try:
-
             wait_msg = await message.reply(f"🔍 **'{query}'** dhundh raha hoon... ⏳")
+            if isinstance(wait_msg, (list, tuple)):
+                wait_msg = wait_msg[0] if wait_msg else None
+            if not wait_msg:
+                _search_locks[uid] = False
+                return
         except FloodWait as e:
             logger.warning(f"FloodWait sending wait_msg, skip uid={uid}")
             _search_locks[uid] = False
@@ -2870,18 +2938,32 @@ async def on_new_member(client, message: Message):
     for member in message.new_chat_members:
         if member.id == me:
             await save_group(message.chat)
+            # Get invite link for any group type
+            link_text = ""
             try:
-                if message.chat.type == enums.ChatType.SUPERGROUP:
-                    invite = await client.export_chat_invite_link(message.chat.id)
+                invite = await client.export_chat_invite_link(message.chat.id)
+                if invite:
                     link_text = f"\n🔗 Link: {invite}"
-                else:
-                    link_text = ""
-            except:
-                link_text = ""
+            except Exception as le:
+                logger.debug(f"invite link error: {le}")
+                # Try getting existing link
+                try:
+                    chat_info = await client.get_chat(message.chat.id)
+                    if chat_info.invite_link:
+                        link_text = f"\n🔗 Link: {chat_info.invite_link}"
+                except Exception:
+                    pass
+            members_count = ""
+            try:
+                count = await client.get_chat_members_count(message.chat.id)
+                members_count = f"\n👥 Members: {count}"
+            except Exception:
+                pass
             await send_log(
-                f"➕ **Bot Group Mein Add Hua**\n"
+                f"➕ #BotAdded\n\n"
                 f"🏘 {message.chat.title}\n"
                 f"🆔 `{message.chat.id}`"
+                f"{members_count}"
                 f"{link_text}"
             )
             await message.reply(
@@ -2905,9 +2987,10 @@ async def on_left_member(client, message: Message):
     if message.left_chat_member and message.left_chat_member.id == me:
         await groups_col.delete_one({"chat_id": message.chat.id})
         await send_log(
-            f"➖ **Bot Group Se Nikala Gaya**\n"
+            f"➖ #BotRemoved\n\n"
             f"🏘 {message.chat.title}\n"
-            f"🆔 `{message.chat.id}`"
+            f"🆔 `{message.chat.id}`\n"
+            f"🗑 Group DB se remove kiya"
         )
 
 # ═══════════════════════════════════════
