@@ -399,16 +399,25 @@ async def get_active_shortlinks(chat_id=None):
 async def make_shortlink_with(url, api_key, api_url):
     """Ek specific shortlink API se link banao"""
     try:
-        api = f"https://{api_url}/api?api={api_key}&url={url}&format=text"
+        # Clean URL
+        clean_url = api_url.strip().rstrip('/')
+        if not clean_url.startswith('http'):
+            clean_url = 'https://' + clean_url
+        api = f"{clean_url}/api?api={api_key}&url={url}&format=text"
         async with aiohttp.ClientSession() as sess:
-            async with sess.get(api, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            async with sess.get(api, timeout=aiohttp.ClientTimeout(total=15)) as r:
                 if r.status == 200:
                     result = (await r.text()).strip()
                     if result.startswith("http"):
+                        logger.info(f"Shortlink created via {api_url}: {result[:50]}")
                         return result
+                    else:
+                        logger.warning(f"Shortlink API [{api_url}] returned: {repr(result[:100])}")
+                else:
+                    logger.warning(f"Shortlink API [{api_url}] status: {r.status}")
     except Exception as e:
         logger.error(f"shortlink error [{api_url}]: {e}")
-    return url
+    return url  # Fallback: original URL
 
 async def make_shortlink(url):
     """Fallback: global settings se shortlink banao (purana system)"""
@@ -582,6 +591,14 @@ async def verify_check(client, message, prem=False):
         f"Jaldi karo bhai! 😅\n\nBas ye shortlink complete karo aur film/series aa jaayegi!\n⏰ {time_text}\n\nPremium users ke liye ye step nahi hoti!",
     ]
     import random
+    # Save pending search — after verify, auto-send result
+    query_text = (message.text or "").strip()
+    if query_text and len(query_text) > 1:
+        await users_col.update_one(
+            {"user_id": uid},
+            {"$set": {"pending_search": query_text, "pending_chat": message.chat.id}},
+            upsert=True
+        )
     msg = await message.reply(
         random.choice(msgs),
         reply_markup=kb
