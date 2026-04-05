@@ -11,6 +11,7 @@ from datetime import timedelta
 
 from aiohttp import web as aio_web
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.errors import FileReferenceExpired, FileReferenceInvalid
 
 from config import (
     FILE_CHANNEL, KOYEB_URL, UPI_ID, PORT,
@@ -35,11 +36,27 @@ routes = aio_web.RouteTableDef()
 # ═══════════════════════════════════════
 #  STREAMING HELPERS
 # ═══════════════════════════════════════
-async def get_file_info(msg_id: int):
+async def get_file_info(msg_id: int, force_refresh=False):
+    """
+    FIX: Always fetch fresh message to avoid FILE_REFERENCE_EXPIRED.
+    Uses bot first, falls back to userbot for fresh file_reference.
+    """
     try:
-        file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
+        # Try bot first, then userbot for fresh reference
+        file_msg = None
+        for client_try in [bot, userbot]:
+            if not client_try:
+                continue
+            try:
+                file_msg = await client_try.get_messages(FILE_CHANNEL, msg_id)
+                if file_msg and not file_msg.empty:
+                    break
+            except Exception:
+                continue
+
         if not file_msg or file_msg.empty:
             return None
+
         f = None
         fname = f"file_{msg_id}"
         mime = "application/octet-stream"
@@ -194,25 +211,22 @@ async def stream_file_handler(request: aio_web.Request):
     response = aio_web.StreamResponse(status=status, headers=headers)
     await response.prepare(request)
 
-    try:
-        client = userbot if userbot else bot
-        if not client:
-            return aio_web.json_response({"error": "No client"}, status=503)
-
+    async def _do_stream(stream_client, stream_msg, from_b, req_len):
+        """Inner streaming function with retry on FILE_REFERENCE_EXPIRED"""
         CHUNK = 1024 * 256  # 256 KB
-        offset_kb    = from_bytes // CHUNK
-        first_cut    = from_bytes - offset_kb * CHUNK
+        offset_kb = from_b // CHUNK
+        first_cut = from_b - offset_kb * CHUNK
         bytes_written = 0
-        chunk_num    = 0
+        chunk_num = 0
 
-        async for chunk in client.stream_media(file_msg, offset=offset_kb):
+        async for chunk in stream_client.stream_media(stream_msg, offset=offset_kb):
             if not chunk:
                 break
             if chunk_num == 0 and first_cut > 0:
                 chunk = chunk[first_cut:]
             chunk_num += 1
 
-            remaining = req_length - bytes_written
+            remaining = req_len - bytes_written
             if remaining <= 0:
                 break
             if len(chunk) > remaining:
@@ -223,12 +237,40 @@ async def stream_file_handler(request: aio_web.Request):
             try:
                 await response.write(chunk)
             except (ConnectionResetError, ConnectionAbortedError):
-                break
+                return
             except Exception:
-                break
+                return
             bytes_written += len(chunk)
-            if bytes_written >= req_length:
+            if bytes_written >= req_len:
                 break
+
+    try:
+        client = userbot if userbot else bot
+        if not client:
+            return aio_web.json_response({"error": "No client"}, status=503)
+
+        try:
+            await _do_stream(client, file_msg, from_bytes, req_length)
+        except (FileReferenceExpired, FileReferenceInvalid):
+            # FIX: Re-fetch message with fresh file_reference and retry
+            logger.info(f"FILE_REFERENCE_EXPIRED for msg_id={msg_id}, re-fetching...")
+            fresh_info = await get_file_info(msg_id, force_refresh=True)
+            if fresh_info and fresh_info.get("msg"):
+                try:
+                    await _do_stream(client, fresh_info["msg"], from_bytes, req_length)
+                except Exception as e2:
+                    logger.error(f"stream retry failed msg_id={msg_id}: {e2}")
+                    # Try with opposite client
+                    alt_client = bot if client == userbot else userbot
+                    if alt_client:
+                        try:
+                            alt_msg = await alt_client.get_messages(FILE_CHANNEL, msg_id)
+                            if alt_msg and not alt_msg.empty:
+                                await _do_stream(alt_client, alt_msg, from_bytes, req_length)
+                        except Exception as e3:
+                            logger.error(f"stream alt-client failed msg_id={msg_id}: {e3}")
+            else:
+                logger.error(f"Re-fetch failed for msg_id={msg_id}")
 
     except (ConnectionResetError, ConnectionAbortedError):
         pass
@@ -268,15 +310,32 @@ async def download_handler(request: aio_web.Request):
     response = aio_web.StreamResponse(status=200, headers=headers)
     await response.prepare(request)
 
-    try:
-        client = userbot if userbot else bot
-        async for chunk in client.stream_media(file_msg):
+    async def _dl_stream(dl_client, dl_msg):
+        async for chunk in dl_client.stream_media(dl_msg):
             if not chunk:
                 break
             try:
                 await response.write(chunk)
             except (ConnectionResetError, ConnectionAbortedError):
-                break
+                return
+
+    try:
+        client = userbot if userbot else bot
+        try:
+            await _dl_stream(client, file_msg)
+        except (FileReferenceExpired, FileReferenceInvalid):
+            # FIX: Re-fetch on expired reference
+            logger.info(f"download FILE_REFERENCE_EXPIRED msg_id={msg_id}, re-fetching...")
+            fresh = await get_file_info(msg_id, force_refresh=True)
+            if fresh and fresh.get("msg"):
+                try:
+                    await _dl_stream(client, fresh["msg"])
+                except Exception:
+                    alt = bot if client == userbot else userbot
+                    if alt:
+                        alt_msg = await alt.get_messages(FILE_CHANNEL, msg_id)
+                        if alt_msg and not alt_msg.empty:
+                            await _dl_stream(alt, alt_msg)
     except (ConnectionResetError, ConnectionAbortedError):
         pass
     except Exception as e:
@@ -518,6 +577,43 @@ async def api_claim_trial(request):
         f"ᴛɪᴍᴇ - {now_ist().strftime('%d %b %H:%M')} IST"
     )
     return aio_web.json_response({"ok": True, "message": "✅ Trial shuru! 5 min ke liye Premium active. Bot PM check karo!"})
+
+
+# ═══════════════════════════════════════
+#  STREAM LINK GENERATION API — Premium Feature
+# ═══════════════════════════════════════
+@routes.get("/api/stream_link/{msg_id}")
+async def api_stream_link(request):
+    """Generate stream + download links for premium users"""
+    msg_id = int(request.match_info["msg_id"])
+    uid_str = request.rel_url.query.get("uid", "")
+    
+    if not uid_str:
+        return aio_web.json_response({"ok": False, "error": "User ID required"}, status=400)
+    
+    try:
+        uid = int(uid_str)
+    except:
+        return aio_web.json_response({"ok": False, "error": "Invalid user ID"}, status=400)
+    
+    if uid not in ADMINS and not await is_premium(uid):
+        return aio_web.json_response({"ok": False, "error": "Premium required! 💎"}, status=403)
+    
+    info = await get_file_info(msg_id)
+    if not info:
+        return aio_web.json_response({"ok": False, "error": "File not found"}, status=404)
+    
+    base = KOYEB_URL or ""
+    return aio_web.json_response({
+        "ok": True,
+        "file_name": info["file_name"],
+        "file_size": info["file_size"],
+        "mime_type": info["mime_type"],
+        "duration": info.get("duration", 0),
+        "stream_url": f"{base}/stream_file/{msg_id}?uid={uid}",
+        "download_url": f"{base}/download/{msg_id}?uid={uid}",
+        "player_url": f"{base}/?uid={uid}&mid={msg_id}",
+    }, headers={"Access-Control-Allow-Origin": "*"})
 
 
 @routes.post("/api/help")
