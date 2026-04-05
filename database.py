@@ -731,46 +731,102 @@ async def do_search(query, limit=5):
 #  SEND FILE TO PM — FIX: stream buttons for all + proper buttons
 # ═══════════════════════════════════════
 async def send_file_to_pm(client, user, msg_id, prem=False):
+    """
+    FIX v3: 
+    1. Re-fetch message for fresh file_reference (no more FILE_REFERENCE_EXPIRED)
+    2. Stream + Download buttons for premium users  
+    3. Funny roast captions
+    4. Retry with bot if userbot fails
+    """
     try:
         s = await get_settings()
         t = s.get("auto_delete_time", 300)
         mins = t // 60
 
-        file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
+        # FIX: Always get fresh message to avoid FILE_REFERENCE_EXPIRED
+        file_msg = None
+        for try_client in [bot, userbot]:
+            if not try_client:
+                continue
+            try:
+                file_msg = await try_client.get_messages(FILE_CHANNEL, msg_id)
+                if file_msg and not file_msg.empty:
+                    break
+            except Exception:
+                continue
+
         if not file_msg or file_msg.empty:
-            return False, "File nahi mili"
+            return False, "File nahi mili — channel mein delete ho gayi hogi 😢"
 
         fname = get_file_name(file_msg)
         fsize = get_file_size(file_msg)
         size_text = f"📦 Size: {fsize}\n" if fsize else ""
 
-        import random
-        planet = random.choice(["🌍","🌎","🌏","🪐","🌕","🌑","🌒","🌓","🌔","🌖","🌗","🌘"])
-        caps = [
-            f"{planet} {fname}\n\n{size_text}Save kar lo — {mins} min mein delete ho jaayegi! 📌",
-            f"🎬 {fname}\n\n{size_text}{planet} Forward ya save karo — {mins} min ka time hai! ⏰",
-            f"📥 {fname}\n\n{size_text}{planet} Enjoy karo! {mins} min baad delete. Save karo! 🙏",
-        ]
+        # Funny/roast captions
+        planet = random.choice(["🌍","🌎","🌏","🪐","🌕","⭐","💫","✨","🔥","💥"])
+        if prem:
+            caps = [
+                f"{planet} **{fname}**\n\n{size_text}💎 Premium power! Jaldi save kar le boss! {mins} min hai! 🏃‍♂️",
+                f"🎬 **{fname}**\n\n{size_text}{planet} VIP delivery! Forward ya save — {mins} min mein gayab! 👻",
+                f"📥 **{fname}**\n\n{size_text}💎 Premium special! Save karo jaldi — {mins} min ka countdown! ⏰",
+                f"🔥 **{fname}**\n\n{size_text}{planet} Premium member ko premium service! {mins} min mein delete! 💨",
+                f"💎 **{fname}**\n\n{size_text}Ye lo tumhari file, raja! 👑 {mins} min baad chali jaayegi! Save karo! 📌",
+            ]
+        else:
+            caps = [
+                f"{planet} **{fname}**\n\n{size_text}Save kar le bhai — {mins} min baad delete! 📌\n💎 Premium lo = Stream + No verify!",
+                f"📥 **{fname}**\n\n{size_text}Jaldi save kar — {mins} min ka time hai! ⏰\n💎 Premium = Unlimited files!",
+                f"🎬 **{fname}**\n\n{size_text}{planet} Ye lo tumhari file! {mins} min mein gayab! 👻\n💎 /premium = No limits!",
+                f"🗂 **{fname}**\n\n{size_text}File aa gayi bhai! {mins} min baad bye-bye! 👋\n💎 Premium kab le rahe ho? 😏",
+            ]
         clean_cap = random.choice(caps)
 
-        # Stream + Download buttons — premium ke liye
-        kb = None
+        # Stream + Download buttons — PREMIUM ke liye
+        buttons = []
         if prem and KOYEB_URL:
             stream_page_url = f"{KOYEB_URL}/?uid={user.id}&mid={msg_id}"
             download_direct_url = f"{KOYEB_URL}/download/{msg_id}?uid={user.id}"
-            kb = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("▶️ Stream", web_app=WebAppInfo(url=stream_page_url)),
-                    InlineKeyboardButton("⬇️ Download", url=download_direct_url)
-                ]
+            buttons.append([
+                InlineKeyboardButton("▶️ Stream HD", web_app=WebAppInfo(url=stream_page_url)),
+                InlineKeyboardButton("⬇️ Download", url=download_direct_url)
             ])
+        elif not prem:
+            # Normal user ko premium ka taste dikhao
+            buttons.append([
+                InlineKeyboardButton("💎 Premium Lo = Stream + Download!", callback_data="show_premium")
+            ])
+        
+        kb = InlineKeyboardMarkup(buttons) if buttons else None
 
-        sent = await file_msg.copy(
-            chat_id=user.id,
-            caption=clean_cap,
-            parse_mode=enums.ParseMode.MARKDOWN,
-            reply_markup=kb
-        )
+        # FIX: Try copy with retry on file reference expired
+        sent = None
+        try:
+            sent = await file_msg.copy(
+                chat_id=user.id,
+                caption=clean_cap,
+                parse_mode=enums.ParseMode.MARKDOWN,
+                reply_markup=kb
+            )
+        except Exception as copy_err:
+            if "FILE_REFERENCE" in str(copy_err).upper():
+                # Re-fetch and retry
+                logger.info(f"send_file_to_pm: FILE_REF expired for {msg_id}, re-fetching...")
+                alt = userbot if bot else None
+                if alt:
+                    try:
+                        fresh = await alt.get_messages(FILE_CHANNEL, msg_id)
+                        if fresh and not fresh.empty:
+                            sent = await fresh.copy(
+                                chat_id=user.id,
+                                caption=clean_cap,
+                                parse_mode=enums.ParseMode.MARKDOWN,
+                                reply_markup=kb
+                            )
+                    except Exception as e2:
+                        logger.error(f"send_file_to_pm retry failed: {e2}")
+                        return False, f"File expired, retry failed: {e2}"
+            else:
+                raise copy_err
 
         if not sent:
             return False, "Send fail hua"
@@ -780,14 +836,18 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
         if s.get("auto_delete"):
             asyncio.create_task(del_later(sent, t))
 
-        # Log
+        # Log with roast
         try:
+            roast = random.choice([
+                "Ek aur file deliver! 📦", "File pahunch gayi! ✈️",
+                "Mission accomplished! 🎯", "File bheji — ab save karo! 💪"
+            ])
             await send_log(
-                f"📤 #FileSent\n\n"
+                f"📤 #FileSent — {roast}\n\n"
                 f"👤 {user.mention} (`{user.id}`)\n"
                 f"🗂 `{fname}`\n"
                 f"📦 {fsize}\n"
-                f"💎 Premium: {'✅' if prem else '❌'}\n"
+                f"💎 Premium: {'✅ VIP' if prem else '❌ Free'}\n"
                 f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
             )
         except: pass
