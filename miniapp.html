@@ -1020,8 +1020,8 @@ function submitPay(){
   })
   .then(function(r){return r.json();})
   .then(function(d){
-    if(d.ok){closeModal();toast(selPlan.isGroup?'✅ Group request submit!':'✅ Submit! 1-2 ghante mein activate.');}
-    else{toast('❌ '+(d.error||'Submit fail'));if(sb){sb.disabled=false;sb.textContent='✅ Submit Payment';}}
+    if(d.ok){closeModal();toast(d.message||'✅ Submit! Bot PM check karo — 1-2 ghante mein activate.');}
+    else{toast('❌ '+(d.error||d.message||'Submit fail — details check karo'));if(sb){sb.disabled=false;sb.textContent='✅ Submit Payment';}}
   })
   .catch(function(e){
     toast('❌ '+(e.message||'Error'));
@@ -1050,21 +1050,25 @@ function checkStream(){
   var p=new URLSearchParams(window.location.search);
   var uid=p.get('uid')||UID;
   var mid=p.get('mid');
-  // Also check hash
   if(!mid && window.location.hash === '#stream') {
     go('pg-stream'); return;
   }
   if(!mid) return;
   go('pg-stream');
   var how=document.getElementById('strm-how');
-  if(!isPrem&&!uid){
-    var sp=document.getElementById('strm-prem');
+  var sp=document.getElementById('strm-prem');
+  /* FIX: Check premium properly */
+  if(!uid && !isPrem){
     if(sp) sp.style.display='block';
     if(how) how.style.display='none';
     return;
   }
   if(how) how.style.display='none';
-  loadVid(BASE+'/stream_file/'+mid+'?uid='+(uid||''),BASE+'/download/'+mid+'?uid='+(uid||''),mid);
+  if(sp) sp.style.display='none';
+  /* FIX: Use proper stream URL with uid */
+  var streamUrl=BASE+'/stream_file/'+mid+'?uid='+(uid||UID||'');
+  var dlUrl=BASE+'/download/'+mid+'?uid='+(uid||UID||'');
+  loadVid(streamUrl,dlUrl,mid);
 }
 function loadVid(su,du,mid){
   curVid=su;curDl=du||su;
@@ -1086,16 +1090,43 @@ function loadVid(su,du,mid){
       .catch(function(){});
   }
   if(!v) return;
+  /* FIX: Set video attributes for better streaming */
+  v.preload='auto';
+  v.playsInline=true;
+  v.crossOrigin='anonymous';
   v.src=su;
-  v.onloadstart=function(){if(v)v.style.display='block';if(ld)ld.style.display='none';showCtrl();};
-  v.oncanplay=function(){if(ld)ld.style.display='none';if(v){v.style.display='block';v.play().catch(function(){toast('▶ Play button dabao');});}updPl();};
+  v.onloadstart=function(){
+    if(v)v.style.display='block';
+    showCtrl();
+  };
+  v.onloadeddata=function(){
+    if(ld)ld.style.display='none';
+    if(v){v.style.display='block';}
+  };
+  v.oncanplay=function(){
+    if(ld)ld.style.display='none';
+    if(v){
+      v.style.display='block';
+      v.play().catch(function(e){
+        toast('▶ Play button dabao');
+        updPl();
+      });
+    }
+    updPl();
+  };
   v.ontimeupdate=function(){updSeek();updPl();};
-  v.onended=updPl;
-  v.onerror=function(){
+  v.onwaiting=function(){if(ld)ld.style.display='flex';};
+  v.onplaying=function(){if(ld)ld.style.display='none';updPl();};
+  v.onended=function(){updPl();toast('🎬 Video khatam!');};
+  v.onerror=function(e){
+    console.error('Video error:',v.error);
     if(v)v.style.display='none';
     if(ld)ld.style.display='none';
-    if(ph){ph.style.display='flex';var m=ph.querySelector('p');if(m)m.innerHTML='❌ Stream error<br><small style="opacity:.4">Download try karo</small>';}
-    toast('⬇ Download button use karo');
+    if(ph){
+      ph.style.display='flex';
+      var m=ph.querySelector('p');
+      if(m) m.innerHTML='❌ Stream error — Premium check karo<br><br><button onclick="doDl()" style="background:var(--grn);color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer">⬇ Download Karo</button>';
+    }
   };
   v.load();
 }
