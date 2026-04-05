@@ -227,7 +227,8 @@ async def start_handler(client, message: Message):
                     await message.reply(
                         f"✅ **Verify ho gaya!** 🎉\n\nAb '{pending_q}' ke results dhundh raha hoon... 🔍"
                     )
-                    found = await do_search(pending_q, limit=10)
+                    prem_user = await is_premium(uid)
+                    found = await do_search(pending_q, limit=10 if prem_user else 5)
                     if found:
                         try:
                             me_obj = await client.get_me()
@@ -236,21 +237,41 @@ async def start_handler(client, message: Message):
                             btns = _build_result_buttons(found[:5], uid, me_obj.username, qkey)
                             s = await get_settings()
                             t = s.get("auto_delete_time", 300)
+                            
+                            # FIX: Try sending to group first, if fails send to PM
+                            result_sent = False
                             try:
                                 result = await client.send_message(
                                     pending_chat,
-                                    f"🎯 **{len(found)} results** mile '{pending_q}' ke liye!\n\n👇 File choose karo:",
+                                    f"🎯 **{len(found)} results** mile '{pending_q}' ke liye!\n\n"
+                                    f"👇 File choose karo — PM mein aayegi! 📥",
                                     reply_markup=InlineKeyboardMarkup(btns)
                                 )
                                 asyncio.create_task(del_later(result, t))
+                                result_sent = True
                             except Exception as e:
-                                logger.error(f"auto-search send error: {e}")
-                                await message.reply(f"✅ Verify done! Group mein '{pending_q}' likhein.")
+                                logger.error(f"auto-search group send error: {e}")
+                            
+                            # FIX: Also send results to PM so user doesn't miss them
+                            if not result_sent:
+                                try:
+                                    await client.send_message(
+                                        uid,
+                                        f"🎯 **{len(found)} results** mile '{pending_q}' ke liye!\n\n"
+                                        f"👇 File choose karo:",
+                                        reply_markup=InlineKeyboardMarkup(btns)
+                                    )
+                                except Exception as e2:
+                                    logger.error(f"auto-search PM send error: {e2}")
+                                    await message.reply(f"✅ Verify done! Group mein '{pending_q}' dobara type karo.")
                         except Exception as e:
                             logger.error(f"auto-search error: {e}")
-                            await message.reply(f"✅ Verify done! Group mein '{pending_q}' likhein.")
+                            await message.reply(f"✅ Verify done! Group mein '{pending_q}' dobara type karo.")
                     else:
-                        await message.reply(f"✅ Verify ho gaya!\n\n'{pending_q}' nahi mila. Dobara try karo group mein!")
+                        await message.reply(
+                            f"✅ Verify ho gaya! 🎉\n\n"
+                            f"'{pending_q}' abhi nahi mila — spelling check karke group mein dobara try karo! 🔍"
+                        )
                 else:
                     await message.reply(
                         f"✅ **Sab Verify Ho Gaya!** 🎉\n\n"
@@ -337,18 +358,46 @@ async def start_handler(client, message: Message):
     if miniapp_url:
         buttons.append([InlineKeyboardButton("🌐 Mini App Kholo", web_app=WebAppInfo(url=miniapp_url))])
 
+    # Funny/Roast personality greetings
+    greetings = [
+        f"🔥 **AsBhai Drop Bot** 🔥\n\n"
+        f"Arre **{message.from_user.mention}**! Kya haal hai boss? 😎\n\n"
+        f"Main hoon tera file wala dost — jo bhi chahiye, bas naam bol! 🎬\n\n"
+        f"**Kaise kaam karta hai (ekdum easy):**\n"
+        f"1️⃣ Channel join kar — free hai re! 📢\n"
+        f"2️⃣ Din mein ek baar verify kar (2 sec ka kaam) 🔗\n"
+        f"3️⃣ Group mein file naam likh — bas! 🔍\n"
+        f"4️⃣ PM mein file aa jaayegi — jadoo! ✨\n\n"
+        f"💎 **Premium** = Verify skip + 10 results + HD Stream + Download! 🏆\n"
+        f"🔗 **10 Refer** = 15 din FREE Premium! 🎁\n\n"
+        f"Chal shuru karte hai — `/premium` | `/mystats` | `/referlink`",
+
+        f"💫 **AsBhai Drop Bot** 💫\n\n"
+        f"Swagat hai **{message.from_user.mention}**! 🙏\n\n"
+        f"Kya dekhna hai aaj? Movie? Series? Anime? Sab milega! 🎬🍿\n\n"
+        f"**Simple steps:**\n"
+        f"1️⃣ 📢 Channel join karo (mandatory hai bhai)\n"
+        f"2️⃣ 🔗 Ek baar verify karo (shortlink)\n"
+        f"3️⃣ 🔍 Group mein type karo jo chahiye\n"
+        f"4️⃣ 📥 PM mein file — auto delivery!\n\n"
+        f"💎 **Premium = Boss Mode** — No verify, HD Stream, Unlimited! 🤑\n"
+        f"🔗 Dosto ko bulao — **10 refer = 15 din FREE premium!**\n\n"
+        f"Commands: `/premium` | `/mystats` | `/referlink`",
+
+        f"⚡ **AsBhai Drop Bot** ⚡\n\n"
+        f"Kya bolti public! **{message.from_user.mention}** aa gaya scene mein! 🎉\n\n"
+        f"Mujhse koi file maang — main refuse nahi karta! 😏\n\n"
+        f"**Instructions (padh le zara):**\n"
+        f"1️⃣ Channel join kar pehle 📢\n"
+        f"2️⃣ Verify kar daily (free users ke liye) 🔗\n"
+        f"3️⃣ Group mein movie/show ka naam likh ✍️\n"
+        f"4️⃣ PM check kar — file ready! 📥\n\n"
+        f"💎 **Premium loge to life set!** Stream + Download + No verify! 🔥\n"
+        f"🔗 **10 Refer karke FREE premium le lo!** 🎁\n\n"
+        f"`/premium` | `/mystats` | `/referlink`",
+    ]
     await message.reply(
-        f"🗂 **AsBhai Drop Bot**\n\n"
-        f"Namaste **{message.from_user.mention}**! 👋\n\n"
-        f"Group mein file naam type karo — PM mein file aayegi! 📥\n\n"
-        f"**Kaise kaam karta hai:**\n"
-        f"1️⃣ Channel join karo\n"
-        f"2️⃣ Har roz 1 baar verify karo (shortlink)\n"
-        f"3️⃣ Group mein naam type karo\n"
-        f"4️⃣ PM mein file aayegi! 🎉\n\n"
-        f"💎 **Premium** = No verify + 10 results + stream!\n"
-        f"🔗 **10 Refer** = 15 din FREE Premium!\n\n"
-        f"/premium | /mystats | /referlink",
+        random.choice(greetings),
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
@@ -650,13 +699,30 @@ async def search_handler(client, message: Message):
         count_text = len(found)
         page_info = f" (1/{total_pages})" if total_pages > 1 else ""
 
-        p_emoji = random.choice(["🌍","🌎","🌏","🪐","🌕","⭐","🌟","💫","✨"])
-        result_text = (
-            f"{p_emoji} {message.from_user.mention}\n\n"
-            f"🎯 **{count_text} Result{'s' if count_text > 1 else ''}{page_info}** mile!\n\n"
-            f"👇 Button dabao — PM mein file aayegi!\n"
-            f"⏳ {mins} min baad delete hoga."
-        )
+        p_emoji = random.choice(["🌍","🌎","🌏","🪐","🌕","⭐","🌟","💫","✨","🔥","💥","⚡"])
+        
+        # Funny result messages
+        result_msgs = [
+            f"{p_emoji} **{message.from_user.mention}**, ye lo tumhare results! 😎\n\n"
+            f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** mili!\n\n"
+            f"👇 Button daba — PM mein file aayegi! 📥\n"
+            f"⏳ {mins} min baad gayab! Jaldi kar! 🏃‍♂️",
+
+            f"{p_emoji} Arre **{message.from_user.mention}**! Mil gaya tera maal! 🎬\n\n"
+            f"🎯 **{count_text} result{'s' if count_text > 1 else ''}{page_info}** ready!\n\n"  
+            f"👇 Jis file chahiye uska button daba!\n"
+            f"⏳ {mins} min hai tere paas — save kar le! ⏰",
+
+            f"💥 **{message.from_user.mention}**, dhundh liya! 🔍\n\n"
+            f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** hai tere liye!\n\n"
+            f"👇 Button daba = PM mein delivery! 📦\n"
+            f"⏳ {mins} min mein delete — jaldi kar bhai! 🚀",
+        ]
+        result_text = random.choice(result_msgs)
+        
+        # Premium upsell for normal users
+        if not prem:
+            result_text += f"\n\n💎 _Premium lo = 10 results + Stream + No verify!_"
 
         result_msg = await message.reply(result_text, reply_markup=kb)
 
@@ -1221,34 +1287,82 @@ async def cb_handler(client, query: CallbackQuery):
         search_q = qkey.replace("_", " ").strip()
         if query.from_user.id != r_uid and query.from_user.id not in ADMINS:
             await query.answer("❌ Ye aapka button nahi!", show_alert=True); return
-        await query.answer("📤 Sab files PM mein bhej raha hoon...")
+        await query.answer("📤 Sab files PM mein bhej raha hoon... Thoda wait karo!")
         cache_key = f"{r_uid}_{qkey}"
         found = _result_cache.get(cache_key) or await do_search(search_q, limit=10)
         if not found:
             await query.answer("😕 Koi file nahi mili!", show_alert=True); return
         s = await get_settings()
         t = s.get("auto_delete_time", 300)
+        prem = await is_premium(r_uid)
         sent_count = 0
+        fail_count = 0
+        flood_hit = False
         for fmsg in found:
+            if flood_hit:
+                break
             try:
-                fname = get_file_name(fmsg)
-                cap = f"🗂 {fname}\n\n⏳ {t//60} min baad delete hogi!"
-                sent = await fmsg.copy(
+                # FIX: Re-fetch message for fresh file_reference to avoid expired errors
+                fresh_msg = await client.get_messages(FILE_CHANNEL, fmsg.id)
+                if not fresh_msg or fresh_msg.empty:
+                    fail_count += 1
+                    continue
+
+                fname = get_file_name(fresh_msg)
+                fsize = get_file_size(fresh_msg)
+                size_txt = f"📦 {fsize}\n" if fsize else ""
+
+                # Stream button for premium
+                kb = None
+                if prem and KOYEB_URL:
+                    stream_url = f"{KOYEB_URL}/?uid={r_uid}&mid={fresh_msg.id}"
+                    dl_url = f"{KOYEB_URL}/download/{fresh_msg.id}?uid={r_uid}"
+                    kb = InlineKeyboardMarkup([
+                        [
+                            InlineKeyboardButton("▶️ Stream", web_app=WebAppInfo(url=stream_url)),
+                            InlineKeyboardButton("⬇️ Download", url=dl_url)
+                        ]
+                    ])
+
+                cap = (
+                    f"🗂 {fname}\n{size_txt}\n"
+                    f"⏳ {t//60} min baad delete hogi! Save kar lo! 📌"
+                )
+                sent = await fresh_msg.copy(
                     chat_id=query.from_user.id,
                     caption=cap,
-                    parse_mode=enums.ParseMode.MARKDOWN
+                    parse_mode=enums.ParseMode.MARKDOWN,
+                    reply_markup=kb
                 )
                 await increment_daily(r_uid)
                 if s.get("auto_delete"):
                     asyncio.create_task(del_later(sent, t))
                 sent_count += 1
-                await asyncio.sleep(0.4)
+                # FIX: Longer delay between sends to avoid PEER_FLOOD
+                await asyncio.sleep(1.5)
+            except FloodWait as e:
+                logger.warning(f"sendall FloodWait {e.value}s uid={r_uid}")
+                if e.value > 30:
+                    flood_hit = True
+                else:
+                    await asyncio.sleep(e.value + 2)
             except Exception as e:
-                logger.error(f"sendall copy error: {e}")
+                err_name = type(e).__name__
+                if "PEER_FLOOD" in str(e) or "PeerFlood" in err_name:
+                    logger.error(f"sendall PEER_FLOOD — stopping")
+                    flood_hit = True
+                else:
+                    logger.error(f"sendall copy error: {e}")
+                    fail_count += 1
+        
+        status_emoji = "✅" if sent_count > 0 else "⚠️"
+        flood_msg = "\n⚠️ Rate limit laga — baaki baad mein try karo." if flood_hit else ""
+        fail_msg = f"\n❌ {fail_count} files fail." if fail_count > 0 else ""
         try:
             await query.message.edit_text(
-                f"✅ **{sent_count} files** aapke PM mein bhej di!\n"
+                f"{status_emoji} **{sent_count}/{len(found)} files** PM mein bhej di!\n"
                 f"📌 Save kar lo — {t//60} min baad delete hongi!"
+                f"{flood_msg}{fail_msg}"
             )
         except: pass
         return
@@ -1471,7 +1585,12 @@ async def cb_handler(client, query: CallbackQuery):
             {"$set": {"status": "approved", "approved_at": now(), "approved_by": query.from_user.id}}
         )
         if pay_doc and pay_doc.get("group_id"):
-            g_id = int(pay_doc["group_id"])
+            try:
+                g_id = int(pay_doc["group_id"])
+            except (ValueError, TypeError):
+                await query.answer("❌ Invalid Group ID! Sahi group ID daalo.", show_alert=True)
+                await send_log(f"⚠️ #InvalidGroupID\nPay ID: {pay_id}\nGroup ID: `{pay_doc['group_id']}`\nUser: `{user_id}`")
+                return
             expiry = now() + timedelta(days=days)
             await group_prem_col.update_one(
                 {"chat_id": g_id},
@@ -1910,32 +2029,77 @@ async def group_shortlink_add(client, message: Message):
 @bot.on_message(filters.command("broadcast") & filters.user(ADMINS) & filters.private)
 async def broadcast(client, message: Message):
     args = message.command
-    if len(args) < 3: await message.reply("`/broadcast users/groups/all <msg>`"); return
+    if len(args) < 3: await message.reply("Usage: `/broadcast users/groups/all <msg>`\n\nReply to a message to broadcast that instead."); return
     target = args[1].lower(); text = " ".join(args[2:])
-    sm = await message.reply("📡 Shuru...")
-    total = done = failed = blocked = 0
+    
+    # Support replying to a message for broadcast
+    reply_msg = message.reply_to_message
+    
+    sm = await message.reply(f"📡 **Broadcast shuru!** Target: `{target}`\n⏳ Please wait...")
+    total = done = failed = blocked = flood_wait_total = 0
+    start_time = time.time()
+    
     if target in ["users","all"]:
         async for doc in users_col.find({}, {"user_id": 1}):
             uid = doc.get("user_id")
             if not uid: continue
             total += 1
             try:
-                await client.send_message(uid, text); done += 1; await asyncio.sleep(0.05)
-            except (UserIsBlocked, InputUserDeactivated, PeerIdInvalid): blocked += 1
-            except FloodWait as e: await asyncio.sleep(e.value + 1)
+                if reply_msg:
+                    await reply_msg.copy(chat_id=uid)
+                else:
+                    await client.send_message(uid, text)
+                done += 1
+                # FIX: Proper rate limiting — 0.1s between messages
+                await asyncio.sleep(0.1)
+            except (UserIsBlocked, InputUserDeactivated): 
+                blocked += 1
+            except PeerIdInvalid: 
+                blocked += 1
+            except FloodWait as e:
+                flood_wait_total += e.value
+                await asyncio.sleep(min(e.value + 1, 60))
+                # Retry after flood wait
+                try:
+                    if reply_msg:
+                        await reply_msg.copy(chat_id=uid)
+                    else:
+                        await client.send_message(uid, text)
+                    done += 1
+                except: failed += 1
             except: failed += 1
-            if total % 50 == 0:
-                try: await sm.edit(f"📡 {total} done...")
+            if total % 100 == 0:
+                elapsed = int(time.time() - start_time)
+                try: await sm.edit(f"📡 **Broadcasting...**\n\n✅ {done} | ❌ {failed} | 🚫 {blocked}\nTotal: {total} | Time: {elapsed}s")
                 except: pass
+    
     if target in ["groups","all"]:
         async for doc in groups_col.find({}, {"chat_id": 1}):
             cid = doc.get("chat_id")
             if not cid: continue
             total += 1
             try:
-                await client.send_message(cid, text); done += 1; await asyncio.sleep(0.12)
+                if reply_msg:
+                    await reply_msg.copy(chat_id=cid)
+                else:
+                    await client.send_message(cid, text)
+                done += 1
+                await asyncio.sleep(0.15)
+            except FloodWait as e:
+                await asyncio.sleep(min(e.value + 1, 60))
             except: failed += 1
-    await sm.edit(f"📡 Done!\nTotal: {total} | ✅ {done} | ❌ {failed} | 🚫 {blocked}")
+    
+    elapsed = int(time.time() - start_time)
+    await sm.edit(
+        f"📡 **Broadcast Complete!** ✅\n\n"
+        f"📊 **Stats:**\n"
+        f"├ Total: **{total}**\n"
+        f"├ ✅ Success: **{done}**\n"  
+        f"├ ❌ Failed: **{failed}**\n"
+        f"├ 🚫 Blocked: **{blocked}**\n"
+        f"└ ⏱ Time: **{elapsed}s**\n\n"
+        f"{'⚠️ FloodWait: ' + str(flood_wait_total) + 's total' if flood_wait_total else '✅ No rate limits!'}"
+    )
 
 @bot.on_message(filters.command("setcommands") & filters.user(ADMINS))
 async def set_commands(client, message: Message):
