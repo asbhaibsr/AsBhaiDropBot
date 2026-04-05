@@ -2,11 +2,10 @@
 # ║  database.py — AsBhai Drop Bot       ║
 # ║  MongoDB Collections & Helper Fns    ║
 # ╚══════════════════════════════════════╝
-# database.py — AsBhai Drop Bot — Database & Helper Functions
 import asyncio, re, string, random
 from datetime import timedelta
 from pyrogram import enums
-from pyrogram.errors import UserNotParticipant
+from pyrogram.errors import UserNotParticipant, FloodWait
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
@@ -17,7 +16,7 @@ from config import (
     LOG_CHANNEL,
     FORCE_SUB_ID, FORCE_SUB_CHANNEL, SHORTLINK_API, SHORTLINK_URL,
     KOYEB_URL, DEFAULT_SETTINGS, GROUP_DEFAULTS,
-    _shortlink_cache, _search_locks, _search_cooldown,
+    _shortlink_cache, _search_locks, _search_cooldown, _user_warnings,
     now, now_ist, make_aware, logger
 )
 
@@ -42,21 +41,20 @@ verify_log_col    = db["verify_logs"]
 group_prem_col    = db["group_premium"]
 group_sl_col      = db["group_shortlinks"]
 group_settings_col = db["group_settings"]
+warn_col          = db["warnings"]       # NEW: link warnings
+action_log_col    = db["action_logs"]    # NEW: all action logs
 
-# bot/userbot — set from bot.py via set_clients()
 bot = None
 userbot = None
 
-
 # ═══════════════════════════════════════
-#  SETTINGS — Global
+#  SETTINGS
 # ═══════════════════════════════════════
 async def get_settings():
     s = await settings_col.find_one({"_id": "global"})
     if not s:
         await settings_col.insert_one({"_id": "global", **DEFAULT_SETTINGS})
         return DEFAULT_SETTINGS.copy()
-    # Ensure keys exist
     for k, v in DEFAULT_SETTINGS.items():
         if k not in s:
             s[k] = v
@@ -70,16 +68,6 @@ async def update_setting(key, value):
 # ═══════════════════════════════════════
 #  GROUP SETTINGS
 # ═══════════════════════════════════════
-GROUP_DEFAULTS = {
-    "free_results": 5,
-    "premium_results": 10,
-    "force_sub": True,
-    "shortlink_enabled": True,
-    "auto_delete": True,
-    "auto_delete_time": 300,
-    "request_mode": False,
-}
-
 async def get_group_settings(chat_id):
     doc = await group_settings_col.find_one({"chat_id": chat_id})
     if not doc:
@@ -114,7 +102,6 @@ async def save_user(user, referred_by=None):
         {"$set": update, "$setOnInsert": {"joined": now(), "refer_count": 0}},
         upsert=True
     )
-    # Refer credit karo
     if is_new and referred_by and referred_by != user.id:
         already = await refers_col.find_one({"referrer_id": referred_by, "referred_id": user.id})
         if not already:
@@ -129,7 +116,6 @@ async def save_user(user, referred_by=None):
                 return_document=True
             )
             new_count = result.get("refer_count", 0) if result else 0
-            # Har 10 refer pe 15 din premium
             if new_count > 0 and new_count % 10 == 0:
                 await add_premium(referred_by, 15)
                 try:
@@ -141,7 +127,6 @@ async def save_user(user, referred_by=None):
                     )
                 except: pass
             else:
-                # Notification
                 needed = 10 - (new_count % 10)
                 try:
                     await bot.send_message(
@@ -178,10 +163,41 @@ async def unban_user(user_id):
     await banned_col.delete_one({"user_id": user_id})
 
 # ═══════════════════════════════════════
+#  LINK PROTECTION — NEW
+# ═══════════════════════════════════════
+LINK_REGEX = re.compile(
+    r'(https?://[^\s]+|t\.me/[^\s]+|telegram\.me/[^\s]+|'
+    r'bit\.ly/[^\s]+|goo\.gl/[^\s]+|tinyurl\.com/[^\s]+|'
+    r'[a-zA-Z0-9.-]+\.[a-z]{2,}/[^\s]*)',
+    re.IGNORECASE
+)
+
+async def check_link_in_message(text):
+    """Check if message contains any links"""
+    if not text:
+        return False
+    return bool(LINK_REGEX.search(text))
+
+async def get_user_warns(chat_id, user_id):
+    doc = await warn_col.find_one({"chat_id": chat_id, "user_id": user_id})
+    return doc.get("count", 0) if doc else 0
+
+async def add_user_warn(chat_id, user_id):
+    result = await warn_col.find_one_and_update(
+        {"chat_id": chat_id, "user_id": user_id},
+        {"$inc": {"count": 1}, "$set": {"last_warn": now()}},
+        upsert=True,
+        return_document=True
+    )
+    return result.get("count", 1)
+
+async def reset_user_warns(chat_id, user_id):
+    await warn_col.delete_one({"chat_id": chat_id, "user_id": user_id})
+
+# ═══════════════════════════════════════
 #  FREE TRIAL
 # ═══════════════════════════════════════
 async def get_free_trial_status(user_id):
-    """Returns (uses_left, can_use). 2 baar 5 min ke liye use kar sakta hai."""
     doc = await free_trial_col.find_one({"user_id": user_id})
     if not doc:
         return 2, True
@@ -209,7 +225,6 @@ async def is_premium(user_id):
     return True
 
 async def add_premium(user_id, days=30):
-    # Existing premium extend karo
     existing = await premium_col.find_one({"user_id": user_id})
     if existing and existing.get("expiry"):
         old_expiry = make_aware(existing["expiry"])
@@ -251,7 +266,6 @@ async def increment_daily(user_id):
 #  VERIFICATION (Shortlink)
 # ═══════════════════════════════════════
 async def is_verified_today(user_id):
-    """get_user_verify_state se consistent check"""
     if await is_premium(user_id): return True
     all_done, _, _ = await get_user_verify_state(user_id)
     return all_done
@@ -273,7 +287,7 @@ async def make_token(user_id, token_type="verify"):
         "token": token,
         "user_id": user_id,
         "type": token_type,
-        "expiry": now() + timedelta(minutes=5),
+        "expiry": now() + timedelta(minutes=10),  # Increased to 10 min
         "created": now()
     })
     return token
@@ -290,26 +304,20 @@ async def check_token(token, expected_uid=None):
 #  MULTI-CHANNEL FORCE SUB
 # ═══════════════════════════════════════
 async def get_fsub_list():
-    """Global settings se force sub channels+groups list lo"""
     s = await get_settings()
     channels = s.get("fsub_channels", [])
     groups = s.get("fsub_groups", [])
     return channels + groups
 
 async def check_member_multi(user_id, prem=False):
-    """
-    Premium users ko force sub nahi.
-    Returns: (joined_all: bool, not_joined: list of channel dicts)
-    """
     if user_id in ADMINS: return True, []
-    if prem: return True, []   # Premium = no force sub
+    if prem: return True, []
     
     s = await get_settings()
     if not s.get("force_sub"): return True, []
     
     fsub_list = await get_fsub_list()
     if not fsub_list:
-        # Fallback to old single channel
         try:
             m = await bot.get_chat_member(FORCE_SUB_ID, user_id)
             if m.status in [enums.ChatMemberStatus.BANNED, enums.ChatMemberStatus.LEFT]:
@@ -336,17 +344,15 @@ async def check_member_multi(user_id, prem=False):
     return len(not_joined) == 0, not_joined
 
 async def build_fsub_keyboard(not_joined, uid):
-    """Buttons banao — har channel ke liye join button"""
     buttons = []
     for ch in not_joined:
-        ch_id = ch.get("id")
         uname = ch.get("username", "")
         title = ch.get("title", "Channel")
         if uname:
             url = f"https://t.me/{uname.replace('@','')}"
         else:
             try:
-                url = await bot.export_chat_invite_link(ch_id)
+                url = await bot.export_chat_invite_link(ch.get("id"))
             except:
                 url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
         buttons.append([InlineKeyboardButton(f"📢 {title} Join Karo", url=url)])
@@ -356,7 +362,7 @@ async def build_fsub_keyboard(not_joined, uid):
 async def force_sub_check(client, message, prem=False):
     uid = message.from_user.id
     if uid in ADMINS: return True
-    if prem: return True  # Premium bypass
+    if prem: return True
     
     s = await get_settings()
     if not s.get("force_sub"): return True
@@ -372,24 +378,16 @@ async def force_sub_check(client, message, prem=False):
         f"Join ke baad ✅ **Verify** button dabao.",
         reply_markup=kb
     )
-    # Auto delete force sub message
     asyncio.create_task(del_later(msg, 300))
     return False
 
 # ═══════════════════════════════════════
 #  MULTI-SHORTLINK SYSTEM
 # ═══════════════════════════════════════
-
 async def get_active_shortlinks(chat_id=None):
-    """
-    Active shortlinks sorted by order.
-    Group shortlinks bhi include karo agar chat_id diya.
-    Returns list of {api_key, url, hours, label, _id}
-    """
     links = []
     async for doc in shortlinks_col.find({"active": True}).sort("order", 1):
         links.append(doc)
-    # Group-specific shortlinks
     if chat_id:
         async for doc in group_sl_col.find({"chat_id": chat_id, "active": True}).sort("order", 1):
             doc["_group_sl"] = True
@@ -397,9 +395,7 @@ async def get_active_shortlinks(chat_id=None):
     return links
 
 async def make_shortlink_with(url, api_key, api_url):
-    """Ek specific shortlink API se link banao"""
     try:
-        # Clean URL
         clean_url = api_url.strip().rstrip('/')
         if not clean_url.startswith('http'):
             clean_url = 'https://' + clean_url
@@ -417,10 +413,9 @@ async def make_shortlink_with(url, api_key, api_url):
                     logger.warning(f"Shortlink API [{api_url}] status: {r.status}")
     except Exception as e:
         logger.error(f"shortlink error [{api_url}]: {e}")
-    return url  # Fallback: original URL
+    return url
 
 async def make_shortlink(url):
-    """Fallback: global settings se shortlink banao (purana system)"""
     s = await get_settings()
     if not s.get("shortlink_enabled"): return url
     links = await get_active_shortlinks()
@@ -432,15 +427,7 @@ async def make_shortlink(url):
 
 async def get_user_verify_state(user_id):
     """
-    User ka current verify state — SEQUENTIAL shortlink rotation.
-    
-    Logic:
-    - Shortlinks order mein check karo
-    - Agar SL1 verified nahi → SL1 dikhao
-    - Agar SL1 verified hai aur time expired nahi → SL2 check karo
-    - Agar SL1 time expired → SL1 dobara dikhao (time-based rotation)
-    - Sab verified aur valid → bypass (all_done=True)
-    
+    Sequential shortlink rotation.
     Returns: (all_verified: bool, next_sl: dict|None, wait_hours: float)
     """
     links = await get_active_shortlinks()
@@ -448,14 +435,12 @@ async def get_user_verify_state(user_id):
     if not links:
         if not SHORTLINK_API:
             return True, None, 0
-        # Env shortlink — date-based
         today = now_ist().strftime("%Y-%m-%d")
         doc = await users_col.find_one({"user_id": user_id})
         if doc and doc.get("verified_date") == today:
             return True, None, 0
         return False, None, 0
 
-    # Sequential check — order mein
     for sl in links:
         sl_id = str(sl["_id"])
         hours = sl.get("hours", 24)
@@ -464,21 +449,15 @@ async def get_user_verify_state(user_id):
             sort=[("verified_at", -1)]
         )
         if not log:
-            # Kabhi verify nahi kiya — ye wali dikhao
             return False, sl, 0
         last_verify = make_aware(log["verified_at"])
         time_passed = (now() - last_verify).total_seconds() / 3600
         if time_passed >= hours:
-            # Time expire ho gaya — ye wali dobara dikhao
             return False, sl, time_passed - hours
-        # Ye SL valid hai — agli check karo
 
-    # Sab shortlinks verified aur valid
     return True, None, 0
 
 async def mark_sl_verified(user_id, shortlink_id, sl_label=""):
-    """Shortlink verify ka log save karo"""
-    # Count kitni baar verify kiya
     count = await verify_log_col.count_documents({"user_id": user_id, "shortlink_id": shortlink_id})
     await verify_log_col.insert_one({
         "user_id": user_id,
@@ -489,10 +468,6 @@ async def mark_sl_verified(user_id, shortlink_id, sl_label=""):
     })
 
 async def get_cached_shortlink(user_id, group_id, target_url, sl_doc=None):
-    """
-    5 min cache — same user, same group, same shortlink => same link.
-    5 min baad naya bane.
-    """
     sl_id = str(sl_doc["_id"]) if sl_doc else "default"
     key = (user_id, group_id, sl_id)
     cached = _shortlink_cache.get(key)
@@ -508,15 +483,19 @@ async def get_cached_shortlink(user_id, group_id, target_url, sl_doc=None):
     return link
 
 # ═══════════════════════════════════════
-#  VERIFY CHECK — Multi-Shortlink
+#  VERIFY CHECK — FIX: proper shortlink flow after force sub
 # ═══════════════════════════════════════
 async def verify_check(client, message, prem=False):
+    """
+    FIX: Ye function channel join ke baad call hota hai.
+    Pehle check karta hai ki user verified hai ya nahi.
+    Agar nahi to shortlink dikhaata hai.
+    """
     uid = message.from_user.id
     if uid in ADMINS: return True
     if prem: return True
 
     s = await get_settings()
-    # Global shortlink enabled check
     if not s.get("shortlink_enabled", True): return True
 
     # Group-level shortlink check
@@ -530,9 +509,14 @@ async def verify_check(client, message, prem=False):
     if all_done: return True
 
     me = await client.get_me()
-    group_id = message.chat.id
+    group_id = message.chat.id if hasattr(message, 'chat') and message.chat else 0
 
-    # next_sl hai ya env-based shortlink use karo
+    # Group shortlinks check — agar group premium hai to uski shortlink use karo
+    group_sl_list = []
+    if group_id:
+        async for gsl in group_sl_col.find({"chat_id": group_id, "active": True}).sort("order", 1):
+            group_sl_list.append(gsl)
+
     if next_sl:
         sl_id = str(next_sl["_id"])
         sl_label = next_sl.get("label", "Shortlink")
@@ -541,9 +525,7 @@ async def verify_check(client, message, prem=False):
         verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
         short = await get_cached_shortlink(uid, group_id, verify_url, next_sl)
     else:
-        # Fallback: env SHORTLINK_API use karo
         if not SHORTLINK_API:
-            # No shortlink configured — mark verified automatically
             await mark_verified(uid)
             return True
         sl_id = "env_default"
@@ -551,7 +533,6 @@ async def verify_check(client, message, prem=False):
         hours = 24
         token = await make_token(uid, "sv_env")
         verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
-        # Direct shortlink banao
         try:
             api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
             async with aiohttp.ClientSession() as sess:
@@ -581,17 +562,28 @@ async def verify_check(client, message, prem=False):
         prem_row = [InlineKeyboardButton(prem_btn_label, url=miniapp_url_v)]
     else:
         prem_row = [InlineKeyboardButton(prem_btn_label, callback_data="buy_premium")]
+
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"🔗 {step_text} — Verify Karo", url=short)],
-        [prem_row],
+        prem_row,
     ])
+
     msgs = [
-        f"Bhai ek kaam karna hoga pehle 🙏\n\nNeeche link dabao, shortlink khatam karo, wapas aao!\n⏰ {time_text} karna hoga.\n\nYa seedha premium le lo, phir ye sab nahi!",
-        f"Ek minute ruko! 🤚\n\nPehle ye shortlink complete karo:\n⏰ {time_text} — ek baar karna hai.\n\nPremium lo to kabhi nahi karna padega!",
-        f"Jaldi karo bhai! 😅\n\nBas ye shortlink complete karo aur film/series aa jaayegi!\n⏰ {time_text}\n\nPremium users ke liye ye step nahi hoti!",
+        f"🔐 **Verify karo pehle!**\n\n"
+        f"👇 Neeche link dabao → Shortlink complete karo → Wapas aao!\n"
+        f"⏰ {time_text} karna hoga.\n\n"
+        f"💎 Premium lo to ye sab skip!",
+        f"⏳ **Ek chhota sa step!**\n\n"
+        f"Shortlink complete karo = File mil jaayegi!\n"
+        f"⏰ {time_text}\n\n"
+        f"💎 Premium = Zero verify, unlimited files!",
+        f"🔗 **Shortlink Verify Karo**\n\n"
+        f"Bas ye link complete karo — file turant milegi!\n"
+        f"⏰ {time_text}\n\n"
+        f"💎 Premium mein ye step nahi hota!",
     ]
-    import random
-    # Save pending search — after verify, auto-send result
+
+    # Save pending search for auto-send after verify
     query_text = (message.text or "").strip()
     if query_text and len(query_text) > 1:
         await users_col.update_one(
@@ -599,10 +591,21 @@ async def verify_check(client, message, prem=False):
             {"$set": {"pending_search": query_text, "pending_chat": message.chat.id}},
             upsert=True
         )
+
     msg = await message.reply(
         random.choice(msgs),
         reply_markup=kb
     )
+
+    # Log shortlink shown
+    await send_log(
+        f"🔗 #ShortlinkShown\n\n"
+        f"👤 `{uid}` | {message.from_user.first_name}\n"
+        f"🔗 {sl_label} | Step {done_count+1}/{total}\n"
+        f"🔍 Query: `{query_text[:40]}`\n"
+        f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
+    )
+
     asyncio.create_task(del_later(msg, 300))
     return False
 
@@ -637,7 +640,6 @@ def get_file_name(msg):
     return name if name else "File"
 
 def get_file_size(msg):
-    """File size nicely formatted"""
     size = 0
     if msg.document: size = msg.document.file_size or 0
     elif msg.video: size = msg.video.file_size or 0
@@ -649,7 +651,6 @@ def get_file_size(msg):
     return f"{size:.1f} TB"
 
 async def del_later(msg, secs):
-    """Safely delete a message or list of messages after secs seconds"""
     await asyncio.sleep(secs)
     msgs = msg if isinstance(msg, (list, tuple)) else [msg]
     for m in msgs:
@@ -662,7 +663,6 @@ async def del_later(msg, secs):
         except: pass
 
 async def send_log(text, reply_markup=None):
-    """Log silently — koi crash nahi"""
     if not LOG_CHANNEL or not bot: return
     try:
         log_cid = int(str(LOG_CHANNEL).strip())
@@ -679,7 +679,7 @@ async def send_log(text, reply_markup=None):
                 reply_markup=reply_markup,
                 disable_web_page_preview=True
             )
-        except Exception: pass
+        except: pass
     except Exception as e:
         logger.debug(f"send_log failed: {e}")
 
@@ -728,7 +728,7 @@ async def do_search(query, limit=5):
         return []
 
 # ═══════════════════════════════════════
-#  SEND FILE TO PM
+#  SEND FILE TO PM — FIX: stream buttons for all + proper buttons
 # ═══════════════════════════════════════
 async def send_file_to_pm(client, user, msg_id, prem=False):
     try:
@@ -744,24 +744,19 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
         fsize = get_file_size(file_msg)
         size_text = f"📦 Size: {fsize}\n" if fsize else ""
 
-        # Human style captions — random se choose karo
         import random
-        import random as _r
-        planet = _r.choice(["🌍","🌎","🌏","🪐","🌕","🌑","🌒","🌓","🌔","🌖","🌗","🌘"])
+        planet = random.choice(["🌍","🌎","🌏","🪐","🌕","🌑","🌒","🌓","🌔","🌖","🌗","🌘"])
         caps = [
-            f"{planet} {fname}\n\n{size_text}Bhai save kar lo jaldi — {mins} min mein delete ho jaayegi! 📌",
-            f"🎬 {fname}\n\n{size_text}Aa gayi! {planet} Seedha save karo ya forward karo — {mins} min ka time hai! ⏰",
-            f"📥 {fname}\n\n{size_text}Enjoy karo! {planet} Bas {mins} min baad file chali jaayegi, pehle save karo! 🙏",
-            f"🎯 {fname}\n\n{size_text}{planet} Le lo bhai! {mins} min baad delete. Abhi save ya forward karo! 📲",
+            f"{planet} {fname}\n\n{size_text}Save kar lo — {mins} min mein delete ho jaayegi! 📌",
+            f"🎬 {fname}\n\n{size_text}{planet} Forward ya save karo — {mins} min ka time hai! ⏰",
+            f"📥 {fname}\n\n{size_text}{planet} Enjoy karo! {mins} min baad delete. Save karo! 🙏",
         ]
         clean_cap = random.choice(caps)
 
-        # Premium users ke liye stream + download buttons
+        # Stream + Download buttons — premium ke liye
         kb = None
         if prem and KOYEB_URL:
-            # Stream = mini app mein video player
             stream_page_url = f"{KOYEB_URL}/?uid={user.id}&mid={msg_id}"
-            # Download = direct download endpoint (attachment mode)
             download_direct_url = f"{KOYEB_URL}/download/{msg_id}?uid={user.id}"
             kb = InlineKeyboardMarkup([
                 [
@@ -785,12 +780,14 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
         if s.get("auto_delete"):
             asyncio.create_task(del_later(sent, t))
 
-        # Log the file send
+        # Log
         try:
             await send_log(
-                f"📤 File Sent\n\n"
+                f"📤 #FileSent\n\n"
                 f"👤 {user.mention} (`{user.id}`)\n"
-                f"🗂 {fname}\n"
+                f"🗂 `{fname}`\n"
+                f"📦 {fsize}\n"
+                f"💎 Premium: {'✅' if prem else '❌'}\n"
                 f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
             )
         except: pass
@@ -802,15 +799,12 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
         return False, str(e)
 
 # ═══════════════════════════════════════
-#  /START
+#  SET CLIENTS
 # ═══════════════════════════════════════
-
-# bot reference — set by bot.py after client creation
 bot = None
 userbot = None
 
 def set_clients(b, u):
-    """Called from bot.py after client creation"""
     global bot, userbot
     bot = b
     userbot = u
