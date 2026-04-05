@@ -781,19 +781,19 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
             ]
         clean_cap = random.choice(caps)
 
-        # Stream + Download buttons — PREMIUM ke liye
+        # ── Buttons ──
+        # Premium: EK button — seedha player/download page khulega (link ready)
+        # Free: Premium upsell
         buttons = []
         if prem and KOYEB_URL:
-            stream_page_url = f"{KOYEB_URL}/?uid={user.id}&mid={msg_id}"
-            download_direct_url = f"{KOYEB_URL}/download/{msg_id}?uid={user.id}"
+            # Link abhi bana do — button dabate hi seedha kaam kare
+            player_url = f"{KOYEB_URL}/?uid={user.id}&mid={msg_id}"
             buttons.append([
-                InlineKeyboardButton("▶️ Stream HD", web_app=WebAppInfo(url=stream_page_url)),
-                InlineKeyboardButton("⬇️ Download", url=download_direct_url)
+                InlineKeyboardButton("▶️ Stream & Download 💎", web_app=WebAppInfo(url=player_url))
             ])
         elif not prem:
-            # Normal user ko premium ka taste dikhao
             buttons.append([
-                InlineKeyboardButton("💎 Premium Lo = Stream + Download!", callback_data="show_premium")
+                InlineKeyboardButton("💎 Premium lo = Stream + Download!", callback_data="show_premium")
             ])
         
         kb = InlineKeyboardMarkup(buttons) if buttons else None
