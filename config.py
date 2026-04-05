@@ -2,7 +2,6 @@
 # ║  config.py — AsBhai Drop Bot         ║
 # ║  Configuration & Environment Variables║
 # ╚══════════════════════════════════════╝
-# config.py — AsBhai Drop Bot Configuration
 import os, logging
 import pytz
 from datetime import datetime
@@ -37,10 +36,14 @@ IST               = pytz.timezone("Asia/Kolkata")
 UPI_ID            = os.getenv("UPI_ID", "arsadsaifi8272@ibl")
 PORT              = int(os.getenv("PORT", "8080"))
 
+# Link protection defaults
+LINK_WARN_LIMIT   = int(os.getenv("LINK_WARN_LIMIT", "3"))
+
 # In-memory caches
 _shortlink_cache  = {}
 _search_locks     = {}
 _search_cooldown  = {}
+_user_warnings    = {}  # {(chat_id, user_id): count}
 
 def now():
     from datetime import datetime
@@ -69,6 +72,9 @@ DEFAULT_SETTINGS = {
     "request_mode": False,
     "fsub_channels": [],
     "fsub_groups": [],
+    "link_protection": True,
+    "link_warn_limit": 3,
+    "link_action": "warn",  # warn / mute / ban
 }
 
 GROUP_DEFAULTS = {
@@ -79,4 +85,7 @@ GROUP_DEFAULTS = {
     "auto_delete": True,
     "auto_delete_time": 300,
     "request_mode": False,
+    "link_protection": True,
+    "link_warn_limit": 3,
+    "link_action": "warn",  # warn / mute / ban
 }
