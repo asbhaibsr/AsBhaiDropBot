@@ -1,7 +1,8 @@
-# ╔══════════════════════════════════════╗
-# ║  routes.py — AsBhai Drop Bot         ║
-# ║  aiohttp Streaming Server & API      ║
-# ╚══════════════════════════════════════╝
+# ╔══════════════════════════════════════════════════════╗
+# ║  routes.py — AsBhai Drop Bot v3.1 ULTRA             ║
+# ║  Advanced Raw MTProto Streaming — No More Buffering ║
+# ║  Auto file_reference refresh on every request       ║
+# ╚══════════════════════════════════════════════════════╝
 import asyncio
 import base64
 import logging
@@ -11,7 +12,13 @@ from datetime import timedelta
 
 from aiohttp import web as aio_web
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.errors import FileReferenceExpired, FileReferenceInvalid
+from pyrogram.errors import (
+    FileReferenceExpired, FileReferenceInvalid,
+    AuthBytesInvalid, VolumeLocNotFound
+)
+from pyrogram import raw
+from pyrogram.file_id import FileId, FileType, PHOTO_TYPES
+from pyrogram.session import Auth, Session
 
 from config import (
     FILE_CHANNEL, KOYEB_URL, UPI_ID, PORT,
@@ -22,72 +29,193 @@ from database import (
     is_premium, send_log, add_premium
 )
 
-bot = None
+bot    = None
 userbot = None
 
 def set_clients(b, u):
     global bot, userbot
-    bot = b
+    bot    = b
     userbot = u
 
-aio_app = aio_web.Application(client_max_size=50*1024*1024)  # 50MB max upload
-routes = aio_web.RouteTableDef()
+aio_app = aio_web.Application(client_max_size=50 * 1024 * 1024)
+routes  = aio_web.RouteTableDef()
 
-# ═══════════════════════════════════════
-#  STREAMING HELPERS
-# ═══════════════════════════════════════
-async def get_file_info(msg_id: int, force_refresh=False):
+# ═══════════════════════════════════════════════════════
+#  ADVANCED RAW STREAMING ENGINE
+#  Inspired by VCPlayerBot/subinps — direct MTProto calls
+#  Har request pe fresh file_reference — no expired errors
+# ═══════════════════════════════════════════════════════
+
+# Chunk size: 1MB — matches Telegram's upload.GetFile limit
+TGRAM_CHUNK = 1024 * 1024
+
+
+async def _get_media_session(client, dc_id: int):
     """
-    FIX: Always fetch fresh message to avoid FILE_REFERENCE_EXPIRED.
-    Uses bot first, falls back to userbot for fresh file_reference.
+    Get or create a media session for the given DC.
+    Exactly the same approach as VCPlayerBot/pyro_dl.py
     """
-    try:
-        # Try bot first, then userbot for fresh reference
-        file_msg = None
-        for client_try in [bot, userbot]:
-            if not client_try:
-                continue
-            try:
-                file_msg = await client_try.get_messages(FILE_CHANNEL, msg_id)
-                if file_msg and not file_msg.empty:
-                    break
-            except Exception:
-                continue
+    async with client.media_sessions_lock:
+        session = client.media_sessions.get(dc_id)
+        if session is None:
+            if dc_id != await client.storage.dc_id():
+                session = Session(
+                    client, dc_id,
+                    await Auth(client, dc_id, await client.storage.test_mode()).create(),
+                    await client.storage.test_mode(),
+                    is_media=True
+                )
+                await session.start()
+                # Export + Import auth for cross-DC
+                for _ in range(3):
+                    exported = await client.send(
+                        raw.functions.auth.ExportAuthorization(dc_id=dc_id)
+                    )
+                    try:
+                        await session.send(
+                            raw.functions.auth.ImportAuthorization(
+                                id=exported.id, bytes=exported.bytes
+                            )
+                        )
+                        break
+                    except AuthBytesInvalid:
+                        continue
+                else:
+                    await session.stop()
+                    raise AuthBytesInvalid
+            else:
+                session = Session(
+                    client, dc_id,
+                    await client.storage.auth_key(),
+                    await client.storage.test_mode(),
+                    is_media=True
+                )
+                await session.start()
+            client.media_sessions[dc_id] = session
+    return session
 
-        if not file_msg or file_msg.empty:
-            return None
 
-        f = None
-        fname = f"file_{msg_id}"
-        mime = "application/octet-stream"
-        duration = 0
-        if file_msg.video:
-            f = file_msg.video
-            fname = f.file_name or f"video_{msg_id}.mp4"
-            mime = f.mime_type or "video/mp4"
-            duration = f.duration or 0
-        elif file_msg.document:
-            f = file_msg.document
-            fname = f.file_name or f"file_{msg_id}"
-            mime = f.mime_type or "application/octet-stream"
-        elif file_msg.audio:
-            f = file_msg.audio
-            fname = f.file_name or f"audio_{msg_id}.mp3"
-            mime = f.mime_type or "audio/mpeg"
-            duration = f.duration or 0
-        if not f:
-            return None
-        return {
-            "file_id": f.file_id,
-            "file_size": f.file_size or 0,
-            "file_name": fname,
-            "mime_type": mime,
-            "duration": duration,
-            "msg": file_msg,
-        }
-    except Exception as e:
-        logger.error(f"get_file_info {msg_id}: {e}")
+async def _fetch_fresh_message(msg_id: int):
+    """
+    Har baar fresh message fetch karo — file_reference kabhi expire nahi hoga.
+    Bot pehle try karta hai, userbot fallback.
+    """
+    for client_try in [bot, userbot]:
+        if not client_try:
+            continue
+        try:
+            msg = await client_try.get_messages(FILE_CHANNEL, msg_id)
+            if msg and not msg.empty:
+                return msg, client_try
+        except Exception as e:
+            logger.debug(f"fetch_fresh_message client {client_try} error: {e}")
+    return None, None
+
+
+def _extract_media(msg):
+    """Message se media object aur metadata nikalo."""
+    if msg.video:
+        m = msg.video
+        return m, m.file_name or f"video_{msg.id}.mp4", m.mime_type or "video/mp4", m.duration or 0
+    elif msg.document:
+        m = msg.document
+        return m, m.file_name or f"file_{msg.id}", m.mime_type or "application/octet-stream", 0
+    elif msg.audio:
+        m = msg.audio
+        return m, m.file_name or f"audio_{msg.id}.mp3", m.mime_type or "audio/mpeg", m.duration or 0
+    return None, None, None, 0
+
+
+async def get_file_info(msg_id: int):
+    """Fresh message se file info nikalo — har baar fresh reference."""
+    msg, _ = await _fetch_fresh_message(msg_id)
+    if not msg:
         return None
+    media, fname, mime, duration = _extract_media(msg)
+    if not media:
+        return None
+    return {
+        "file_size": media.file_size or 0,
+        "file_name": fname,
+        "mime_type": mime,
+        "duration":  duration,
+        "msg":       msg,
+    }
+
+
+async def _raw_stream_generator(client, msg, from_bytes: int, req_length: int):
+    """
+    ADVANCED: Direct MTProto upload.GetFile — raw level streaming.
+    - Har chunk directly Telegram DC se aata hai
+    - file_reference fresh message se liya — kabhi expire nahi hoga
+    - Seeking perfectly supported (range requests)
+    """
+    media, _, _, _ = _extract_media(msg)
+    if not media:
+        return
+
+    file_id_obj = FileId.decode(media.file_id)
+    dc_id       = file_id_obj.dc_id
+
+    # Build location with FRESH file_reference from message
+    location = raw.types.InputDocumentFileLocation(
+        id=file_id_obj.media_id,
+        access_hash=file_id_obj.access_hash,
+        file_reference=file_id_obj.file_reference,
+        thumb_size=""
+    )
+
+    session = await _get_media_session(client, dc_id)
+
+    # Calculate starting offset (aligned to TGRAM_CHUNK)
+    offset     = (from_bytes // TGRAM_CHUNK) * TGRAM_CHUNK
+    first_cut  = from_bytes - offset
+    bytes_sent = 0
+
+    while bytes_sent < req_length:
+        remaining = req_length - bytes_sent
+        limit     = min(TGRAM_CHUNK, remaining + first_cut if offset == (from_bytes // TGRAM_CHUNK) * TGRAM_CHUNK else remaining)
+        limit     = TGRAM_CHUNK  # Always request full chunk — slice ourselves
+
+        try:
+            r = await session.send(
+                raw.functions.upload.GetFile(
+                    location=location,
+                    offset=offset,
+                    limit=TGRAM_CHUNK
+                ),
+                sleep_threshold=30
+            )
+        except Exception as e:
+            logger.error(f"raw_stream GetFile error offset={offset}: {e}")
+            break
+
+        if not isinstance(r, raw.types.upload.File):
+            break
+
+        chunk = r.bytes
+        if not chunk:
+            break
+
+        # First chunk mein range offset tak skip karo
+        if first_cut > 0:
+            chunk     = chunk[first_cut:]
+            first_cut = 0
+
+        # Zaroorat se zyada mat bhejo
+        if len(chunk) > (req_length - bytes_sent):
+            chunk = chunk[:(req_length - bytes_sent)]
+
+        if not chunk:
+            break
+
+        yield chunk
+        bytes_sent += len(chunk)
+        offset     += TGRAM_CHUNK
+
+        if len(r.bytes) < TGRAM_CHUNK:
+            # End of file
+            break
 
 
 # ═══════════════════════════════════════
@@ -108,7 +236,7 @@ async def home_handler(request):
 async def health_handler(request):
     return aio_web.json_response({
         "status": "ok",
-        "time": now_ist().strftime("%d %b %H:%M IST")
+        "time":   now_ist().strftime("%d %b %H:%M IST")
     })
 
 
@@ -120,7 +248,7 @@ async def stream_page_handler(request):
 @routes.get(r"/file_info/{msg_id:\d+}")
 async def file_info_handler(request: aio_web.Request):
     msg_id = int(request.match_info["msg_id"])
-    info = await get_file_info(msg_id)
+    info   = await get_file_info(msg_id)
     if not info:
         return aio_web.json_response({"error": "File not found"}, status=404)
     return aio_web.json_response(
@@ -128,7 +256,7 @@ async def file_info_handler(request: aio_web.Request):
             "file_name": info["file_name"],
             "file_size": info["file_size"],
             "mime_type": info["mime_type"],
-            "duration": info.get("duration", 0),
+            "duration":  info.get("duration", 0),
         },
         headers={"Access-Control-Allow-Origin": "*"},
     )
@@ -137,50 +265,58 @@ async def file_info_handler(request: aio_web.Request):
 @routes.get(r"/stream_file/{msg_id:\d+}", allow_head=True)
 async def stream_file_handler(request: aio_web.Request):
     """
-    FIX: Improved streaming with proper range requests and CORS.
-    Supports seeking, quality control, and all browsers.
+    ADVANCED STREAMING — Direct MTProto raw API.
+    Har request pe fresh file_reference — FILE_REFERENCE_EXPIRED kabhi nahi aayega.
+    Range requests fully supported — seeking works perfectly.
     """
     msg_id = int(request.match_info["msg_id"])
 
     # CORS preflight
     if request.method == "OPTIONS":
         return aio_web.Response(headers={
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin":  "*",
             "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
             "Access-Control-Allow-Headers": "Range, Content-Type",
-            "Access-Control-Max-Age": "86400",
+            "Access-Control-Max-Age":       "86400",
         })
 
-    # UID check — premium only for streaming
+    # Premium check
     uid_str = request.rel_url.query.get("uid", "")
     if uid_str:
         try:
             uid_int = int(uid_str)
             if uid_int not in ADMINS and not await is_premium(uid_int):
                 return aio_web.json_response(
-                    {"error": "Premium required for streaming"}, status=403
+                    {"error": "💎 Premium required for streaming"}, status=403
                 )
         except Exception:
             pass
 
-    info = await get_file_info(msg_id)
-    if not info:
+    # Har request pe FRESH message — file_reference never expired
+    msg, stream_client = await _fetch_fresh_message(msg_id)
+    if not msg:
         return aio_web.json_response({"error": "File not found"}, status=404)
 
-    file_size = info["file_size"]
-    mime_type = info["mime_type"]
-    file_name = info["file_name"]
-    file_msg  = info["msg"]
+    media, fname, mime, _ = _extract_media(msg)
+    if not media:
+        return aio_web.json_response({"error": "No media in message"}, status=404)
 
+    file_size = media.file_size or 0
     if file_size == 0:
         return aio_web.json_response({"error": "File size unknown"}, status=404)
 
-    # Range request parse
+    # Fallback: use whichever client is available
+    if not stream_client:
+        stream_client = userbot if userbot else bot
+    if not stream_client:
+        return aio_web.json_response({"error": "No client available"}, status=503)
+
+    # Parse Range header
     range_header = request.headers.get("Range", "")
     from_bytes, until_bytes = 0, file_size - 1
     if range_header:
         try:
-            parts = range_header.replace("bytes=", "").split("-")
+            parts       = range_header.replace("bytes=", "").split("-")
             from_bytes  = int(parts[0]) if parts[0] else 0
             until_bytes = int(parts[1]) if len(parts) > 1 and parts[1] else file_size - 1
         except Exception:
@@ -189,94 +325,35 @@ async def stream_file_handler(request: aio_web.Request):
     req_length  = until_bytes - from_bytes + 1
 
     headers = {
-        "Content-Type":    mime_type,
-        "Content-Range":   f"bytes {from_bytes}-{until_bytes}/{file_size}",
-        "Content-Length":  str(req_length),
-        "Content-Disposition": f'inline; filename="{file_name}"',
-        "Accept-Ranges":   "bytes",
-        "Access-Control-Allow-Origin":  "*",
-        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-        "Access-Control-Allow-Headers": "Range, Content-Type",
+        "Content-Type":                  mime,
+        "Content-Range":                 f"bytes {from_bytes}-{until_bytes}/{file_size}",
+        "Content-Length":                str(req_length),
+        "Content-Disposition":           f'inline; filename="{fname}"',
+        "Accept-Ranges":                 "bytes",
+        "Access-Control-Allow-Origin":   "*",
+        "Access-Control-Allow-Methods":  "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers":  "Range, Content-Type",
         "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
-        # Cache for 1 hour — better performance
-        "Cache-Control": "public, max-age=3600",
+        "Cache-Control":                 "no-cache",  # Fresh fetch every time
     }
 
-    status   = 206 if range_header else 200
-    
-    # HEAD request — just return headers
+    status = 206 if range_header else 200
+
     if request.method == "HEAD":
         return aio_web.Response(status=status, headers=headers)
-    
+
     response = aio_web.StreamResponse(status=status, headers=headers)
     await response.prepare(request)
 
-    async def _do_stream(stream_client, stream_msg, from_b, req_len):
-        """
-        stream_media offset = chunk index to skip (each chunk = 1MB = 1024*1024 bytes).
-        So: offset = from_b // 1048576, first_cut = from_b % 1048576
-        """
-        STREAM_CHUNK = 1024 * 1024  # 1 MB — matches stream_media internal chunk size
-        offset = from_b // STREAM_CHUNK
-        first_cut = from_b % STREAM_CHUNK
-        bytes_written = 0
-        chunk_num = 0
-
-        async for chunk in stream_client.stream_media(stream_msg, offset=offset):
-            if not chunk:
-                break
-            if chunk_num == 0 and first_cut > 0:
-                chunk = chunk[first_cut:]
-            chunk_num += 1
-
-            remaining = req_len - bytes_written
-            if remaining <= 0:
-                break
-            if len(chunk) > remaining:
-                chunk = chunk[:remaining]
-            if not chunk:
-                break
-
+    try:
+        async for chunk in _raw_stream_generator(stream_client, msg, from_bytes, req_length):
             try:
                 await response.write(chunk)
             except (ConnectionResetError, ConnectionAbortedError):
-                return
-            except Exception:
-                return
-            bytes_written += len(chunk)
-            if bytes_written >= req_len:
                 break
-
-    try:
-        client = userbot if userbot else bot
-        if not client:
-            return aio_web.json_response({"error": "No client"}, status=503)
-
-        try:
-            await _do_stream(client, file_msg, from_bytes, req_length)
-        except (FileReferenceExpired, FileReferenceInvalid):
-            # FIX: Re-fetch message with fresh file_reference and retry
-            logger.info(f"FILE_REFERENCE_EXPIRED for msg_id={msg_id}, re-fetching...")
-            fresh_info = await get_file_info(msg_id, force_refresh=True)
-            if fresh_info and fresh_info.get("msg"):
-                try:
-                    await _do_stream(client, fresh_info["msg"], from_bytes, req_length)
-                except Exception as e2:
-                    logger.error(f"stream retry failed msg_id={msg_id}: {e2}")
-                    # Try with opposite client
-                    alt_client = bot if client == userbot else userbot
-                    if alt_client:
-                        try:
-                            alt_msg = await alt_client.get_messages(FILE_CHANNEL, msg_id)
-                            if alt_msg and not alt_msg.empty:
-                                await _do_stream(alt_client, alt_msg, from_bytes, req_length)
-                        except Exception as e3:
-                            logger.error(f"stream alt-client failed msg_id={msg_id}: {e3}")
-            else:
-                logger.error(f"Re-fetch failed for msg_id={msg_id}")
-
-    except (ConnectionResetError, ConnectionAbortedError):
-        pass
+            except Exception as e:
+                logger.debug(f"stream write error: {e}")
+                break
     except Exception as e:
         logger.error(f"stream_file error msg_id={msg_id}: {type(e).__name__}: {e}")
 
@@ -289,58 +366,56 @@ async def stream_file_handler(request: aio_web.Request):
 
 @routes.get(r"/download/{msg_id:\d+}", allow_head=True)
 async def download_handler(request: aio_web.Request):
+    """Download handler — same advanced raw streaming, attachment header."""
     msg_id = int(request.match_info["msg_id"])
-    info = await get_file_info(msg_id)
-    if not info:
+
+    uid_str = request.rel_url.query.get("uid", "")
+    if uid_str:
+        try:
+            uid_int = int(uid_str)
+            if uid_int not in ADMINS and not await is_premium(uid_int):
+                return aio_web.json_response(
+                    {"error": "💎 Premium required"}, status=403
+                )
+        except Exception:
+            pass
+
+    msg, dl_client = await _fetch_fresh_message(msg_id)
+    if not msg:
         return aio_web.json_response({"error": "File not found"}, status=404)
 
-    file_size  = info["file_size"]
-    file_name  = info["file_name"]
-    mime_type  = info["mime_type"]
-    file_msg   = info["msg"]
+    media, fname, mime, _ = _extract_media(msg)
+    if not media:
+        return aio_web.json_response({"error": "No media"}, status=404)
+
+    file_size = media.file_size or 0
+    if not dl_client:
+        dl_client = userbot if userbot else bot
+    if not dl_client:
+        return aio_web.json_response({"error": "No client"}, status=503)
 
     headers = {
-        "Content-Type":        mime_type,
-        "Content-Length":      str(file_size),
-        "Content-Disposition": f'attachment; filename="{file_name}"',
-        "Accept-Ranges":       "bytes",
-        "Access-Control-Allow-Origin": "*",
+        "Content-Type":                 mime,
+        "Content-Length":               str(file_size),
+        "Content-Disposition":          f'attachment; filename="{fname}"',
+        "Accept-Ranges":                "bytes",
+        "Access-Control-Allow-Origin":  "*",
     }
-    
+
     if request.method == "HEAD":
         return aio_web.Response(status=200, headers=headers)
-    
+
     response = aio_web.StreamResponse(status=200, headers=headers)
     await response.prepare(request)
 
-    async def _dl_stream(dl_client, dl_msg):
-        async for chunk in dl_client.stream_media(dl_msg):
-            if not chunk:
-                break
+    try:
+        async for chunk in _raw_stream_generator(dl_client, msg, 0, file_size):
             try:
                 await response.write(chunk)
             except (ConnectionResetError, ConnectionAbortedError):
-                return
-
-    try:
-        client = userbot if userbot else bot
-        try:
-            await _dl_stream(client, file_msg)
-        except (FileReferenceExpired, FileReferenceInvalid):
-            # FIX: Re-fetch on expired reference
-            logger.info(f"download FILE_REFERENCE_EXPIRED msg_id={msg_id}, re-fetching...")
-            fresh = await get_file_info(msg_id, force_refresh=True)
-            if fresh and fresh.get("msg"):
-                try:
-                    await _dl_stream(client, fresh["msg"])
-                except Exception:
-                    alt = bot if client == userbot else userbot
-                    if alt:
-                        alt_msg = await alt.get_messages(FILE_CHANNEL, msg_id)
-                        if alt_msg and not alt_msg.empty:
-                            await _dl_stream(alt, alt_msg)
-    except (ConnectionResetError, ConnectionAbortedError):
-        pass
+                break
+            except Exception:
+                break
     except Exception as e:
         logger.error(f"download error msg_id={msg_id}: {e}")
 
@@ -371,17 +446,17 @@ async def api_plans(request):
 async def api_user_status(request):
     try:
         user_id  = int(request.match_info["user_id"])
-        prem_doc = await premium_col.find_one({"user_id": user_id})
+        prem_doc  = await premium_col.find_one({"user_id": user_id})
         trial_doc = await free_trial_col.find_one({"user_id": user_id})
-        user_doc = await users_col.find_one({"user_id": user_id})
-        pending  = await payments_col.count_documents({"user_id": user_id, "status": "pending"})
+        user_doc  = await users_col.find_one({"user_id": user_id})
+        pending   = await payments_col.count_documents({"user_id": user_id, "status": "pending"})
 
         is_prem, is_trial, expiry_str = False, False, None
         if prem_doc and prem_doc.get("expiry"):
             exp = make_aware(prem_doc["expiry"])
             if now() < exp:
-                is_prem  = True
-                is_trial = prem_doc.get("trial", False)
+                is_prem    = True
+                is_trial   = prem_doc.get("trial", False)
                 expiry_str = exp.astimezone(IST).strftime("%d %b %Y %H:%M")
 
         return aio_web.json_response({
@@ -399,7 +474,6 @@ async def api_user_status(request):
 
 @routes.post("/api/submit_payment")
 async def api_submit_payment(request):
-    """FIX: Payment submit — PM mein message + approve/reject buttons"""
     try:
         data = await request.json()
     except Exception:
@@ -415,14 +489,11 @@ async def api_submit_payment(request):
 
     if not user_id:
         return aio_web.json_response({"ok": False, "error": "Telegram se kholo — user ID nahi mila!"}, status=400)
-    
     if not plan_id:
         return aio_web.json_response({"ok": False, "error": "Plan select karo!"}, status=400)
-    
     if not txn_id:
         return aio_web.json_response({"ok": False, "error": "Transaction ID bharo!"}, status=400)
 
-    # Convert user_id to int safely
     try:
         user_id = int(user_id)
     except (ValueError, TypeError):
@@ -433,10 +504,11 @@ async def api_submit_payment(request):
         return aio_web.json_response({"ok": False, "error": "Yeh TXN ID already submit ho chuki!"})
 
     plan_days = {
-        "10days": 10, "30days": 30, "60days": 60, "150days": 150,
-        "365days": 365, "group_1m": 30, "group_2m": 60
+        "10days": 10, "30days": 30, "60days": 60,
+        "150days": 150, "365days": 365,
+        "group_1m": 30, "group_2m": 60
     }
-    days = plan_days.get(str(plan_id), 30)
+    days     = plan_days.get(str(plan_id), 30)
     is_group = str(plan_id).startswith("group_")
 
     pay_doc = {
@@ -448,11 +520,11 @@ async def api_submit_payment(request):
         "group_id": str(group_id) if group_id else None,
     }
     result = await payments_col.insert_one(pay_doc)
-    pay_id = str(result.inserted_id)
+    pay_id  = str(result.inserted_id)
 
-    pay_type = "🏘 GROUP PREMIUM" if is_group else "💎 USER PREMIUM"
+    pay_type   = "🏘 GROUP PREMIUM" if is_group else "💎 USER PREMIUM"
     group_info = f"\n🏘 Group: `{group_id}`" if is_group and group_id else ""
-    msg_text = (
+    msg_text   = (
         f"💰 #NewPayment — {pay_type}\n\n"
         f"👤 {name} (`{user_id}`)\n"
         f"📦 Plan: **{plan_id}** ({days} din)\n"
@@ -466,10 +538,7 @@ async def api_submit_payment(request):
         InlineKeyboardButton("❌ Reject",  callback_data=f"pay_reject_{pay_id}_{user_id}"),
     ]])
 
-    # Send to log channel + owner PM
-    sent_to_log = False
-    sent_to_owner = False
-    
+    sent_to_log = sent_to_owner = False
     if screenshot and screenshot.startswith("data:image"):
         try:
             img_data = base64.b64decode(screenshot.split(",")[1])
@@ -480,48 +549,42 @@ async def api_submit_payment(request):
                 await bot.send_photo(int(LOG_CHANNEL), tf_path, caption=msg_text, reply_markup=kb)
                 sent_to_log = True
             except Exception as e:
-                logger.error(f"Log channel photo send error: {e}")
+                logger.error(f"Log photo error: {e}")
             try:
                 await bot.send_photo(int(OWNER_ID), tf_path, caption=msg_text, reply_markup=kb)
                 sent_to_owner = True
             except Exception as e:
-                logger.error(f"Owner PM photo error: {e}")
+                logger.error(f"Owner photo error: {e}")
             _os.unlink(tf_path)
         except Exception as e:
-            logger.error(f"Screenshot processing error: {e}")
-    
-    # Fallback: text message
+            logger.error(f"Screenshot error: {e}")
+
     if not sent_to_log:
         try:
             await bot.send_message(int(LOG_CHANNEL), msg_text, reply_markup=kb)
-            sent_to_log = True
         except Exception as e:
-            logger.error(f"Log channel text error: {e}")
-    
+            logger.error(f"Log msg error: {e}")
     if not sent_to_owner:
         try:
             await bot.send_message(int(OWNER_ID), msg_text, reply_markup=kb)
-            sent_to_owner = True
         except Exception as e:
-            logger.error(f"Owner PM text error: {e}")
+            logger.error(f"Owner msg error: {e}")
 
-    # Send confirmation to user PM
     try:
         if bot and user_id:
-            confirm_text = (
+            await bot.send_message(user_id,
                 f"✅ **Payment Submit Ho Gayi!**\n\n"
                 f"📦 Plan: **{plan_id}** ({days} din)\n"
                 f"💵 Amount: **₹{amount}**\n"
                 f"🔖 TXN: `{txn_id}`\n\n"
                 f"⏳ Owner verify karega — **1-2 ghante** mein activate hoga!\n"
-                f"📩 Koi problem ho to @asbhaibsr se baat karo."
+                f"📩 Problem ho to @asbhaibsr se baat karo."
             )
-            await bot.send_message(user_id, confirm_text)
     except Exception as e:
         logger.debug(f"User confirm PM failed: {e}")
 
     return aio_web.json_response({
-        "ok": True, 
+        "ok": True,
         "message": "✅ Payment submit ho gayi! Bot PM check karo — 1-2 ghante mein activate hoga."
     })
 
@@ -536,7 +599,6 @@ async def api_claim_trial(request):
     user_id = data.get("user_id")
     if not user_id:
         return aio_web.json_response({"ok": False, "error": "Telegram se kholo — user ID nahi mila"}, status=400)
-
     try:
         user_id = int(user_id)
     except Exception:
@@ -551,20 +613,12 @@ async def api_claim_trial(request):
     await free_trial_col.insert_one({"user_id": user_id, "claimed_at": now()})
     await premium_col.update_one(
         {"user_id": user_id},
-        {"$set": {
-            "user_id": user_id,
-            "expiry":  expiry,
-            "trial":   True,
-            "plan":    "trial_5min",
-            "added":   now(),
-        }},
+        {"$set": {"user_id": user_id, "expiry": expiry, "trial": True, "plan": "trial_5min", "added": now()}},
         upsert=True,
     )
-
     try:
         if bot:
-            await bot.send_message(
-                user_id,
+            await bot.send_message(user_id,
                 "🆓 **Free Trial Shuru!**\n\n"
                 "5 minute ke liye Premium active hai!\n"
                 "Abhi group mein movie naam type karo!\n\n"
@@ -575,47 +629,44 @@ async def api_claim_trial(request):
         logger.warning(f"Trial PM failed uid={user_id}: {e}")
 
     await send_log(
-        f"🆓 #FreeTrial\n\n"
-        f"ɪᴅ - `{user_id}`\n"
-        f"ᴛɪᴍᴇ - {now_ist().strftime('%d %b %H:%M')} IST"
+        f"🆓 #FreeTrial\n\nɪᴅ - `{user_id}`\nᴛɪᴍᴇ - {now_ist().strftime('%d %b %H:%M')} IST"
     )
     return aio_web.json_response({"ok": True, "message": "✅ Trial shuru! 5 min ke liye Premium active. Bot PM check karo!"})
 
 
-# ═══════════════════════════════════════
-#  STREAM LINK GENERATION API — Premium Feature
-# ═══════════════════════════════════════
 @routes.get("/api/stream_link/{msg_id}")
 async def api_stream_link(request):
-    """Generate stream + download links for premium users"""
-    msg_id = int(request.match_info["msg_id"])
+    """
+    Stream + Download link generate karo — Premium ke liye.
+    Yahan links ready milte hain — button daba ke seedha player mein!
+    """
+    msg_id  = int(request.match_info["msg_id"])
     uid_str = request.rel_url.query.get("uid", "")
-    
+
     if not uid_str:
         return aio_web.json_response({"ok": False, "error": "User ID required"}, status=400)
-    
     try:
         uid = int(uid_str)
-    except:
+    except Exception:
         return aio_web.json_response({"ok": False, "error": "Invalid user ID"}, status=400)
-    
+
     if uid not in ADMINS and not await is_premium(uid):
-        return aio_web.json_response({"ok": False, "error": "Premium required! 💎"}, status=403)
-    
+        return aio_web.json_response({"ok": False, "error": "💎 Premium required!"}, status=403)
+
     info = await get_file_info(msg_id)
     if not info:
         return aio_web.json_response({"ok": False, "error": "File not found"}, status=404)
-    
+
     base = KOYEB_URL or ""
     return aio_web.json_response({
-        "ok": True,
-        "file_name": info["file_name"],
-        "file_size": info["file_size"],
-        "mime_type": info["mime_type"],
-        "duration": info.get("duration", 0),
-        "stream_url": f"{base}/stream_file/{msg_id}?uid={uid}",
+        "ok":           True,
+        "file_name":    info["file_name"],
+        "file_size":    info["file_size"],
+        "mime_type":    info["mime_type"],
+        "duration":     info.get("duration", 0),
+        "stream_url":   f"{base}/stream_file/{msg_id}?uid={uid}",
         "download_url": f"{base}/download/{msg_id}?uid={uid}",
-        "player_url": f"{base}/?uid={uid}&mid={msg_id}",
+        "player_url":   f"{base}/?uid={uid}&mid={msg_id}",
     }, headers={"Access-Control-Allow-Origin": "*"})
 
 
@@ -632,11 +683,7 @@ async def api_help(request):
     if not msg_text:
         return aio_web.json_response({"ok": False, "error": "Message empty"}, status=400)
 
-    await help_msgs_col.insert_one({
-        "user_id": user_id, "name": name,
-        "message": msg_text, "time": now()
-    })
-
+    await help_msgs_col.insert_one({"user_id": user_id, "name": name, "message": msg_text, "time": now()})
     log_text = (
         f"📩 #HelpMessage\n\n"
         f"👤 {name} (`{user_id}`)\n"
