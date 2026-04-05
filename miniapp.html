@@ -917,7 +917,7 @@ function loadVid(su,du,mid){
   var v=document.getElementById('vid'),pld=document.getElementById('pld'),pph=document.getElementById('pph');
   if(v)v.style.display='none';
   if(pph)pph.style.display='none';
-  if(pld)pld.style.display='flex';
+  if(pld){pld.style.display='flex';var pt=pld.querySelector('p');if(pt)pt.textContent='Loading stream... ⏳';}
   
   // Load file info
   if(mid){
@@ -937,18 +937,34 @@ function loadVid(su,du,mid){
   v.preload='auto';v.playsInline=true;
   v.src=su;
   
-  v.onloadstart=function(){if(v)v.style.display='block';showCtrl();};
+  // Clear any previous stall timeout
+  if(window._stall_t){clearTimeout(window._stall_t);}
+
+  v.onloadstart=function(){if(v)v.style.display='block';if(pld){pld.style.display='flex';pld.querySelector('p').textContent='Connecting... ⏳';}showCtrl();};
+  v.onprogress=function(){
+    // Data aayi — loading hide karo
+    if(v&&v.buffered&&v.buffered.length>0){if(pld)pld.style.display='none';}
+    if(window._stall_t){clearTimeout(window._stall_t);window._stall_t=null;}
+  };
+  v.onloadedmetadata=function(){
+    if(pld){pld.style.display='none';}
+    if(v)v.style.display='block';
+    updPl();
+  };
   v.onloadeddata=function(){if(pld)pld.style.display='none';if(v)v.style.display='block';};
   v.oncanplay=function(){
     if(pld)pld.style.display='none';
+    if(window._stall_t){clearTimeout(window._stall_t);window._stall_t=null;}
     if(v){v.style.display='block';v.play().catch(function(){toast('▶ Play button dabao');updPl();});}
     updPl();
   };
-  v.ontimeupdate=function(){updSeek();updPl();};
-  v.onwaiting=function(){if(pld)pld.style.display='flex';};
-  v.onplaying=function(){if(pld)pld.style.display='none';updPl();};
+  v.ontimeupdate=function(){updSeek();updPl();if(pld)pld.style.display='none';};
+  v.onwaiting=function(){if(pld){pld.style.display='flex';pld.querySelector('p').textContent='Buffering... ⏳';}};
+  v.onstalled=function(){if(pld){pld.style.display='flex';pld.querySelector('p').textContent='Connection slow... ⏳';}};
+  v.onplaying=function(){if(pld)pld.style.display='none';if(window._stall_t){clearTimeout(window._stall_t);window._stall_t=null;}updPl();};
   v.onended=function(){updPl();toast('🎬 Video khatam!');};
   v.onerror=function(){
+    if(window._stall_t){clearTimeout(window._stall_t);window._stall_t=null;}
     if(v)v.style.display='none';if(pld)pld.style.display='none';
     if(pph){
       pph.style.display='flex';
@@ -956,6 +972,14 @@ function loadVid(su,du,mid){
       if(m)m.innerHTML='❌ Stream error<br><br><button onclick="retryStream()" style="background:var(--acc);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;margin:4px">🔄 Retry</button><button onclick="doDl()" style="background:var(--grn);color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;margin:4px">⬇ Download</button><br><button onclick="openExtPlayer()" style="background:var(--sky);color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;margin:4px">📱 External Player</button>';
     }
   };
+
+  // Safety timeout — agar 15 second mein kuch nahi aaya
+  window._stall_t = setTimeout(function(){
+    if(v && v.readyState < 2){
+      if(pld){pld.style.display='flex';pld.querySelector('p').innerHTML='Slow connection... ⏳<br><small>Retry karo ya download karo</small>';}
+    }
+  }, 15000);
+
   v.load();
 }
 
