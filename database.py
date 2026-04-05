@@ -167,8 +167,7 @@ async def unban_user(user_id):
 # ═══════════════════════════════════════
 LINK_REGEX = re.compile(
     r'(https?://[^\s]+|t\.me/[^\s]+|telegram\.me/[^\s]+|'
-    r'bit\.ly/[^\s]+|goo\.gl/[^\s]+|tinyurl\.com/[^\s]+|'
-    r'[a-zA-Z0-9.-]+\.[a-z]{2,}/[^\s]*)',
+    r'bit\.ly/[^\s]+|goo\.gl/[^\s]+|tinyurl\.com/[^\s]+)',
     re.IGNORECASE
 )
 
@@ -687,8 +686,9 @@ async def send_log(text, reply_markup=None):
 #  SEARCH
 # ═══════════════════════════════════════
 async def do_search(query, limit=5):
-    if not userbot:
-        logger.error("Userbot not available!")
+    search_client = userbot if userbot else bot
+    if not search_client:
+        logger.error("No client available for search!")
         return []
 
     query = query.strip()
@@ -707,7 +707,7 @@ async def do_search(query, limit=5):
 
     try:
         for sq in search_queries:
-            async for msg in userbot.search_messages(FILE_CHANNEL, sq, limit=50):
+            async for msg in search_client.search_messages(FILE_CHANNEL, sq, limit=50):
                 if msg.id in seen: continue
                 seen.add(msg.id)
                 txt = ""
@@ -861,9 +861,6 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
 # ═══════════════════════════════════════
 #  SET CLIENTS
 # ═══════════════════════════════════════
-bot = None
-userbot = None
-
 def set_clients(b, u):
     global bot, userbot
     bot = b
