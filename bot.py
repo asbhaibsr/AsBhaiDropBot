@@ -441,15 +441,10 @@ def _build_result_buttons(found_page, uid, bot_username, qkey, page=0, total_pag
     return btns
 
 # ═══════════════════════════════════════
-#  LINK PROTECTION — NEW FEATURE
+#  LINK PROTECTION — called from search_handler
 # ═══════════════════════════════════════
-@bot.on_message(
-    filters.group & filters.text &
-    ~filters.bot &
-    filters.incoming
-)
 async def link_protection_handler(client, message: Message):
-    """Detect links in group and warn/mute/ban"""
+    """Detect links in group and warn/mute/ban — called internally from search_handler"""
     if not message.from_user: return
     uid = message.from_user.id
     chat_id = message.chat.id
@@ -566,8 +561,10 @@ async def search_handler(client, message: Message):
         for ent in message.entities:
             if ent.type == enums.MessageEntityType.BOT_COMMAND: return
 
-    # Skip if it's a link (handled by link_protection)
-    if await check_link_in_message(query): return
+    # If it's a link — run link protection then stop search
+    if await check_link_in_message(query):
+        await link_protection_handler(client, message)
+        return
 
     if len(query) < 2 or len(query) > 80: return
 
