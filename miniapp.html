@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- © 2025 @asbhaibsr | @asbhai_bsr -->
+<!-- © 2025 @asbhaibsr | @asbhai_bsr — AsBhai Drop Bot v3.0 Ultra -->
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
@@ -12,7 +12,7 @@
   --bg:#07070f;--s1:#0d0d1a;--s2:#131320;--s3:#1a1a28;--s4:#252535;
   --acc:#6c63ff;--acc2:#a78bfa;--acc3:#c4b5fd;
   --gold:#f59e0b;--gold2:#fcd34d;--grn:#22c55e;--grn2:#4ade80;
-  --red:#ef4444;--sky:#38bdf8;
+  --red:#ef4444;--sky:#38bdf8;--pink:#ec4899;--cyan:#06b6d4;
   --t:#f4f4ff;--t2:#9090bb;--t3:#4a4a7a;
   --bd:#1f1f35;--bd2:#2d2d50;
   --ff:'Inter',sans-serif;--mono:'Space Mono',monospace;
@@ -31,185 +31,104 @@ body{font-family:var(--ff);background:var(--bg);color:var(--t);min-height:100vh;
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes glow{0%,100%{box-shadow:0 0 20px rgba(108,99,255,.3)}50%{box-shadow:0 0 45px rgba(108,99,255,.7)}}
 @keyframes ptcl{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:.8}90%{opacity:.3}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 
-.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(108,99,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(108,99,255,.05) 1px,transparent 1px);background-size:44px 44px}
-.bg-glow{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70vw 50vh at 15% 15%,rgba(108,99,255,.12) 0%,transparent 60%),radial-gradient(ellipse 50vw 40vh at 85% 75%,rgba(167,139,250,.07) 0%,transparent 55%)}
-.pts{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(108,99,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(108,99,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+#pts{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .pt{position:absolute;border-radius:50%;animation:ptcl linear infinite}
+.spi{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 
-/* ── PAGES ── */
-.pg{display:none;animation:fadeIn .25s ease;position:relative;z-index:1}
-.pg.on{display:block}
-#pg-home.on{display:flex;flex-direction:column;min-height:100vh}
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:rgba(7,7,15,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--bd);padding:10px 16px;display:flex;align-items:center;gap:10px}
+.nav-logo{font-size:16px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-sub{font-size:9px;color:var(--t3);margin-top:1px}
+.nbdg{margin-left:auto;display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700}
+.nb-f{background:rgba(255,255,255,.06);color:var(--t2)}
+.nb-p{background:linear-gradient(135deg,rgba(108,99,255,.3),rgba(167,139,250,.3));color:var(--acc3);border:1px solid rgba(108,99,255,.3)}
+.nb-t{background:rgba(34,197,94,.15);color:var(--grn2);border:1px solid rgba(34,197,94,.2)}
+.ndot{width:6px;height:6px;border-radius:50%}
+.np{background:var(--acc2);animation:pulse 2s infinite}
+.ng{background:var(--t3)}
+.na{background:var(--grn)}
 
-/* ── NAV ── */
-.nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;padding:13px 18px;background:rgba(7,7,15,.9);backdrop-filter:blur(24px);border-bottom:1px solid rgba(108,99,255,.18)}
-.nav-brand{display:flex;align-items:center;gap:10px}
-.nav-ico{width:34px;height:34px;background:linear-gradient(135deg,var(--acc),var(--acc2));border-radius:10px;display:grid;place-items:center;font-size:16px;animation:glow 3s ease-in-out infinite}
-.nav-name{font-weight:800;font-size:16px;letter-spacing:-.4px;background:linear-gradient(90deg,var(--t),var(--acc3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.nav-r{margin-left:auto}
-.nbdg{display:inline-flex;align-items:center;gap:5px;border-radius:100px;padding:4px 12px;font-size:11px;font-weight:700;letter-spacing:.3px}
-.nb-f{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--grn2)}
-.nb-p{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:var(--gold2)}
-.nb-t{background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.3);color:var(--acc3)}
-.ndot{width:6px;height:6px;border-radius:50%;animation:pulse 2s ease-in-out infinite}
-.ng{background:var(--grn2)}.np{background:var(--gold2)}.na{background:var(--acc3)}
+/* PAGES */
+.pg{display:none;position:relative;z-index:1;animation:fadeIn .35s ease}.pg.on{display:block}
 
-/* ── BACK BAR ── */
-.bbar{display:flex;align-items:center;gap:12px;padding:12px 18px;background:rgba(7,7,15,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:50}
-.bk{width:36px;height:36px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;display:grid;place-items:center;cursor:pointer;font-size:18px;color:var(--t2);transition:all .12s}
-.bk:active{background:var(--acc);border-color:var(--acc);color:#fff}
-.btit{font-size:15px;font-weight:700;letter-spacing:-.3px}
-.btag{margin-left:auto;background:rgba(108,99,255,.2);border:1px solid rgba(108,99,255,.4);color:var(--acc3);font-size:9.5px;font-weight:800;padding:3px 9px;border-radius:5px;letter-spacing:1px}
+/* TAB BAR */
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(13,13,26,.96);backdrop-filter:blur(20px);border-top:1px solid var(--bd);display:flex;padding:6px 4px 10px;gap:2px}
+.tabs .tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;border:none;background:none;color:var(--t3);font-size:9px;font-weight:600;cursor:pointer;transition:.2s;border-radius:8px}
+.tabs .tb.on{color:var(--acc2);background:rgba(108,99,255,.1)}
+.tabs .tb .ti{font-size:18px}
+body{padding-bottom:64px}
 
-/* ── USER CARD ── */
-.user-card{margin:14px 16px;border-radius:18px;overflow:hidden;border:1px solid var(--bd2);animation:fadeIn .3s ease}
-.uc-f{background:linear-gradient(135deg,#0a1208,#0f1d0e);border-color:rgba(34,197,94,.3)}
-.uc-p{background:linear-gradient(135deg,#140a28,#1c0f38);border-color:rgba(245,158,11,.4);box-shadow:0 0 24px rgba(245,158,11,.08)}
-.uc-t{background:linear-gradient(135deg,#0c0820,#150b30);border-color:rgba(108,99,255,.4)}
-.uc-in{padding:16px;display:flex;align-items:center;gap:14px}
-.uc-av{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:28px;flex-shrink:0}
-.av-f{background:rgba(34,197,94,.12);border:2px solid rgba(34,197,94,.3)}
-.av-p{background:rgba(245,158,11,.12);border:2px solid rgba(245,158,11,.4);box-shadow:0 0 14px rgba(245,158,11,.2)}
-.av-t{background:rgba(108,99,255,.12);border:2px solid rgba(108,99,255,.4)}
-.uc-nfo{flex:1;min-width:0}
-.uc-lbl{font-size:8.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:4px}
-.ul-f{background:rgba(34,197,94,.2);color:var(--grn2)}
-.ul-p{background:rgba(245,158,11,.2);color:var(--gold2)}
-.ul-t{background:rgba(108,99,255,.2);color:var(--acc3)}
-.uc-nm{font-size:17px;font-weight:800;letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.uc-un{font-size:12px;color:var(--t2);margin-top:1px;font-family:var(--mono)}
-.uc-id{font-size:10px;color:var(--t3);margin-top:1px;font-family:var(--mono)}
-.uc-ex{font-size:11px;margin-top:4px;font-weight:700;font-family:var(--mono)}
-.ex-f{color:var(--t3)}.ex-p{color:var(--gold2)}.ex-t{color:var(--acc3)}
+/* USER CARD */
+.user-card{margin:14px;border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;border:1px solid var(--bd);position:relative;overflow:hidden}
+.uc-f{background:linear-gradient(135deg,var(--s1),var(--s2))}
+.uc-p{background:linear-gradient(135deg,#0f0825,#1a0a3a);border-color:rgba(108,99,255,.3)}
+.uc-t{background:linear-gradient(135deg,#081a0f,#0a2518);border-color:rgba(34,197,94,.2)}
+.uc-av{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.av-f{background:rgba(255,255,255,.06)}.av-p{background:linear-gradient(135deg,var(--acc),var(--acc2))}.av-t{background:linear-gradient(135deg,var(--grn),#059669)}
+.uc-info{flex:1;min-width:0}
+.uc-nm{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uc-un{font-size:11px;color:var(--t2);margin-top:1px}
+.uc-id{font-size:10px;color:var(--t3);font-family:var(--mono);margin-top:2px}
+.uc-lbl{position:absolute;top:8px;right:10px;font-size:8px;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:1px}
+.ul-f{background:rgba(255,255,255,.06);color:var(--t3)}
+.ul-p{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff}
+.ul-t{background:var(--grn);color:#000}
+.uc-ex{font-size:10px;margin-top:3px;font-family:var(--mono)}
+.ex-f{color:var(--t3)}.ex-p{color:var(--acc3)}.ex-t{color:var(--grn2)}
 
-/* ── HERO ── */
-.hero{padding:28px 20px 24px;text-align:center;position:relative;z-index:2}
-.hero h1{font-size:36px;font-weight:900;line-height:1.05;letter-spacing:-2px}
-.l1{display:block}
-.l2{display:block;background:linear-gradient(135deg,var(--acc),var(--acc2),var(--acc3),var(--gold));background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradShift 4s ease infinite}
-.tw{display:inline-block;min-width:2px}
-.cur{display:inline-block;width:3px;height:.9em;background:var(--acc2);margin-left:2px;vertical-align:text-bottom;animation:blink .8s step-end infinite;border-radius:2px}
-.hero p{font-size:13.5px;color:var(--t2);max-width:300px;margin:8px auto 0;line-height:1.65}
+/* HERO */
+.hero{padding:30px 20px 24px;background:linear-gradient(160deg,#0a0820,#0d0530);border-bottom:1px solid rgba(108,99,255,.15);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;width:300px;height:300px;background:radial-gradient(circle,rgba(108,99,255,.12) 0%,transparent 70%);top:-100px;right:-100px;pointer-events:none}
+.hero h1{font-size:26px;font-weight:900;letter-spacing:-1.5px;line-height:1.1;position:relative}
+.hero h1 span{background:linear-gradient(90deg,var(--acc2),var(--acc3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:12px;color:var(--t2);margin-top:8px;line-height:1.6}
+#typed{color:var(--acc3);font-weight:700}
+#typed::after{content:'|';animation:blink 1s infinite;color:var(--acc);margin-left:1px}
 
-/* ── MENU ── */
-.menu-sec{position:relative;z-index:2}
-.mi{display:flex;align-items:center;gap:14px;padding:18px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .12s}
-.mi:active{background:var(--s1)}
-.mi:last-child{border-bottom:none}
-.mico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex-shrink:0}
-.mi-v{background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25)}
-.mi-p{background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25)}
-.mi-g{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2)}
-.mi-r{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2)}
-.mi-gp{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2)}
-.mtxt h3{font-size:15px;font-weight:700;letter-spacing:-.3px;margin-bottom:2px}
-.mtxt p{font-size:12px;color:var(--t2);line-height:1.4}
-.mbdg{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:5px;letter-spacing:.5px}
-.marr{font-size:20px;color:var(--t3);margin-left:auto;transition:transform .2s}
-.mi:active .marr{transform:translateX(4px)}
-
-/* ── SECTION LABEL ── */
-.slbl{font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:2px;display:flex;align-items:center;gap:10px;padding:18px 20px 10px}
-.slbl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bd2),transparent)}
-
-/* ── PLAN CARD ── */
-.plan-card{border-radius:18px;overflow:hidden;margin-bottom:12px;border:1px solid var(--bd2);transition:transform .18s}
-.plan-card:hover{transform:translateY(-2px)}
-.pc-f{background:linear-gradient(135deg,#0a1208,#0f1d0e);border-color:rgba(34,197,94,.3)}
-.pc-s{background:linear-gradient(135deg,#111118,#191926);border-color:rgba(148,163,184,.3)}
-.pc-g{background:linear-gradient(135deg,#18100a,#271808);border-color:rgba(245,158,11,.45);box-shadow:0 0 0 1px rgba(245,158,11,.08)}
-.pc-d{background:linear-gradient(135deg,#0a0820,#130c30);border-color:rgba(108,99,255,.5);box-shadow:0 0 24px rgba(108,99,255,.1)}
-.pc-e{background:linear-gradient(135deg,#1a0505,#2a0808);border-color:rgba(239,68,68,.4)}
-.plan-hd{padding:16px 16px 12px;display:flex;align-items:center;gap:13px;border-bottom:1px solid rgba(255,255,255,.05)}
-.p-ico{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font-size:24px;flex-shrink:0}
-.pi-f{background:rgba(34,197,94,.12);border:2px solid rgba(34,197,94,.3)}
-.pi-s{background:rgba(148,163,184,.12);border:2px solid rgba(148,163,184,.3)}
-.pi-g{background:rgba(245,158,11,.12);border:2px solid rgba(245,158,11,.4)}
-.pi-d{background:rgba(108,99,255,.12);border:2px solid rgba(108,99,255,.45)}
-.pi-e{background:rgba(239,68,68,.12);border:2px solid rgba(239,68,68,.4)}
-.p-meta{flex:1}
-.p-lbl{font-size:8.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:4px}
-.pl-f{background:rgba(34,197,94,.2);color:var(--grn2)}
-.pl-s{background:rgba(148,163,184,.2);color:#cbd5e1}
-.pl-g{background:rgba(245,158,11,.2);color:var(--gold2)}
-.pl-d{background:rgba(108,99,255,.2);color:var(--acc3)}
-.pl-e{background:rgba(239,68,68,.2);color:#fca5a5}
-.p-name{font-size:19px;font-weight:900;letter-spacing:-.5px}
-.p-tag{font-size:11px;color:var(--t2);margin-top:2px}
-.p-price{text-align:right;flex-shrink:0}
-.p-amt{font-size:28px;font-weight:900;letter-spacing:-1.5px;line-height:1}
-.p-amt sup{font-size:12px}
-.p-dur{font-size:10px;color:var(--t3);font-family:var(--mono)}
-.plan-feats{padding:12px 16px;display:flex;flex-direction:column;gap:4px}
-.feat{display:flex;align-items:flex-start;gap:9px;font-size:12px}
-.feat .fi{flex-shrink:0;width:18px;font-size:13px;margin-top:1px}
-.feat .ft{color:var(--t2);line-height:1.4}
-.feat .ft b{color:var(--t);font-weight:700}
-.feat.dim .ft{color:var(--t3);text-decoration:line-through;opacity:.5}
-.p-btn{display:block;width:calc(100% - 32px);margin:0 16px 14px;border:none;border-radius:11px;padding:12px;font-size:13.5px;font-weight:800;font-family:var(--ff);cursor:pointer;transition:transform .15s;letter-spacing:-.2px}
-.p-btn:active{transform:scale(.97)}
-.p-btn:disabled{opacity:.45;cursor:not-allowed}
-.pb-f{background:rgba(34,197,94,.12);color:var(--grn2);border:1px solid rgba(34,197,94,.3)}
-.pb-s{background:rgba(148,163,184,.12);color:#cbd5e1;border:1px solid rgba(148,163,184,.3)}
-.pb-g{background:linear-gradient(135deg,var(--gold),#d97706);color:#000;box-shadow:0 4px 14px rgba(245,158,11,.3)}
-.pb-d{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;box-shadow:0 4px 16px rgba(108,99,255,.4)}
-.pb-e{background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;box-shadow:0 4px 16px rgba(239,68,68,.3)}
-
-/* ── TRIAL CARD ── */
-.tc{background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(16,185,129,.04));border:1px solid rgba(34,197,94,.25);border-radius:16px;padding:15px;cursor:pointer;display:flex;align-items:center;gap:13px;transition:transform .18s;position:relative;overflow:hidden}
-.tc::after{content:'1× FREE';position:absolute;top:6px;right:-13px;background:var(--grn);color:#000;font-size:7px;font-weight:900;padding:3px 20px;transform:rotate(35deg);letter-spacing:.5px}
-.tc.used{opacity:.45;cursor:not-allowed}
-.tc.used::after{content:'USED';background:var(--red);color:#fff}
-.tc:not(.used):active{transform:scale(.97)}
-.tc-i{font-size:28px;flex-shrink:0;animation:float 3s ease-in-out infinite}
-.tc-t h4{font-size:13.5px;font-weight:800;color:var(--grn2);margin-bottom:2px}
-.tc-t p{font-size:11.5px;color:var(--t2)}
-.tc-b{margin-left:auto;flex-shrink:0;background:var(--grn);color:#000;font-size:9px;font-weight:900;font-family:var(--mono);padding:4px 9px;border-radius:5px;letter-spacing:.5px}
-
-/* ── STREAM PAGE ── */
-.mx-p{position:relative;width:100%;background:#000;aspect-ratio:16/9;overflow:hidden;user-select:none}
-video{width:100%;height:100%;object-fit:contain;display:none;background:#000}
-.mx-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(135deg,#050510,#0d0520)}
-.mx-ph-i{font-size:52px;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 20px rgba(108,99,255,.5))}
-.mx-ph p{font-size:12px;color:rgba(255,255,255,.35);text-align:center;padding:0 28px;line-height:1.65}
-.mx-ld{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:13px;background:rgba(0,0,0,.92)}
-.mx-sp{width:44px;height:44px;border:3px solid rgba(108,99,255,.2);border-top-color:var(--acc2);border-radius:50%;animation:spin .8s linear infinite}
-.mx-lt{font-size:11.5px;color:rgba(255,255,255,.45);font-family:var(--mono);letter-spacing:.5px}
-.mx-ov{position:absolute;inset:0;display:none;flex-direction:column;justify-content:flex-end;background:linear-gradient(0deg,rgba(0,0,0,.88) 0%,transparent 40%,rgba(0,0,0,.3) 100%);cursor:pointer}
-.mx-p.cv .mx-ov{display:flex}
-.mx-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:12px 14px}
-.mx-fn{font-size:12px;color:rgba(255,255,255,.8);font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 10px}
-.mx-bot{padding:0 14px 14px}
-.mx-sw{display:flex;align-items:center;gap:10px;margin-bottom:9px}
-.mx-t{font-size:11px;color:rgba(255,255,255,.65);font-family:var(--mono);flex-shrink:0;letter-spacing:.5px}
-.mx-seek{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:rgba(255,255,255,.2);border-radius:2px;cursor:pointer;outline:none}
-.mx-seek::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--acc2);cursor:pointer;box-shadow:0 0 8px rgba(108,99,255,.8)}
-.mx-vr{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-.mx-vi{font-size:16px;cursor:pointer;color:rgba(255,255,255,.7)}
-.mx-vb{flex:1;-webkit-appearance:none;height:3px;background:rgba(255,255,255,.18);border-radius:2px;cursor:pointer;outline:none;max-width:100px}
-.mx-vb::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;cursor:pointer}
-.mx-bts{display:flex;align-items:center;justify-content:center;gap:18px}
-.mx-b{width:42px;height:42px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:50%;display:grid;place-items:center;cursor:pointer;font-size:15px;transition:all .12s;color:rgba(255,255,255,.9)}
-.mx-b:active{background:rgba(108,99,255,.4);transform:scale(.9)}
-.mx-pb{width:52px;height:52px;font-size:20px;background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;box-shadow:0 0 20px rgba(108,99,255,.5)}
-.mx-pb:active{transform:scale(.9)!important}
-.s-ctrls{display:flex;gap:7px;padding:11px 13px;background:var(--s1);border-bottom:1px solid var(--bd)}
-.sc{flex:1;padding:10px 5px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;color:var(--t);font-size:12px;font-weight:700;font-family:var(--ff);cursor:pointer;text-align:center;transition:all .12s}
-.sc:active{background:var(--acc);border-color:var(--acc2);color:#fff}
-.sc.dl{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--grn2)}
+/* SECTION CARDS */
+.sc{margin:12px 14px;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;cursor:pointer;transition:.2s}
+.sc:active{transform:scale(.98);border-color:var(--acc)}
+.sc-t{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.sc-i{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sc-nm{font-size:13px;font-weight:700}.sc-sub{font-size:10px;color:var(--t2)}
+.sc-bd{font-size:11px;color:var(--t2);line-height:1.6}
+.sc.pr{border-color:rgba(108,99,255,.2);background:linear-gradient(135deg,#0d0820,#130a2e)}
+.sc.dl{background:linear-gradient(135deg,#081a0f,#0a1a18);border-color:rgba(34,197,94,.2)}
 .sc.dl:active{background:var(--grn);color:#000}
-.si-card{margin:13px 14px;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px}
-.si-card h3{font-size:13px;font-weight:800;color:var(--acc3);margin-bottom:6px}
-.si-card p{font-size:12px;color:var(--t2);line-height:1.7}
 
-/* ── REFER PAGE ── */
+/* PLANS */
+.plan-card{margin:12px 14px;border-radius:18px;border:1px solid var(--bd);overflow:hidden;background:var(--s1)}
+.plan-hd{display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(255,255,255,.02)}
+.p-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.pi-s{background:linear-gradient(135deg,var(--sky),var(--cyan))}.pi-g{background:linear-gradient(135deg,var(--gold),var(--gold2))}.pi-d{background:linear-gradient(135deg,var(--acc),var(--acc2))}.pi-e{background:linear-gradient(135deg,var(--red),var(--pink))}
+.p-meta{flex:1;min-width:0}.p-lbl{font-size:8px;font-weight:800;letter-spacing:1.5px;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:2px}
+.pl-s{background:rgba(56,189,248,.2);color:var(--sky)}.pl-g{background:rgba(245,158,11,.2);color:var(--gold)}.pl-d{background:rgba(108,99,255,.2);color:var(--acc3)}.pl-e{background:rgba(239,68,68,.2);color:#fca5a5}
+.p-name{font-size:14px;font-weight:800}.p-tag{font-size:10px;color:var(--t2)}
+.p-price{text-align:right}.p-amt{font-size:22px;font-weight:900}.p-amt sup{font-size:12px}.p-dur{font-size:9px;color:var(--t3);margin-top:1px}
+.plan-feats{padding:10px 16px}
+.feat{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px;color:var(--t2)}.feat .fi{font-size:13px;flex-shrink:0}
+.p-btn{display:block;width:calc(100% - 32px);margin:8px 16px 14px;padding:11px;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;color:#fff;transition:.2s}
+.pb-s{background:linear-gradient(135deg,var(--sky),var(--cyan))}.pb-g{background:linear-gradient(135deg,var(--gold),#d97706)}.pb-d{background:linear-gradient(135deg,var(--acc),#4f46e5)}.pb-e{background:linear-gradient(135deg,var(--red),#b91c1c)}
+.p-btn:active{transform:scale(.97);opacity:.85}
+
+/* TRIAL */
+.tc{margin:12px 14px;background:linear-gradient(135deg,#0a1a0f,#0f2518);border:1px solid rgba(34,197,94,.25);border-radius:14px;padding:14px 16px;cursor:pointer;transition:.3s}
+.tc:active{transform:scale(.97)}.tc.used{opacity:.5;pointer-events:none}
+.tc h4{font-size:13px;font-weight:700;color:var(--grn2)}.tc p{font-size:11px;color:var(--t2);margin-top:4px}
+.tc-row{display:flex;justify-content:space-between;align-items:center}
+.tc-bdg{font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:var(--grn);color:#000}
+
+/* REFER */
 .refer-hero{padding:28px 20px 22px;background:linear-gradient(160deg,#0a0820,#130c30);border-bottom:1px solid rgba(108,99,255,.25);position:relative;overflow:hidden}
 .refer-hero::before{content:'';position:absolute;width:250px;height:250px;background:radial-gradient(circle,rgba(108,99,255,.2) 0%,transparent 70%);top:-80px;right:-80px;pointer-events:none}
 .refer-hero h2{font-size:28px;font-weight:900;letter-spacing:-1.5px;line-height:1.1;position:relative}
 .refer-hero h2 span{background:linear-gradient(90deg,var(--acc2),var(--acc3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .refer-hero p{font-size:13px;color:rgba(255,255,255,.5);margin-top:6px;position:relative}
-.ref-box{background:var(--s1);border:1px solid var(--bd2);border-radius:18px;padding:20px}
+.ref-box{background:var(--s1);border:1px solid var(--bd2);border-radius:18px;padding:20px;margin:14px}
 .ref-num{font-size:52px;font-weight:900;letter-spacing:-2px;line-height:1;color:var(--acc2)}
 .ref-sub{font-size:12px;color:var(--t2);margin-top:4px}
 .ref-bar{background:rgba(255,255,255,.06);border-radius:100px;height:5px;margin:12px 0 5px;overflow:hidden}
@@ -217,487 +136,485 @@ video{width:100%;height:100%;object-fit:contain;display:none;background:#000}
 .ref-txt{font-size:11px;color:var(--t3);font-family:var(--mono)}
 .ref-link{background:var(--s2);border:1px solid var(--bd);border-radius:11px;padding:10px 13px;margin:12px 0;display:flex;align-items:center;gap:9px}
 .ref-url{flex:1;font-size:10.5px;color:var(--t2);word-break:break-all;font-family:var(--mono);line-height:1.4}
-
-/* ── GROUP PREM PAGE ── */
-.earn-hero{padding:28px 20px 22px;background:linear-gradient(160deg,#040a1e,#081535);border-bottom:1px solid rgba(56,189,248,.2)}
-.earn-hero h2{font-size:28px;font-weight:900;letter-spacing:-1.5px;color:var(--sky);line-height:1.1}
-.earn-hero p{font-size:13px;color:rgba(255,255,255,.45);margin-top:7px;line-height:1.65}
-.guide-card{background:var(--s1);border:1px solid var(--bd2);border-radius:16px;padding:18px}
-.g-step{display:flex;gap:13px;padding:8px 0;border-bottom:1px solid var(--bd)}
-.g-step:last-child{border-bottom:none;padding-bottom:0}
-.g-num{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;font-size:12px;font-weight:900;flex-shrink:0;margin-top:2px}
-.g-txt h4{font-size:13px;font-weight:700;margin-bottom:2px}
-.g-txt p{font-size:12px;color:var(--t2);line-height:1.6}
-.g-txt code{background:rgba(108,99,255,.15);border:1px solid var(--bd2);border-radius:4px;padding:2px 6px;font-size:11px;color:var(--acc3);font-family:var(--mono)}
-.gplan{border-radius:18px;overflow:hidden;margin-bottom:12px;border:1px solid var(--bd2)}
-.gplan-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 14px;border-bottom:1px solid rgba(255,255,255,.05)}
-.gplan-hd.dk{background:linear-gradient(135deg,#14102a,#1c1440)}
-.gplan-meta .gpl{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:4px}
-.gpl-1{background:rgba(56,189,248,.2);color:var(--sky)}
-.gpl-2{background:rgba(108,99,255,.2);color:var(--acc3)}
-.gplan-nm{font-size:20px;font-weight:900;letter-spacing:-.5px}
-.gplan-tg{font-size:11px;color:var(--t2);margin-top:2px}
-.gplan-pr{text-align:right;flex-shrink:0}
-.gplan-amt{font-size:30px;font-weight:900;letter-spacing:-1.5px;line-height:1}
-.gplan-amt sup{font-size:13px}
-.gplan-dur{font-size:10px;color:var(--t3);font-family:var(--mono)}
-.gplan-feats{padding:12px 18px;font-size:12px;color:var(--t2);display:flex;flex-direction:column;gap:4px;border-bottom:1px solid rgba(255,255,255,.05)}
-.gplan-foot{padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
-.gplan-tag{font-size:12px;color:var(--t2);font-weight:500}
-.gbtn{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:13px;font-weight:800;font-family:var(--mono);cursor:pointer;transition:all .15s}
-.gbtn:active{transform:scale(.94)}
-
-/* ── MODAL ── */
-.mov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.87);z-index:200;align-items:flex-end;backdrop-filter:blur(8px)}
-.mov.on{display:flex}
-.mod{background:var(--s2);border-radius:24px 24px 0 0;width:100%;border:1px solid var(--bd2);border-bottom:none;animation:slideUp .28s ease;max-height:94vh;overflow-y:auto}
-.m-nav{position:sticky;top:0;z-index:10;display:flex;align-items:center;padding:14px 18px 12px;background:var(--s2);border-bottom:1px solid var(--bd)}
-.m-drag{width:36px;height:4px;background:var(--bd2);border-radius:2px}
-.m-tit{font-size:15px;font-weight:800;flex:1;text-align:center;letter-spacing:-.3px}
-.m-cl{width:30px;height:30px;background:var(--s3);border:1px solid var(--bd2);border-radius:8px;display:grid;place-items:center;cursor:pointer;font-size:14px;color:var(--t2);transition:all .12s}
-.m-cl:active{background:rgba(239,68,68,.2);border-color:var(--red);color:var(--red)}
-.m-body{padding:18px}
-.upi-row{display:flex;gap:12px;margin-bottom:14px}
-.qrb{background:#fff;border-radius:12px;padding:7px;width:88px;flex-shrink:0;display:grid;place-items:center}
-.qrb img{width:74px;height:74px;object-fit:contain}
-.ubox{flex:1;background:var(--s3);border:1.5px dashed var(--acc2);border-radius:12px;padding:13px}
-.ulbl{font-size:9.5px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px}
-.uval{font-size:14px;font-weight:800;color:var(--acc3);word-break:break-all;line-height:1.4}
-.ucp{margin-top:8px;display:inline-block;background:rgba(108,99,255,.2);border:1px solid var(--bd2);color:var(--acc3);border-radius:7px;padding:4px 12px;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer}
-.ucp:active{background:var(--acc);color:#fff}
-.ibox{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:13px;margin-bottom:14px;font-size:12px;line-height:1.85;color:#fde68a;font-family:var(--mono)}
-.ibox b{color:#fbbf24}
-.fg{margin-bottom:13px}
-.fg label{display:block;font-family:var(--mono);font-size:9.5px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px}
-input[type=text]{width:100%;background:var(--s3);border:1px solid var(--bd2);border-radius:12px;color:var(--t);font-size:13.5px;padding:12px 14px;font-family:var(--ff);outline:none;transition:border-color .2s,box-shadow .2s}
-input[type=text]:focus{border-color:var(--acc2);box-shadow:0 0 0 3px rgba(108,99,255,.12)}
-input::placeholder{color:var(--t3)}
-.flbl{width:100%;display:block;background:var(--s3);border:1.5px dashed var(--bd2);border-radius:12px;color:var(--t2);font-size:12.5px;padding:13px;text-align:center;cursor:pointer}
-.sprev{display:none;margin-top:8px;border-radius:9px;overflow:hidden}
-.sprev img{width:100%;max-height:140px;object-fit:cover}
-.bf{width:100%;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:var(--ff);cursor:pointer;transition:transform .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.bf{display:block;width:100%;padding:11px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;transition:.2s}
+.bfp{background:linear-gradient(135deg,var(--acc),#4f46e5);color:#fff}
+.bfs{background:rgba(255,255,255,.06);color:var(--t2)}
 .bf:active{transform:scale(.97)}
-.bf:disabled{opacity:.45;cursor:not-allowed}
-.bfp{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;box-shadow:0 4px 16px rgba(108,99,255,.3)}
-.bfs{background:var(--s3);border:1px solid var(--bd2);color:var(--t);margin-top:8px;font-size:13.5px;padding:12px}
-.spi{width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px}
 
-/* ── COMMON ── */
-.page-pad{padding:16px 16px 40px}
-.cpbtn{background:var(--acc);color:#fff;border:none;border-radius:7px;padding:7px 13px;font-size:11.5px;font-weight:800;font-family:var(--mono);cursor:pointer;flex-shrink:0;transition:all .15s}
-.cpbtn:active{transform:scale(.9)}
-.foot{padding:20px;text-align:center;border-top:1px solid var(--bd)}
-.foot p{font-size:11px;color:var(--t3);line-height:1.8;font-family:var(--mono)}
-.foot a{color:var(--acc2)}
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(14px);background:rgba(10,10,20,.97);backdrop-filter:blur(16px);border:1px solid var(--bd2);border-radius:100px;padding:10px 20px;font-size:12.5px;font-weight:700;opacity:0;transition:all .25s;z-index:300;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
-.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* GROUP PREM */
+.earn-hero{padding:28px 20px 22px;background:linear-gradient(160deg,#040a1e,#081535);border-bottom:1px solid rgba(56,189,248,.2)}
+.earn-hero h2{font-size:26px;font-weight:900;letter-spacing:-1.5px;background:linear-gradient(90deg,var(--sky),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.earn-hero p{font-size:12px;color:var(--t2);margin-top:6px}
+
+/* PREMIUM PANEL */
+.prem-panel{margin:14px;border-radius:18px;border:1px solid rgba(108,99,255,.3);overflow:hidden;background:linear-gradient(135deg,#0d0825,#150a35)}
+.pp-hd{padding:20px 16px;text-align:center;background:linear-gradient(180deg,rgba(108,99,255,.15),transparent)}
+.pp-hd h2{font-size:24px;font-weight:900;background:linear-gradient(135deg,var(--acc2),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.pp-hd p{font-size:11px;color:var(--t2);margin-top:4px}
+.pp-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 16px 16px}
+.pp-stat{background:rgba(255,255,255,.04);border-radius:12px;padding:12px 8px;text-align:center}
+.pp-stat .pps-n{font-size:20px;font-weight:900;color:var(--acc2)}
+.pp-stat .pps-l{font-size:9px;color:var(--t3);margin-top:2px}
+.pp-feats{padding:0 16px 16px}
+.pp-feat{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:4px 0;background:rgba(108,99,255,.06);border-radius:10px;border:1px solid rgba(108,99,255,.1)}
+.pp-feat .ppf-i{font-size:18px;flex-shrink:0}
+.pp-feat .ppf-t{font-size:12px;font-weight:600}
+.pp-feat .ppf-d{font-size:10px;color:var(--t2)}
+
+/* ════ ADVANCED HD PLAYER ════ */
+.player-wrap{margin:14px;border-radius:18px;overflow:hidden;background:#000;position:relative;border:1px solid var(--bd)}
+.player-inner{position:relative;width:100%;padding-top:56.25%;background:#000}
+.player-inner video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.player-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;cursor:pointer}
+.player-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.8);z-index:10}
+.player-loading .pl-spin{width:48px;height:48px;border:3px solid rgba(108,99,255,.2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
+.player-loading p{color:var(--t2);font-size:12px;margin-top:12px}
+.player-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.9);z-index:8}
+.player-placeholder .pp-icon{font-size:48px;margin-bottom:12px;animation:bounce 2s infinite}
+.player-placeholder p{color:var(--t2);font-size:12px;text-align:center;padding:0 20px;line-height:1.6}
+
+/* Player Controls - Ultra Advanced */
+.ctrl-bar{background:linear-gradient(180deg,transparent,rgba(0,0,0,.9));position:absolute;bottom:0;left:0;right:0;z-index:15;padding:8px 12px 12px;transition:opacity .3s}
+.ctrl-bar.hide{opacity:0;pointer-events:none}
+.ctrl-seek{width:100%;height:4px;appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.15);border-radius:4px;outline:none;cursor:pointer;margin-bottom:8px}
+.ctrl-seek::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--acc);cursor:pointer;box-shadow:0 0 8px rgba(108,99,255,.5)}
+.ctrl-row{display:flex;align-items:center;gap:6px}
+.ctrl-btn{background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:.15s}
+.ctrl-btn:active{background:rgba(255,255,255,.15);transform:scale(.9)}
+.ctrl-btn.sm{font-size:12px;padding:2px 4px}
+.ctrl-time{font-size:10px;color:var(--t2);font-family:var(--mono);white-space:nowrap}
+.ctrl-spacer{flex:1}
+.ctrl-fname{font-size:10px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.ctrl-vol{width:60px;height:3px;appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.2);border-radius:3px;outline:none;cursor:pointer}
+.ctrl-vol::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:#fff;cursor:pointer}
+.ctrl-spd{font-size:10px;font-weight:700;color:var(--acc2);padding:2px 6px;border-radius:4px;background:rgba(108,99,255,.15);cursor:pointer;border:none;white-space:nowrap}
+
+/* Player Engine Selector */
+.engine-bar{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.engine-bar::-webkit-scrollbar{display:none}
+.eng-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;border:1px solid var(--bd);background:var(--s2);color:var(--t2);cursor:pointer;white-space:nowrap;transition:.2s;flex-shrink:0}
+.eng-btn.on{background:linear-gradient(135deg,var(--acc),#4f46e5);color:#fff;border-color:var(--acc)}
+.eng-btn:active{transform:scale(.95)}
+
+/* Player Info Bar */
+.file-info-bar{padding:10px 14px;background:var(--s1);border-top:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.fib-icon{font-size:24px}
+.fib-meta{flex:1;min-width:0}
+.fib-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fib-detail{font-size:10px;color:var(--t2);margin-top:2px;font-family:var(--mono)}
+.fib-actions{display:flex;gap:6px}
+.fib-btn{padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;transition:.2s}
+.fib-btn:active{transform:scale(.95)}
+.fib-dl{background:var(--grn);color:#000}
+.fib-share{background:rgba(108,99,255,.2);color:var(--acc2)}
+.fib-link{background:rgba(56,189,248,.15);color:var(--sky)}
+
+/* Quality Selector */
+.quality-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.quality-modal.on{display:flex}
+.qm-body{background:var(--s1);border-radius:18px 18px 0 0;width:100%;max-width:400px;padding:20px 16px;animation:slideUp .3s ease}
+.qm-title{font-size:14px;font-weight:800;margin-bottom:12px;text-align:center}
+.qm-opt{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;cursor:pointer;transition:.15s;margin:4px 0}
+.qm-opt:active,.qm-opt.on{background:rgba(108,99,255,.15);border:1px solid rgba(108,99,255,.3)}
+.qm-opt .qm-i{font-size:20px}
+.qm-opt .qm-l{font-size:13px;font-weight:600}
+.qm-opt .qm-d{font-size:10px;color:var(--t2)}
+
+/* STREAM PREMIUM GATE */
+.strm-prem{display:none;padding:30px 20px;text-align:center}
+.strm-prem h3{font-size:18px;font-weight:900;color:var(--acc2);margin-bottom:8px}
+.strm-prem p{font-size:12px;color:var(--t2);line-height:1.6}
+
+/* HELP */
+.si-card{margin:13px 14px;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px}
+.si-card h3{font-size:13px;font-weight:800;color:var(--acc3);margin-bottom:6px}
+.si-card p{font-size:12px;color:var(--t2);line-height:1.7}
+
+/* MODAL */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;display:none;align-items:flex-end;justify-content:center}
+.mov.on{display:flex}
+.mod{background:var(--s1);border-radius:18px 18px 0 0;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;animation:slideUp .3s ease}
+.m-nav{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--s1);z-index:1}
+.m-drag{width:36px;height:4px;background:var(--bd2);border-radius:100px;position:absolute;top:6px;left:50%;transform:translateX(-50%)}
+.m-tit{font-size:14px;font-weight:800;flex:1;margin-top:4px}
+.m-cl{font-size:18px;cursor:pointer;color:var(--t2);padding:4px}
+.m-body{padding:16px}
+.upi-row{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.qrb{width:100px;height:100px;background:var(--s2);border-radius:12px;overflow:hidden;flex-shrink:0}
+.qrb img{width:100%;height:100%;object-fit:cover}
+.ubox{flex:1}.ulbl{font-size:9px;color:var(--t3);font-weight:700;letter-spacing:1px;margin-bottom:4px}
+.uval{font-size:13px;font-weight:700;color:var(--acc3);font-family:var(--mono);word-break:break-all}
+.ucp{margin-top:6px;font-size:11px;color:var(--acc2);cursor:pointer;font-weight:600}
+.ibox{font-size:11px;color:var(--t2);background:rgba(108,99,255,.06);border-radius:10px;padding:10px 12px;line-height:1.7;margin-bottom:14px;border:1px solid rgba(108,99,255,.1)}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:10px;font-weight:700;color:var(--t2);margin-bottom:4px;letter-spacing:0.5px}
+.fg input[type="text"]{width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--t);font-size:13px;font-family:var(--ff);outline:none;transition:.2s}
+.fg input[type="text"]:focus{border-color:var(--acc)}
+.flbl{display:block;padding:10px;border:1px dashed var(--bd2);border-radius:8px;text-align:center;color:var(--t2);font-size:11px;cursor:pointer;transition:.2s}
+.flbl:active{border-color:var(--acc)}
+.sprev{display:none;margin-top:8px;border-radius:8px;overflow:hidden}.sprev img{width:100%;max-height:150px;object-fit:cover;border-radius:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%) translateY(100%);background:var(--s2);color:var(--t);padding:10px 20px;border-radius:12px;font-size:12px;font-weight:600;z-index:300;transition:transform .3s ease,opacity .3s;opacity:0;border:1px solid var(--bd);max-width:85%;text-align:center;white-space:nowrap}
+.toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* FOOTER */
+.foot{padding:20px;text-align:center;border-top:1px solid var(--bd);margin-top:20px}
+.foot a{color:var(--acc2);text-decoration:none;font-size:11px;font-weight:600}
+.foot p{font-size:9px;color:var(--t3);margin-top:4px}
 </style>
 </head>
 <body>
-<div class="bg-grid"></div><div class="bg-glow"></div>
-<div class="pts" id="pts"></div>
+<div class="bg-grid"></div>
+<div id="pts"></div>
+
+<!-- NAV -->
+<div class="nav">
+  <div>
+    <div class="nav-logo">AsBhai Drop Bot</div>
+    <div class="nav-sub">v3.0 Ultra • HD Stream</div>
+  </div>
+  <div class="nbdg nb-f" id="nav-bdg">
+    <div class="ndot ng" id="nav-dot"></div>
+    <span id="nav-txt">FREE</span>
+  </div>
+</div>
 
 <!-- ════ HOME PAGE ════ -->
 <div class="pg on" id="pg-home">
-  <nav class="nav">
-    <div class="nav-brand">
-      <div class="nav-ico">🎬</div>
-      <span class="nav-name">AsBhai Drop</span>
+  <div id="user-card" class="user-card uc-f">
+    <div class="uc-av av-f" id="uc-av">👤</div>
+    <div class="uc-info">
+      <div class="uc-nm" id="uc-nm">User</div>
+      <div class="uc-un" id="uc-un">@username</div>
+      <div class="uc-id" id="uc-id">ID: —</div>
+      <div class="uc-ex ex-f" id="uc-ex">Upgrade karo → Premium lo</div>
     </div>
-    <div class="nav-r">
-      <div class="nbdg nb-f" id="nav-bdg">
-        <span class="ndot ng" id="nav-dot"></span>
-        <span id="nav-txt">Loading...</span>
-      </div>
-    </div>
-  </nav>
-
-  <!-- User card -->
-  <div class="user-card uc-f" id="user-card">
-    <div class="uc-in">
-      <div class="uc-av av-f" id="uc-av">👤</div>
-      <div class="uc-nfo">
-        <div class="uc-lbl ul-f" id="uc-lbl">FREE</div>
-        <div class="uc-nm" id="uc-nm">—</div>
-        <div class="uc-un" id="uc-un">—</div>
-        <div class="uc-id" id="uc-id">ID: —</div>
-        <div class="uc-ex ex-f" id="uc-ex">Upgrade karo → Premium lo</div>
-      </div>
-    </div>
+    <div class="uc-lbl ul-f" id="uc-lbl">FREE</div>
   </div>
 
   <div class="hero">
-    <h1>
-      <span class="l1">ᴍᴏᴠɪᴇs</span>
-      <span class="l2"><span class="tw" id="typed"></span><span class="cur"></span></span>
-    </h1>
-    <p>Group mein movie naam type karo — seedha PM mein file milegi</p>
+    <h1>Files download karo<br><span id="typed">ɪɴsᴛᴀɴᴛʟʏ.</span></h1>
+    <p>Group mein file naam type karo — PM mein aayegi! 📥<br>Premium users ko HD stream + download bhi! 🎬</p>
   </div>
 
-  <div class="menu-sec">
-    <div class="mi" onclick="go('pg-stream')">
-      <div class="mico mi-v">▶️</div>
-      <div class="mtxt"><h3>Stream &amp; Download</h3><p>Browser mein seedha dekho ya download karo</p></div>
-      <div class="mbdg">PREMIUM</div>
-      <span class="marr">›</span>
-    </div>
-    <div class="mi" onclick="go('pg-prem')">
-      <div class="mico mi-p">💎</div>
-      <div class="mtxt"><h3>Premium Plans</h3><p>No verify, no ads, unlimited results</p></div>
-      <span class="marr">›</span>
-    </div>
-    <div class="mi" onclick="go('pg-group')">
-      <div class="mico mi-gp">🏘</div>
-      <div class="mtxt"><h3>Group Premium</h3><p>Group mein shortlink lagao aur earning karo</p></div>
-      <span class="marr">›</span>
-    </div>
-    <div class="mi" onclick="go('pg-refer')">
-      <div class="mico mi-r">🔗</div>
-      <div class="mtxt"><h3>Refer &amp; Earn Free Premium</h3><p>Har 10 refer = 15 din FREE Premium</p></div>
-      <span class="marr">›</span>
+  <div class="sc pr" onclick="go('pg-premium')">
+    <div class="sc-t"><div class="sc-i" style="background:linear-gradient(135deg,var(--acc),var(--acc2))">💎</div><div><div class="sc-nm">Premium Plans</div><div class="sc-sub">Stream + No Verify + Unlimited</div></div></div>
+    <div class="sc-bd">💎 Premium = Boss Mode! No limits, HD stream, all features! →</div>
+  </div>
+
+  <div class="sc" onclick="go('pg-stream')">
+    <div class="sc-t"><div class="sc-i" style="background:linear-gradient(135deg,var(--red),var(--pink))">▶️</div><div><div class="sc-nm">HD Stream Player</div><div class="sc-sub">Multiple players • Full HD • PiP</div></div></div>
+    <div class="sc-bd">🎬 Advanced HD player — MX, VLC style controls! Premium only.</div>
+  </div>
+
+  <div class="sc" onclick="go('pg-refer')">
+    <div class="sc-t"><div class="sc-i" style="background:linear-gradient(135deg,var(--grn),#059669)">🔗</div><div><div class="sc-nm">Refer & Earn</div><div class="sc-sub">10 refer = 15 din FREE premium</div></div></div>
+    <div class="sc-bd">🔗 Dosto ko bulao — free premium kamao!</div>
+  </div>
+
+  <div class="sc" onclick="go('pg-group')">
+    <div class="sc-t"><div class="sc-i" style="background:linear-gradient(135deg,var(--sky),var(--cyan))">🏘</div><div><div class="sc-nm">Group Premium</div><div class="sc-sub">Apni shortlink lagao — paisa kamao</div></div></div>
+    <div class="sc-bd">💰 Group mein bot lagao — apni shortlink se earn karo!</div>
+  </div>
+
+  <div class="tc" id="tc" onclick="claimTrial()">
+    <div class="tc-row">
+      <div><h4>🆓 Free Trial — 5 Min Premium</h4><p>Ek baar try karo — phir decide karo!</p></div>
+      <div class="tc-bdg" id="tc-bdg">FREE</div>
     </div>
   </div>
 
-  <div class="foot" style="margin-top:auto">
-    <p>© 2025 <a href="https://t.me/asbhaibsr">@asbhaibsr</a> · <a href="https://t.me/asbhai_bsr">@asbhai_bsr</a></p>
-  </div>
-</div>
-
-<!-- ════ STREAM PAGE ════ -->
-<div class="pg" id="pg-stream">
-  <div class="bbar">
-    <div class="bk" onclick="go('pg-home')">‹</div>
-    <div class="btit">▶ Stream</div>
-    <div class="btag">MX PLAYER</div>
-  </div>
-  <div class="mx-p" id="mxp" onclick="togCtrl()">
-    <video id="vid" controls preload="metadata" playsinline webkit-playsinline controlsList="nodownload"></video>
-    <div class="mx-ph" id="mxph">
-      <div class="mx-ph-i">🎬</div>
-      <p id="mxph-t">Group mein search karo, phir ▶ Stream button dabao</p>
-    </div>
-    <div class="mx-ld" id="mxld">
-      <div class="mx-sp"></div>
-      <div class="mx-lt">Loading...</div>
-      <div class="mx-lt" id="mxfname" style="font-size:10px;opacity:.5;margin-top:2px"></div>
-    </div>
-    <div class="mx-ov" id="mxov" onclick="event.stopPropagation()">
-      <div class="mx-top">
-        <div class="mx-b" onclick="go('pg-home')" style="width:32px;height:32px;font-size:14px">‹</div>
-        <div class="mx-fn" id="mxfn" style="font-size:12px;font-weight:700;color:rgba(255,255,255,.9)">—</div>
-        <div class="mx-b" onclick="doDl()" style="width:32px;height:32px;font-size:14px;background:rgba(34,197,94,.3);border-color:rgba(34,197,94,.5)">⬇</div>
-      </div>
-      <div class="mx-bot">
-        <div class="mx-sw">
-          <span class="mx-t" id="mxct">0:00</span>
-          <input type="range" class="mx-seek" id="mxsk" value="0" min="0" step="0.1" oninput="seekV(this.value)">
-          <span class="mx-t" id="mxdt">0:00</span>
-        </div>
-        <div class="mx-vr">
-          <span class="mx-vi" onclick="togMute()">🔊</span>
-          <input type="range" class="mx-vb" id="mxvl" value="100" min="0" max="100" oninput="setVol(this.value)">
-          <span style="color:rgba(255,255,255,.5);font-size:11px;margin-left:8px;font-family:var(--mono)" id="mxspd">1×</span>
-        </div>
-        <div class="mx-bts">
-          <div class="mx-b" onclick="skip(-10)">⏮10</div>
-          <div class="mx-b" onclick="skip(-5)">‹5</div>
-          <div class="mx-b mx-pb" id="mxpl" onclick="playPause()">▶</div>
-          <div class="mx-b" onclick="skip(5)">5›</div>
-          <div class="mx-b" onclick="skip(10)">10⏭</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="s-ctrls">
-    <button class="sc" onclick="doFull()">⛶ Full</button>
-    <button class="sc" onclick="cycSpd()">⚡<span id="spd-lbl">1×</span></button>
-    <button class="sc" onclick="doPiP()">📺 PiP</button>
-    <button class="sc dl" onclick="doDl()">⬇ DL</button>
-  </div>
-  <div id="strm-prem" style="display:none">
-    <div class="si-card" style="border-color:rgba(245,158,11,.3)">
-      <h3 style="color:var(--gold2)">🔒 Premium Feature</h3>
-      <p>Stream aur download ke liye Premium chahiye. Niche se Premium lo.</p>
-    </div>
-    <div style="padding:0 14px 14px">
-      <button class="bf bfp" onclick="go('pg-prem')">💎 Premium Lo →</button>
-    </div>
-  </div>
-  <div class="si-card" id="strm-how">
-    <h3>📱 Kaise Use Karein</h3>
-    <p id="strm-how-t">1️⃣ Group mein movie naam type karo<br>2️⃣ Bot PM mein file bhejega<br>3️⃣ File ke niche ▶ Stream button dabao<br>4️⃣ Yahan MX Player mein play hogi!</p>
-  </div>
+  <div id="prem-status" style="padding:0 14px;font-size:10px;color:var(--t3);text-align:center;margin:8px 0"></div>
 </div>
 
 <!-- ════ PREMIUM PAGE ════ -->
-<div class="pg" id="pg-prem">
-  <div class="bbar">
-    <div class="bk" onclick="go('pg-home')">‹</div>
-    <div class="btit">💎 Premium Plans</div>
+<div class="pg" id="pg-premium">
+  <div class="hero">
+    <h1>💎 <span>Premium</span> Plans</h1>
+    <p>Premium = No verify, no force join, HD stream, unlimited files, download links! 🤑</p>
   </div>
 
-  <div style="background:linear-gradient(160deg,#0e0620,#180930);padding:24px 20px;border-bottom:1px solid rgba(108,99,255,.25)">
-    <div style="font-size:28px;font-weight:900;letter-spacing:-1.5px">AsBhai <span style="background:linear-gradient(90deg,var(--gold),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Premium</span></div>
-    <div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:5px">Sab kuch unlimited — koi verify nahi</div>
-    <div id="prem-status" style="margin-top:10px;font-size:12px;color:rgba(255,255,255,.45);font-family:var(--mono)">—</div>
+  <!-- Starter -->
+  <div class="plan-card">
+    <div class="plan-hd">
+      <div class="p-ico pi-s">⚡</div>
+      <div class="p-meta"><div class="p-lbl pl-s">STARTER</div><div class="p-name">Starter</div><div class="p-tag">Try karo 10 din</div></div>
+      <div class="p-price"><div class="p-amt" style="color:var(--sky)"><sup>₹</sup>50</div><div class="p-dur">10 din</div></div>
+    </div>
+    <div class="plan-feats">
+      <div class="feat"><span class="fi">✅</span><span class="ft">No daily limit</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">No shortlink verify</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">10 search results</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">Send All button</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft"><b>HD Stream + Download</b></span></div>
+    </div>
+    <button class="p-btn pb-s" onclick="buyPlan('10days','Starter',10,50)">Starter Lo — ₹50 →</button>
   </div>
 
-  <div class="page-pad">
-    <!-- Trial -->
-    <div class="slbl">🆓 Free Trial</div>
-    <div class="tc" id="tc" onclick="claimTrial()">
-      <div class="tc-i">🆓</div>
-      <div class="tc-t"><h4>5 Minute Free Trial</h4><p>Sirf 1 baar — koi payment nahi!</p></div>
-      <div class="tc-b" id="tc-bdg">1× FREE</div>
+  <!-- Gold -->
+  <div class="plan-card" style="border-color:rgba(245,158,11,.3)">
+    <div class="plan-hd">
+      <div class="p-ico pi-g">🏆</div>
+      <div class="p-meta"><div class="p-lbl pl-g">GOLD 🔥</div><div class="p-name">Gold</div><div class="p-tag">Best seller — 1 mahina</div></div>
+      <div class="p-price"><div class="p-amt" style="color:var(--gold)"><sup>₹</sup>150</div><div class="p-dur">30 din</div></div>
+    </div>
+    <div class="plan-feats">
+      <div class="feat"><span class="fi">✅</span><span class="ft">Sab Starter features</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">No force join</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">All filters + Send All</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft"><b>HD Stream + Multi-Player</b></span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">PM Search unlimited</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft"><b>Stream Link Generator</b></span></div>
+    </div>
+    <button class="p-btn pb-g" onclick="buyPlan('30days','Gold',30,150)">Gold Lo — ₹150 →</button>
+  </div>
+
+  <!-- Diamond -->
+  <div class="plan-card" style="border-color:rgba(108,99,255,.3)">
+    <div class="plan-hd">
+      <div class="p-ico pi-d">💎</div>
+      <div class="p-meta"><div class="p-lbl pl-d">DIAMOND</div><div class="p-name">Diamond</div><div class="p-tag">Power user — 2 mahine</div></div>
+      <div class="p-price"><div class="p-amt" style="color:var(--acc3)"><sup>₹</sup>200</div><div class="p-dur">60 din</div></div>
+    </div>
+    <div class="plan-feats">
+      <div class="feat"><span class="fi">✅</span><span class="ft">Sab Gold features</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft"><b>Priority support</b></span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">New features early access</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">Diamond badge 💎</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft"><b>Premium Panel Access</b></span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft"><b>Zoom + Rotate + PiP</b></span></div>
+    </div>
+    <button class="p-btn pb-d" onclick="buyPlan('60days','Diamond',60,200)">Diamond Lo — ₹200 →</button>
+  </div>
+
+  <!-- Elite -->
+  <div class="plan-card" style="border-color:rgba(239,68,68,.3)">
+    <div class="plan-hd">
+      <div class="p-ico pi-e">👑</div>
+      <div class="p-meta"><div class="p-lbl pl-e">ELITE 🔥</div><div class="p-name">Elite</div><div class="p-tag">1 saal — best deal ever</div></div>
+      <div class="p-price"><div class="p-amt" style="color:#fca5a5"><sup>₹</sup>800</div><div class="p-dur">365 din</div></div>
+    </div>
+    <div class="plan-feats">
+      <div class="feat"><span class="fi">✅</span><span class="ft">Sab Diamond features</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft"><b>1 saal = ₹2.2/din!</b></span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">Lifetime updates</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">Elite badge 👑</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft"><b>All future features FREE</b></span></div>
+    </div>
+    <button class="p-btn pb-e" onclick="buyPlan('365days','Elite',365,800)">Elite Lo — ₹800 →</button>
+  </div>
+
+  <div class="foot"><a href="https://t.me/asbhaibsr">@asbhaibsr</a><p>© AsBhai Drop Bot v3.0</p></div>
+</div>
+
+<!-- ════ STREAM PAGE — ULTRA HD PLAYER ════ -->
+<div class="pg" id="pg-stream">
+  <div style="padding:14px 14px 6px;font-size:16px;font-weight:900">▶️ <span style="background:linear-gradient(90deg,var(--acc2),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">HD Stream Player</span></div>
+
+  <!-- Premium Gate -->
+  <div class="strm-prem" id="strm-prem">
+    <h3>💎 Premium Feature</h3>
+    <p>HD streaming sirf Premium users ke liye hai!<br><br>Premium lo — HD stream + download + multiple players!</p>
+    <button class="bf bfp" style="max-width:280px;margin:16px auto" onclick="go('pg-premium')">💎 Premium Plans Dekho →</button>
+  </div>
+
+  <!-- Player Area -->
+  <div id="strm-player" style="display:none">
+    <!-- Engine Selector -->
+    <div class="engine-bar" id="engine-bar">
+      <button class="eng-btn on" onclick="switchEngine('html5')">🎬 HTML5</button>
+      <button class="eng-btn" onclick="switchEngine('mx')">📱 MX Style</button>
+      <button class="eng-btn" onclick="switchEngine('vlc')">🔶 VLC Style</button>
+      <button class="eng-btn" onclick="switchEngine('mini')">⚡ Mini</button>
     </div>
 
-    <div class="slbl">💰 Plans Choose Karo</div>
+    <!-- Player -->
+    <div class="player-wrap" id="player-wrap" onclick="togCtrl()">
+      <div class="player-inner" id="player-inner">
+        <video id="vid" playsinline preload="auto" crossorigin="anonymous"></video>
 
-    <!-- Free -->
-    <div class="plan-card pc-f">
-      <div class="plan-hd">
-        <div class="p-ico pi-f">🆓</div>
-        <div class="p-meta"><div class="p-lbl pl-f">FREE</div><div class="p-name">Free</div><div class="p-tag">Basic access</div></div>
-        <div class="p-price"><div class="p-amt">₹0</div><div class="p-dur">forever</div></div>
+        <!-- Loading -->
+        <div class="player-loading" id="pld" style="display:none">
+          <div class="pl-spin"></div>
+          <p>Loading stream... ⏳</p>
+        </div>
+
+        <!-- Placeholder -->
+        <div class="player-placeholder" id="pph">
+          <div class="pp-icon">🎬</div>
+          <p>Koi video select nahi hai<br>Bot se file bhejo — stream link milega!</p>
+        </div>
+
+        <!-- Controls Overlay -->
+        <div class="ctrl-bar" id="ctrl-bar">
+          <input type="range" class="ctrl-seek" id="ctrl-seek" min="0" max="100" value="0" oninput="seekV(this.value)">
+          <div class="ctrl-row">
+            <span class="ctrl-time" id="ct-cur">0:00</span>
+            <button class="ctrl-btn sm" onclick="skip(-10)" title="⏪ 10s">⏪</button>
+            <button class="ctrl-btn" id="ctrl-play" onclick="playPause()" style="font-size:22px">▶</button>
+            <button class="ctrl-btn sm" onclick="skip(10)" title="⏩ 10s">⏩</button>
+            <span class="ctrl-time" id="ct-dur">0:00</span>
+            <div class="ctrl-spacer"></div>
+            <span class="ctrl-fname" id="ctrl-fname"></span>
+            <button class="ctrl-spd" onclick="cycSpd()" id="ctrl-spd">1×</button>
+            <button class="ctrl-btn sm" onclick="togMute()">🔊</button>
+            <input type="range" class="ctrl-vol" id="ctrl-vol" min="0" max="100" value="100" oninput="setVol(this.value)">
+            <button class="ctrl-btn sm" onclick="doPiP()" title="PiP">🖼</button>
+            <button class="ctrl-btn sm" onclick="doRotate()" title="Rotate">🔄</button>
+            <button class="ctrl-btn sm" onclick="doZoom()" title="Zoom">🔍</button>
+            <button class="ctrl-btn sm" onclick="doFull()" title="Fullscreen">⛶</button>
+          </div>
+        </div>
       </div>
-      <div class="plan-feats">
-        <div class="feat"><span class="fi">✅</span><span class="ft">5 results per search</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">Language / Season / Episode filter</span></div>
-        <div class="feat dim"><span class="fi">❌</span><span class="ft">No shortlink verify</span></div>
-        <div class="feat dim"><span class="fi">❌</span><span class="ft">No force join</span></div>
-        <div class="feat dim"><span class="fi">❌</span><span class="ft">Stream &amp; Download</span></div>
-        <div class="feat dim"><span class="fi">❌</span><span class="ft">PM Search</span></div>
-      </div>
-      <button class="p-btn pb-f" onclick="toast('✅ Abhi free mein use karo!')">Free Use Karo</button>
     </div>
 
-    <!-- Silver -->
-    <div class="plan-card pc-s">
-      <div class="plan-hd">
-        <div class="p-ico pi-s">🥈</div>
-        <div class="p-meta"><div class="p-lbl pl-s">SILVER</div><div class="p-name">Silver</div><div class="p-tag">Starter plan</div></div>
-        <div class="p-price"><div class="p-amt"><sup>₹</sup>50</div><div class="p-dur">10 din</div></div>
+    <!-- File Info Bar -->
+    <div class="file-info-bar" id="file-info-bar">
+      <div class="fib-icon">🎬</div>
+      <div class="fib-meta">
+        <div class="fib-name" id="fib-name">No file loaded</div>
+        <div class="fib-detail" id="fib-detail">—</div>
       </div>
-      <div class="plan-feats">
-        <div class="feat"><span class="fi">✅</span><span class="ft"><b>10 results</b> per search</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">No shortlink verify</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">No force join</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">Language / Season / Episode / Send All</span></div>
-        <div class="feat dim"><span class="fi">❌</span><span class="ft">Stream &amp; Download</span></div>
-        <div class="feat dim"><span class="fi">❌</span><span class="ft">PM Search</span></div>
+      <div class="fib-actions">
+        <button class="fib-btn fib-link" onclick="copyStreamLink()" title="Copy Stream Link">🔗</button>
+        <button class="fib-btn fib-dl" onclick="doDl()" title="Download">⬇</button>
       </div>
-      <button class="p-btn pb-s" onclick="buyPlan('10days','Silver',10,50)">Silver Lo — ₹50 →</button>
     </div>
 
-    <!-- Gold -->
-    <div class="plan-card pc-g">
-      <div class="plan-hd">
-        <div class="p-ico pi-g">🥇</div>
-        <div class="p-meta"><div class="p-lbl pl-g">GOLD 🔥 POPULAR</div><div class="p-name">Gold</div><div class="p-tag">Most popular</div></div>
-        <div class="p-price"><div class="p-amt" style="color:var(--gold2)"><sup>₹</sup>150</div><div class="p-dur">30 din</div></div>
+    <!-- Quality/Player Options -->
+    <div style="padding:8px 14px">
+      <div class="sc" onclick="openQuality()" style="margin:0">
+        <div class="sc-t" style="margin-bottom:0"><div class="sc-i" style="background:rgba(108,99,255,.15)">⚙️</div><div><div class="sc-nm">Player Settings</div><div class="sc-sub">Quality • Speed • Subtitles • Aspect</div></div></div>
       </div>
-      <div class="plan-feats">
-        <div class="feat"><span class="fi">✅</span><span class="ft"><b>10 results</b> per search</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">No shortlink verify</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">No force join</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">All filters + Send All</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft"><b>Stream + Download</b></span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">PM Search</span></div>
-      </div>
-      <button class="p-btn pb-g" onclick="buyPlan('30days','Gold',30,150)">Gold Lo — ₹150 →</button>
-    </div>
-
-    <!-- Diamond -->
-    <div class="plan-card pc-d">
-      <div class="plan-hd">
-        <div class="p-ico pi-d">💎</div>
-        <div class="p-meta"><div class="p-lbl pl-d">DIAMOND</div><div class="p-name">Diamond</div><div class="p-tag">Power user — 2 mahine</div></div>
-        <div class="p-price"><div class="p-amt" style="color:var(--acc3)"><sup>₹</sup>200</div><div class="p-dur">60 din</div></div>
-      </div>
-      <div class="plan-feats">
-        <div class="feat"><span class="fi">✅</span><span class="ft">Sab Gold features</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft"><b>Priority support</b></span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">New features early access</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">Diamond badge 💎</span></div>
-      </div>
-      <button class="p-btn pb-d" onclick="buyPlan('60days','Diamond',60,200)">Diamond Lo — ₹200 →</button>
-    </div>
-
-    <!-- Elite -->
-    <div class="plan-card pc-e">
-      <div class="plan-hd">
-        <div class="p-ico pi-e">👑</div>
-        <div class="p-meta"><div class="p-lbl pl-e">ELITE 👑</div><div class="p-name">Elite</div><div class="p-tag">1 saal — best deal</div></div>
-        <div class="p-price"><div class="p-amt" style="color:#fca5a5"><sup>₹</sup>800</div><div class="p-dur">365 din</div></div>
-      </div>
-      <div class="plan-feats">
-        <div class="feat"><span class="fi">✅</span><span class="ft">Sab Diamond features</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">Elite badge 👑 exclusive</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft">Direct owner contact</span></div>
-        <div class="feat"><span class="fi">✅</span><span class="ft"><b>₹2.2/din</b> — cheapest plan</span></div>
-      </div>
-      <button class="p-btn pb-e" onclick="buyPlan('365days','Elite',365,800)">Elite Lo — ₹800 →</button>
-    </div>
-
-    <div class="foot">
-      <p>© 2025 <a href="https://t.me/asbhaibsr">@asbhaibsr</a> · <a href="https://t.me/asbhai_bsr">@asbhai_bsr</a></p>
     </div>
   </div>
 </div>
 
-<!-- ════ GROUP PREMIUM PAGE ════ -->
-<div class="pg" id="pg-group">
-  <div class="bbar">
-    <div class="bk" onclick="go('pg-home')">‹</div>
-    <div class="btit">🏘 Group Premium</div>
+<!-- ════ PREMIUM PANEL PAGE ════ -->
+<div class="pg" id="pg-panel">
+  <div class="prem-panel" id="prem-panel-locked">
+    <div class="pp-hd">
+      <h2>🔒 Premium Panel</h2>
+      <p>Sirf Premium users ke liye! Premium lo → Panel unlock hoga.</p>
+    </div>
+    <button class="bf bfp" style="margin:0 16px 16px;width:calc(100% - 32px)" onclick="go('pg-premium')">💎 Premium Lo →</button>
   </div>
 
-  <div class="earn-hero">
-    <h2>Group<br>Premium</h2>
-    <p>Apna Telegram group banao → Bot add karo → Shortlink lagao → Har user aapki shortlink verify karega = aapki earning!</p>
-    <div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:12px;margin-top:12px;font-size:12px;color:rgba(255,255,255,.7);line-height:1.7">
-      💡 Ye bot aapke group pe AAPKA kaam karega.<br>
-      Aapki shortlink se bot user ko file deta hai.<br>
-      Aapki shortlink ka paise = aapki kamaai!<br>
-      Bot ke apne ads ya force channel se ye ALAG hai.
-    </div>
-  </div>
-
-  <div class="page-pad">
-    <div class="slbl">📋 Setup Guide</div>
-    <div class="guide-card">
-      <div class="g-step">
-        <div class="g-num">1</div>
-        <div class="g-txt"><h4>Group Premium Kharido</h4><p>Niche se plan lo. Shortlink system milega.</p></div>
+  <div id="prem-panel-content" style="display:none">
+    <div class="prem-panel">
+      <div class="pp-hd">
+        <h2>💎 Premium Panel</h2>
+        <p>Welcome back, VIP! Tumhare special features:</p>
       </div>
-      <div class="g-step">
-        <div class="g-num">2</div>
-        <div class="g-txt"><h4>Shortlink Account Banao</h4><p>Koi bhi shortlink website par account banao. Wahan se API Key lo.</p></div>
+      <div class="pp-stats">
+        <div class="pp-stat"><div class="pps-n" id="pp-files">∞</div><div class="pps-l">Daily Files</div></div>
+        <div class="pp-stat"><div class="pps-n" id="pp-results">10</div><div class="pps-l">Results</div></div>
+        <div class="pp-stat"><div class="pps-n" id="pp-expiry">—</div><div class="pps-l">Days Left</div></div>
       </div>
-      <div class="g-step">
-        <div class="g-num">3</div>
-        <div class="g-txt"><h4>Bot Ko Admin Banao</h4><p>@AsBhaiDropBot ko group mein add karo aur admin banao.</p></div>
+      <div class="pp-feats">
+        <div class="pp-feat" onclick="go('pg-stream')"><div class="ppf-i">▶️</div><div><div class="ppf-t">HD Stream Player</div><div class="ppf-d">Multiple players — MX, VLC, HTML5</div></div></div>
+        <div class="pp-feat" onclick="openStreamGen()"><div class="ppf-i">🔗</div><div><div class="ppf-t">Stream Link Generator</div><div class="ppf-d">Direct stream link banao — share karo!</div></div></div>
+        <div class="pp-feat"><div class="ppf-i">🚀</div><div><div class="ppf-t">No Verify + No Force Join</div><div class="ppf-d">Direct search → file — zero waiting!</div></div></div>
+        <div class="pp-feat"><div class="ppf-i">📤</div><div><div class="ppf-t">Send All Button</div><div class="ppf-d">Ek click mein sab files PM mein!</div></div></div>
+        <div class="pp-feat"><div class="ppf-i">🔍</div><div><div class="ppf-t">PM Search</div><div class="ppf-d">Private mein search karo — unlimited!</div></div></div>
+        <div class="pp-feat"><div class="ppf-i">⬇️</div><div><div class="ppf-t">Direct Download</div><div class="ppf-d">Fast download links — no wait!</div></div></div>
+        <div class="pp-feat"><div class="ppf-i">🖼</div><div><div class="ppf-t">Picture-in-Picture</div><div class="ppf-d">Video chhota karke dekhte raho!</div></div></div>
+        <div class="pp-feat"><div class="ppf-i">🔄</div><div><div class="ppf-t">Rotate + Zoom</div><div class="ppf-d">Video rotate karo — landscape/portrait!</div></div></div>
       </div>
-      <div class="g-step">
-        <div class="g-num">4</div>
-        <div class="g-txt"><h4>Shortlink Set Karo</h4><p>Group mein command chalao:<br><code>/gshortlink API_KEY site.com 6 Label</code></p></div>
-      </div>
-      <div class="g-step">
-        <div class="g-num">5</div>
-        <div class="g-txt"><h4>Earning Shuru! 💸</h4><p>Har user aapki shortlink se verify karega. Paise aapke account mein!</p></div>
-      </div>
-    </div>
-
-    <div class="slbl">💰 Group Plans</div>
-
-    <!-- Group 1M -->
-    <div class="gplan" style="background:linear-gradient(135deg,#0e1525,#121e30);border-color:rgba(56,189,248,.3)">
-      <div class="gplan-hd">
-        <div style="display:flex;align-items:center;gap:14px">
-          <div style="width:50px;height:50px;border-radius:50%;background:rgba(56,189,248,.12);border:2px solid rgba(56,189,248,.3);display:grid;place-items:center;font-size:24px">🏆</div>
-          <div class="gplan-meta">
-            <div class="gpl gpl-1">GROUP PLAN</div>
-            <div class="gplan-nm">1 Mahina</div>
-            <div class="gplan-tg">Kamaai shuru karo!</div>
-          </div>
-        </div>
-        <div class="gplan-pr">
-          <div class="gplan-amt" style="color:var(--sky)"><sup>₹</sup>300</div>
-          <div class="gplan-dur">30 din</div>
-        </div>
-      </div>
-      <div class="gplan-feats">
-        <div>✅ Group shortlink system active</div>
-        <div>✅ Unlimited earning potential</div>
-        <div>✅ /gshortlink command</div>
-        <div>✅ /gstats se status dekho</div>
-      </div>
-      <div class="gplan-foot">
-        <div class="gplan-tag">1 Mahina — ₹300</div>
-        <button class="gbtn" onclick="buyGroupPlan('group_1m','Group 1 Mahina',30,300)">BUY →</button>
-      </div>
-    </div>
-
-    <!-- Group 2M -->
-    <div class="gplan" style="background:linear-gradient(135deg,#14102a,#1c1440);border-color:rgba(108,99,255,.4);box-shadow:0 0 20px rgba(108,99,255,.1)">
-      <div class="gplan-hd dk">
-        <div style="display:flex;align-items:center;gap:14px">
-          <div style="width:50px;height:50px;border-radius:50%;background:rgba(108,99,255,.12);border:2px solid rgba(108,99,255,.4);display:grid;place-items:center;font-size:24px">💎</div>
-          <div class="gplan-meta">
-            <div class="gpl gpl-2">GROUP PLAN 🔥</div>
-            <div class="gplan-nm">2 Mahine</div>
-            <div class="gplan-tg">Best value — ₹50 bachao!</div>
-          </div>
-        </div>
-        <div class="gplan-pr">
-          <div class="gplan-amt" style="color:var(--acc3)"><sup>₹</sup>550</div>
-          <div class="gplan-dur">60 din</div>
-        </div>
-      </div>
-      <div class="gplan-feats">
-        <div>✅ Sab 1-mahina features</div>
-        <div>✅ 2 mahine earning</div>
-        <div>✅ Priority support</div>
-        <div style="color:var(--acc3);font-weight:700">✅ ₹50 bachao!</div>
-      </div>
-      <div class="gplan-foot">
-        <div class="gplan-tag">2 Mahine — ₹550</div>
-        <button class="gbtn" onclick="buyGroupPlan('group_2m','Group 2 Mahine',60,550)">BUY →</button>
-      </div>
-    </div>
-
-    <div class="foot">
-      <p>© 2025 <a href="https://t.me/asbhaibsr">@asbhaibsr</a> · <a href="https://t.me/asbhai_bsr">@asbhai_bsr</a></p>
     </div>
   </div>
 </div>
 
 <!-- ════ REFER PAGE ════ -->
 <div class="pg" id="pg-refer">
-  <div class="bbar">
-    <div class="bk" onclick="go('pg-home')">‹</div>
-    <div class="btit">🔗 Refer &amp; Earn</div>
-  </div>
-
   <div class="refer-hero">
-    <h2>Refer Karo<br><span>Free Premium Pao</span></h2>
-    <p>Har 10 refer = 15 din FREE Premium. Apne dosto ko invite karo!</p>
+    <h2>🔗 <span>Refer</span> & Earn</h2>
+    <p>10 dost bulao → 15 din FREE premium!</p>
+  </div>
+  <div class="ref-box">
+    <div class="ref-num" id="ref-num">0</div>
+    <div class="ref-sub">Total Refers</div>
+    <div class="ref-bar"><div class="ref-fill" id="ref-fill" style="width:0%"></div></div>
+    <div class="ref-txt" id="ref-txt">0/10 — 10 aur chahiye</div>
+    <div class="ref-link">
+      <div class="ref-url" id="ref-url">Telegram se kholo</div>
+      <div style="cursor:pointer;font-size:16px" onclick="copyRef()">📋</div>
+    </div>
+    <button class="bf bfp" onclick="copyRef()">📋 Link Copy Karo</button>
+    <button class="bf bfs" onclick="shareRef()">📤 Dosto Ko Share Karo</button>
+  </div>
+  <div class="si-card">
+    <h3>📋 Kaise Kaam Karta Hai?</h3>
+    <p>1. Apna refer link copy karo ↑<br>2. Dosto ko share karo<br>3. Jab wo /start karein — refer count badhega<br>4. Har 10 refer = 15 din FREE Premium! 🎁</p>
+  </div>
+</div>
+
+<!-- ════ GROUP PREMIUM PAGE ════ -->
+<div class="pg" id="pg-group">
+  <div class="earn-hero">
+    <h2>🏘 Group Premium</h2>
+    <p>Apne group mein bot lagao — apni shortlink se kamao! 💰</p>
   </div>
 
-  <div class="page-pad">
-    <div class="slbl">📊 Your Refer Stats</div>
-    <div class="ref-box">
-      <div class="ref-num" id="ref-num">0</div>
-      <div class="ref-sub">Total Refers</div>
-      <div class="ref-bar" style="margin-top:12px"><div class="ref-fill" id="ref-fill"></div></div>
-      <div class="ref-txt" id="ref-txt">0/10 — 10 aur chahiye</div>
-      <div style="margin-top:14px;background:var(--s2);border:1px solid var(--bd);border-radius:11px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div style="font-size:11px;color:var(--t2);font-family:var(--mono);word-break:break-all;flex:1" id="ref-url">—</div>
-        <button class="cpbtn" onclick="copyRef()">COPY</button>
-      </div>
-      <button class="bf bfp" style="margin-top:12px" onclick="shareRef()">📤 Share Refer Link</button>
-    </div>
-
-    <div class="slbl" style="margin-top:20px">🎁 Reward System</div>
-    <div style="background:var(--s1);border:1px solid var(--bd2);border-radius:16px;overflow:hidden">
-      <div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px">
-        <div style="font-size:24px">🎯</div>
-        <div><div style="font-size:13px;font-weight:700">10 Refer Complete</div><div style="font-size:12px;color:var(--t2);margin-top:2px">15 din FREE Premium milega automatically!</div></div>
-      </div>
-      <div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px">
-        <div style="font-size:24px">🔔</div>
-        <div><div style="font-size:13px;font-weight:700">Har Naya Refer</div><div style="font-size:12px;color:var(--t2);margin-top:2px">Bot se notification aayega kitne refer baaki hain</div></div>
-      </div>
-      <div style="padding:14px 16px;display:flex;align-items:center;gap:12px">
-        <div style="font-size:24px">♾️</div>
-        <div><div style="font-size:13px;font-weight:700">Unlimited Refers</div><div style="font-size:12px;color:var(--t2);margin-top:2px">Jitne chahein utne refer karo — koi limit nahi!</div></div>
-      </div>
-    </div>
-
-    <div class="foot" style="margin-top:24px">
-      <p>© 2025 <a href="https://t.me/asbhaibsr">@asbhaibsr</a> · <a href="https://t.me/asbhai_bsr">@asbhai_bsr</a></p>
-    </div>
+  <div class="si-card">
+    <h3>💰 Kaise Earn Karein?</h3>
+    <p>1. Group Premium lo (₹300/month ya ₹500/2 months)<br>2. Bot ko group mein add karo<br>3. Apni shortlink set karo: <code>/gshortlink API_KEY modijiurl.com 6 MyLink</code><br>4. Users search karenge — tumhari shortlink aayegi = ₹ earn! 💸</p>
   </div>
+
+  <div class="plan-card" style="border-color:rgba(56,189,248,.3)">
+    <div class="plan-hd">
+      <div class="p-ico" style="background:linear-gradient(135deg,var(--sky),var(--cyan))">🏘</div>
+      <div class="p-meta"><div class="p-lbl" style="background:rgba(56,189,248,.2);color:var(--sky)">GROUP</div><div class="p-name">1 Month</div><div class="p-tag">Apni shortlink lagao</div></div>
+      <div class="p-price"><div class="p-amt" style="color:var(--sky)"><sup>₹</sup>300</div><div class="p-dur">30 din</div></div>
+    </div>
+    <div class="plan-feats">
+      <div class="feat"><span class="fi">✅</span><span class="ft">Apni shortlink set karo</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">Users verify = tumhari earning</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">Multiple shortlinks support</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">Owner approval system</span></div>
+    </div>
+    <button class="p-btn pb-s" onclick="buyGroupPlan('group_1m','Group 1 Month',30,300)">Group Premium — ₹300 →</button>
+  </div>
+
+  <div class="plan-card" style="border-color:rgba(34,197,94,.3)">
+    <div class="plan-hd">
+      <div class="p-ico" style="background:linear-gradient(135deg,var(--grn),#059669)">🏘</div>
+      <div class="p-meta"><div class="p-lbl" style="background:rgba(34,197,94,.2);color:var(--grn2)">GROUP PRO</div><div class="p-name">2 Months</div><div class="p-tag">Best value — extra 1 month!</div></div>
+      <div class="p-price"><div class="p-amt" style="color:var(--grn2)"><sup>₹</sup>500</div><div class="p-dur">60 din</div></div>
+    </div>
+    <div class="plan-feats">
+      <div class="feat"><span class="fi">✅</span><span class="ft">Sab 1-month features</span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft"><b>Save ₹100!</b></span></div>
+      <div class="feat"><span class="fi">✅</span><span class="ft">Priority support</span></div>
+    </div>
+    <button class="p-btn" style="background:linear-gradient(135deg,var(--grn),#059669)" onclick="buyGroupPlan('group_2m','Group 2 Months',60,500)">Group Pro — ₹500 →</button>
+  </div>
+
+  <div class="foot"><a href="https://t.me/asbhaibsr">@asbhaibsr</a><p>© AsBhai Drop Bot v3.0</p></div>
+</div>
+
+<!-- ════ HELP PAGE ════ -->
+<div class="pg" id="pg-help">
+  <div class="hero">
+    <h1>ℹ️ <span>Help</span> Guide</h1>
+    <p>Sab kuch jaano — A to Z!</p>
+  </div>
+  <div class="si-card"><h3>🔍 Search Kaise Karein?</h3><p>1. Group mein movie/show ka naam type karo<br>2. Channel join + shortlink verify karo (pehli baar)<br>3. Results aayenge — button dabao<br>4. PM mein file aayegi! 📥</p></div>
+  <div class="si-card"><h3>💎 Premium Kya Hai?</h3><p>Premium = No verify, no force join, HD stream, download link, 10 results, PM search, send all button! Premium lo — life set! 🏆</p></div>
+  <div class="si-card"><h3>▶️ Stream Kaise Karein?</h3><p>1. Bot se file mangao (PM mein aayegi)<br>2. Stream button dabao<br>3. HD player open hoga — enjoy! 🎬<br>4. Multiple players available — MX, VLC, HTML5!</p></div>
+  <div class="si-card"><h3>🔗 Refer System</h3><p>10 dosto ko refer karo = 15 din FREE premium!<br>Refer link: /referlink command se milega.</p></div>
+  <div class="si-card"><h3>🏘 Group Premium</h3><p>Group owners apni shortlink laga sakte hain!<br>₹300/month — users verify = tumhari earning! 💸</p></div>
+  <div class="si-card"><h3>📩 Contact</h3><p>Problem? Owner se baat karo: <b>@asbhaibsr</b></p></div>
+  
+  <!-- Help Message Form -->
+  <div class="si-card">
+    <h3>💬 Message Bhejo</h3>
+    <div class="fg" style="margin-top:8px"><input type="text" id="help-msg" placeholder="Apni problem ya suggestion likho..."></div>
+    <button class="bf bfp" onclick="sendHelp()">📩 Send Message</button>
+  </div>
+
+  <div class="foot"><a href="https://t.me/asbhaibsr">@asbhaibsr</a><p>© AsBhai Drop Bot v3.0</p></div>
 </div>
 
 <!-- ════ PAYMENT MODAL ════ -->
@@ -714,7 +631,7 @@ input::placeholder{color:var(--t3)}
         <div class="ubox">
           <div class="ulbl">UPI ID</div>
           <div class="uval">arsadsaifi8272@ibl</div>
-          <div class="ucp" onclick="copyUPI()">📋 Copy</div>
+          <div class="ucp" onclick="copyUPI()">📋 Copy UPI</div>
         </div>
       </div>
       <div class="ibox">
@@ -726,7 +643,8 @@ input::placeholder{color:var(--t3)}
       <div class="fg"><label>Transaction ID *</label><input type="text" id="txn-in" placeholder="UPI Ref No. ya TXN ID"></div>
       <div class="fg" id="grp-field" style="display:none">
         <label>Group ID / Username *</label>
-        <input type="text" id="grp-in" placeholder="@groupusername">
+        <input type="text" id="grp-in" placeholder="-100xxxxxxxxxx ya @groupname">
+        <p style="font-size:9px;color:var(--t3);margin-top:4px">⚠️ Sirf numeric Group ID use karo (e.g. -1001234567890)</p>
       </div>
       <div class="fg">
         <label>Screenshot (Optional)</label>
@@ -740,52 +658,41 @@ input::placeholder{color:var(--t3)}
   </div>
 </div>
 
+<!-- ════ QUALITY MODAL ════ -->
+<div class="quality-modal" id="quality-modal" onclick="if(event.target.id==='quality-modal')closeQuality()">
+  <div class="qm-body">
+    <div class="qm-title">⚙️ Player Settings</div>
+    <div class="qm-opt" onclick="setAspect('contain')"><div class="qm-i">📐</div><div><div class="qm-l">Fit to Screen</div><div class="qm-d">Default — black bars</div></div></div>
+    <div class="qm-opt" onclick="setAspect('cover')"><div class="qm-i">🔲</div><div><div class="qm-l">Fill Screen</div><div class="qm-d">Crop to fill — no bars</div></div></div>
+    <div class="qm-opt" onclick="setAspect('fill')"><div class="qm-i">⬜</div><div><div class="qm-l">Stretch</div><div class="qm-d">Stretch to fill</div></div></div>
+    <div class="qm-opt" onclick="doRotate()"><div class="qm-i">🔄</div><div><div class="qm-l">Rotate Video</div><div class="qm-d">90° rotate karo</div></div></div>
+    <div class="qm-opt" onclick="doZoom()"><div class="qm-i">🔍</div><div><div class="qm-l">Zoom Toggle</div><div class="qm-d">Zoom in/out karo</div></div></div>
+    <div class="qm-opt" onclick="doPiP()"><div class="qm-i">🖼</div><div><div class="qm-l">Picture-in-Picture</div><div class="qm-d">Chhota window mein dekho</div></div></div>
+    <div class="qm-opt" onclick="openExtPlayer()"><div class="qm-i">📱</div><div><div class="qm-l">Open in External Player</div><div class="qm-d">MX Player / VLC mein kholo</div></div></div>
+    <button class="bf bfs" onclick="closeQuality()" style="margin-top:12px">✕ Close</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<!-- ════ TAB BAR ════ -->
+<div class="tabs">
+  <div class="tb on" id="tab-home" onclick="switchTab('home')"><div class="ti">🏠</div>Home</div>
+  <div class="tb" id="tab-stream" onclick="switchTab('stream')"><div class="ti">▶️</div>Stream</div>
+  <div class="tb" id="tab-panel" onclick="switchTab('panel')"><div class="ti">💎</div>Panel</div>
+  <div class="tb" id="tab-refer" onclick="switchTab('refer')"><div class="ti">🔗</div>Refer</div>
+  <div class="tb" id="tab-help" onclick="switchTab('help')"><div class="ti">ℹ️</div>Help</div>
+</div>
+
 <script>
-/* © 2025 @asbhaibsr | @asbhai_bsr */
-(function(){
-  function _cr(){
-    var f=document.querySelector('.foot');
-    if(!f) return;
-    var links=f.querySelectorAll('a');
-    var ok=false;
-    for(var i=0;i<links.length;i++){
-      if(links[i].href&&links[i].href.indexOf('asbhaibsr')>=0){ok=true;break;}
-    }
-    if(!ok){console.error('[AsBhai] Copyright violation! @asbhaibsr');document.title='⚠ License';}
-  }
-  setInterval(_cr,8000);_cr();
-})();
+/* © 2025 @asbhaibsr | @asbhai_bsr — v3.0 Ultra */
+(function(){function _cr(){var f=document.querySelector('.foot');if(!f)return;var links=f.querySelectorAll('a');var ok=false;for(var i=0;i<links.length;i++){if(links[i].href&&links[i].href.indexOf('asbhaibsr')>=0){ok=true;break;}}if(!ok){console.error('[AsBhai] ©');}}setInterval(_cr,8000);_cr();})();
 
 /* PARTICLES */
-(function(){
-  var c=document.getElementById('pts');
-  if(!c) return;
-  var cols=['#6c63ff','#a78bfa','#f59e0b','#38bdf8','#22c55e'];
-  for(var i=0;i<16;i++){
-    var p=document.createElement('div');p.className='pt';
-    var sz=Math.random()*3+1;
-    p.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+Math.random()*100+'%;background:'+cols[i%cols.length]+';opacity:'+(Math.random()*.5+.1)+';animation-duration:'+(Math.random()*18+10)+'s;animation-delay:-'+(Math.random()*15)+'s';
-    c.appendChild(p);
-  }
-})();
+(function(){var c=document.getElementById('pts');if(!c)return;var cols=['#6c63ff','#a78bfa','#f59e0b','#38bdf8','#22c55e','#ec4899'];for(var i=0;i<20;i++){var p=document.createElement('div');p.className='pt';var sz=Math.random()*3+1;p.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+Math.random()*100+'%;background:'+cols[i%cols.length]+';opacity:'+(Math.random()*.5+.1)+';animation-duration:'+(Math.random()*18+10)+'s;animation-delay:-'+(Math.random()*15)+'s';c.appendChild(p);}})();
 
 /* TYPEWRITER */
-(function(){
-  var phrases=['ɪɴsᴛᴀɴᴛʟʏ.','ɪɴ sᴇᴄᴏɴᴅs.','ꜰᴏʀ ꜰʀᴇᴇ.','ᴇᴀsɪʟʏ.'];
-  var pi=0,ci=0,del=false,w=0;
-  var el=document.getElementById('typed');
-  if(!el) return;
-  function tick(){
-    if(w>0){w--;setTimeout(tick,80);return;}
-    var ph=phrases[pi];
-    if(!del){el.textContent=ph.substring(0,++ci);if(ci===ph.length){del=true;w=25;}}
-    else{el.textContent=ph.substring(0,--ci);if(ci===0){del=false;pi=(pi+1)%phrases.length;w=5;}}
-    setTimeout(tick,del?55:90);
-  }
-  setTimeout(tick,600);
-})();
+(function(){var phrases=['ɪɴsᴛᴀɴᴛʟʏ.','ɪɴ sᴇᴄᴏɴᴅs.','ꜰᴏʀ ꜰʀᴇᴇ.','ᴇᴀsɪʟʏ.','ɪɴ ʜᴅ.'];var pi=0,ci=0,del=false,w=0;var el=document.getElementById('typed');if(!el)return;function tick(){if(w>0){w--;setTimeout(tick,80);return;}var ph=phrases[pi];if(!del){el.textContent=ph.substring(0,++ci);if(ci===ph.length){del=true;w=25;}}else{el.textContent=ph.substring(0,--ci);if(ci===0){del=false;pi=(pi+1)%phrases.length;w=5;}}setTimeout(tick,del?55:90);}setTimeout(tick,600);})();
 
 /* TELEGRAM */
 var tg=(window.Telegram&&window.Telegram.WebApp)||null;
@@ -795,371 +702,417 @@ var UID=TGU&&TGU.id||null;
 var FNAME=(TGU&&TGU.first_name)||'User';
 var LNAME=(TGU&&TGU.last_name)||'';
 var UNAME=(TGU&&TGU.username)||null;
-
 var BASE=window.location.origin.replace('http://','https://');
 var UPI='arsadsaifi8272@ibl';
 var isPrem=false,trialUsed=false,selPlan=null;
-var curVid=null,curDl=null,ctlT=null;
+var curVid=null,curDl=null,curMid=null,ctlT=null;
 var SPDS=[0.25,0.5,0.75,1,1.25,1.5,2,2.5,3];var spIdx=3;
+var curRotation=0,curZoom=1,curEngine='html5';
 
-/* ── INIT ── */
+/* ══ INIT ══ */
 function init(){
-  /* Set user info immediately */
   setEl('uc-nm',FNAME+(LNAME?' '+LNAME:''));
   setEl('uc-un',UNAME?('@'+UNAME):'Username nahi');
   setEl('uc-id','ID: '+(UID||'—'));
+  if(!UID){setEl('nav-txt','FREE');setRefUI(0);return;}
 
-  if(!UID){
-    setEl('nav-txt','FREE');
-    setRefUI(0);
-    return;
-  }
-
-  var ctrl=new AbortController();
-  var tid=setTimeout(function(){ctrl.abort();},8000);
-  fetch(BASE+'/api/user_status/'+UID,{signal:ctrl.signal})
-    .then(function(r){clearTimeout(tid);return r.json();})
+  fetch(BASE+'/api/user_status/'+UID)
+    .then(function(r){return r.json();})
     .then(function(d){
       isPrem=d.is_premium||false;
       trialUsed=d.trial_used||false;
       var isTrial=d.is_trial||false;
       var expiry=d.expiry||null;
-      if(isPrem&&!isTrial){
-        setNavBadge('prem');
-        setUserCard('prem',expiry);
-      } else if(isTrial){
-        setNavBadge('trial');
-        setUserCard('trial',null);
-      } else {
-        setNavBadge('free');
-        setUserCard('free',null);
-      }
-      if(trialUsed) markTrialUsed();
+      if(isPrem&&!isTrial){setNavBadge('prem');setUserCard('prem',expiry);}
+      else if(isTrial){setNavBadge('trial');setUserCard('trial',null);}
+      else{setNavBadge('free');setUserCard('free',null);}
+      if(trialUsed)markTrialUsed();
       setRefUI(d.refer_count||0);
+      updatePremPanel(d);
       var ps=document.getElementById('prem-status');
-      if(ps) ps.textContent=isPrem?('✅ Premium Active'+(expiry?' — '+expiry:'')):'Free User — Upgrade karo!';
+      if(ps)ps.textContent=isPrem?('✅ Premium Active'+(expiry?' — '+expiry:'')):'Free User — Upgrade karo! 💎';
     })
-    .catch(function(){
-      clearTimeout(tid);
-      setNavBadge('free');
-      setRefUI(0);
-    });
-
+    .catch(function(){setNavBadge('free');setRefUI(0);});
   checkStream();
 }
 
-function setEl(id,val){
-  var e=document.getElementById(id);
-  if(e) e.textContent=val;
-}
+function setEl(id,val){var e=document.getElementById(id);if(e)e.textContent=val;}
+
 function setNavBadge(type){
-  var b=document.getElementById('nav-bdg');
-  var d=document.getElementById('nav-dot');
-  var t=document.getElementById('nav-txt');
-  if(!b||!d||!t) return;
+  var b=document.getElementById('nav-bdg'),d=document.getElementById('nav-dot'),t=document.getElementById('nav-txt');
+  if(!b||!d||!t)return;
   if(type==='prem'){b.className='nbdg nb-p';d.className='ndot np';t.textContent='PREMIUM ✓';}
   else if(type==='trial'){b.className='nbdg nb-t';d.className='ndot na';t.textContent='TRIAL ✓';}
   else{b.className='nbdg nb-f';d.className='ndot ng';t.textContent='FREE';}
 }
+
 function setUserCard(type,expiry){
-  var card=document.getElementById('user-card');
-  var av=document.getElementById('uc-av');
-  var lbl=document.getElementById('uc-lbl');
-  var ex=document.getElementById('uc-ex');
+  var card=document.getElementById('user-card'),av=document.getElementById('uc-av'),lbl=document.getElementById('uc-lbl'),ex=document.getElementById('uc-ex');
   if(type==='prem'){
-    if(card) card.className='user-card uc-p';
-    if(av){av.className='uc-av av-p';av.textContent='💎';}
+    if(card)card.className='user-card uc-p';if(av){av.className='uc-av av-p';av.textContent='💎';}
     if(lbl){lbl.className='uc-lbl ul-p';lbl.textContent='PREMIUM';}
     if(ex){ex.className='uc-ex ex-p';ex.textContent=expiry?'Expiry: '+expiry:'Active ✅';}
   } else if(type==='trial'){
-    if(card) card.className='user-card uc-t';
-    if(av){av.className='uc-av av-t';av.textContent='🆓';}
+    if(card)card.className='user-card uc-t';if(av){av.className='uc-av av-t';av.textContent='🆓';}
     if(lbl){lbl.className='uc-lbl ul-t';lbl.textContent='TRIAL';}
     if(ex){ex.className='uc-ex ex-t';ex.textContent='5 min trial active ⏰';}
   } else {
-    if(card) card.className='user-card uc-f';
-    if(av){av.className='uc-av av-f';av.textContent='👤';}
+    if(card)card.className='user-card uc-f';if(av){av.className='uc-av av-f';av.textContent='👤';}
     if(lbl){lbl.className='uc-lbl ul-f';lbl.textContent='FREE';}
-    if(ex){ex.className='uc-ex ex-f';ex.textContent='Upgrade karo → Premium lo';}
+    if(ex){ex.className='uc-ex ex-f';ex.textContent='Upgrade karo → Premium lo 💎';}
   }
 }
+
+function updatePremPanel(d){
+  if(isPrem){
+    var locked=document.getElementById('prem-panel-locked');
+    var content=document.getElementById('prem-panel-content');
+    if(locked)locked.style.display='none';
+    if(content)content.style.display='block';
+    if(d.expiry){
+      var exp=new Date(d.expiry);
+      var days=Math.max(0,Math.ceil((exp-new Date())/(1000*60*60*24)));
+      setEl('pp-expiry',days+'');
+    }
+  }
+}
+
 function setRefUI(count){
   setEl('ref-num',count);
   var fill=document.getElementById('ref-fill');
-  if(fill) fill.style.width=((count%10)*10)+'%';
+  if(fill)fill.style.width=((count%10)*10)+'%';
   var need=10-(count%10===0&&count>0?10:count%10);
   setEl('ref-txt',(count%10===0&&count>0?10:count%10)+'/10 — '+need+' aur chahiye');
   var ru=document.getElementById('ref-url');
-  if(ru) ru.textContent=UID?('https://t.me/AsBhaiDropBot?start=ref_'+UID):'Telegram se kholo';
+  if(ru)ru.textContent=UID?('https://t.me/AsBhaiDropBot?start=ref_'+UID):'Telegram se kholo';
 }
 
-/* ── TRIAL ── */
+/* ══ TAB NAVIGATION ══ */
+function switchTab(tab){
+  var map={home:'pg-home',stream:'pg-stream',panel:'pg-panel',refer:'pg-refer',help:'pg-help'};
+  go(map[tab]||'pg-home');
+  document.querySelectorAll('.tabs .tb').forEach(function(t){t.classList.remove('on');});
+  var el=document.getElementById('tab-'+tab);if(el)el.classList.add('on');
+}
+
+function go(id){
+  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});
+  var el=document.getElementById(id);if(el)el.classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+  // Sync tab
+  var tabMap={'pg-home':'tab-home','pg-premium':'tab-home','pg-stream':'tab-stream','pg-panel':'tab-panel','pg-refer':'tab-refer','pg-group':'tab-home','pg-help':'tab-help'};
+  document.querySelectorAll('.tabs .tb').forEach(function(t){t.classList.remove('on');});
+  var tabId=tabMap[id];if(tabId){var te=document.getElementById(tabId);if(te)te.classList.add('on');}
+}
+
+/* ══ TRIAL ══ */
 function claimTrial(){
-  if(trialUsed){toast('❌ Trial pehle le chuke ho!');return;}
+  if(trialUsed){toast('❌ Trial pehle le chuke ho! Premium lo.');return;}
   if(!UID){toast('❌ Telegram se kholo — /start karo');return;}
-  var card=document.getElementById('tc');
-  if(!card||card.classList.contains('used')) return;
+  var card=document.getElementById('tc');if(!card||card.classList.contains('used'))return;
   card.style.opacity='.5';card.style.pointerEvents='none';
-  var ctrl=new AbortController();
-  var tid=setTimeout(function(){ctrl.abort();},10000);
-  fetch(BASE+'/api/claim_trial',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({user_id:parseInt(UID)}),
-    signal:ctrl.signal
-  })
-  .then(function(r){clearTimeout(tid);if(!r.ok) throw new Error('Server '+r.status);return r.json();})
+  fetch(BASE+'/api/claim_trial',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:parseInt(UID)})})
+  .then(function(r){return r.json();})
   .then(function(d){
-    if(d.ok){
-      trialUsed=true;markTrialUsed();
-      setNavBadge('trial');setUserCard('trial',null);
-      toast('🆓 5 min trial shuru! Bot PM check karo!');
-    } else {
-      toast('❌ '+(d.error||d.message||'Error'));
-      card.style.opacity='';card.style.pointerEvents='';
-    }
-  })
-  .catch(function(e){
-    clearTimeout(tid);
-    toast(e.name==='AbortError'?'❌ Timeout':'❌ '+(e.message||'Error'));
-    card.style.opacity='';card.style.pointerEvents='';
-  });
+    if(d.ok){trialUsed=true;markTrialUsed();setNavBadge('trial');setUserCard('trial',null);toast('🆓 5 min trial shuru! Bot PM check karo!');}
+    else{toast('❌ '+(d.error||d.message||'Error'));card.style.opacity='';card.style.pointerEvents='';}
+  }).catch(function(e){toast('❌ '+(e.message||'Error'));card.style.opacity='';card.style.pointerEvents='';});
 }
 function markTrialUsed(){
-  var card=document.getElementById('tc');
-  if(!card) return;
-  card.classList.add('used');
+  var card=document.getElementById('tc');if(!card)return;card.classList.add('used');
   card.onclick=function(){toast('❌ Trial khatam! Premium lo.');};
   var h=card.querySelector('h4'),p=card.querySelector('p'),b=document.getElementById('tc-bdg');
-  if(h) h.textContent='Trial Khatam ✓';
-  if(p) p.textContent='Premium lo — unlimited use';
+  if(h)h.textContent='Trial Khatam ✓';if(p)p.textContent='Premium lo — unlimited use';
   if(b){b.textContent='USED';b.style.background='var(--red)';}
 }
 
-/* ── BUY ── */
-function buyPlan(planId,planName,days,price){
-  selPlan={id:planId,name:planName,days:days,price:price,isGroup:false};
-  openModal(planName+' — ₹'+price, price, false);
-}
-function buyGroupPlan(planId,planName,days,price){
-  selPlan={id:planId,name:planName,days:days,price:price,isGroup:true};
-  openModal(planName+' — ₹'+price, price, true);
-}
+/* ══ PAYMENT ══ */
+function buyPlan(planId,planName,days,price){selPlan={id:planId,name:planName,days:days,price:price,isGroup:false};openModal(planName+' — ₹'+price,price,false);}
+function buyGroupPlan(planId,planName,days,price){selPlan={id:planId,name:planName,days:days,price:price,isGroup:true};openModal(planName+' — ₹'+price,price,true);}
 function openModal(title,price,isGroup){
-  setEl('modal-title',title);
-  setEl('modal-amt','₹'+price);
-  var txn=document.getElementById('txn-in');
-  var gf=document.getElementById('grp-field');
-  var gi=document.getElementById('grp-in');
-  var sp=document.getElementById('ss-prev');
-  var sl=document.getElementById('ss-lbl');
-  var sb=document.getElementById('sub-btn');
-  if(txn) txn.value='';
-  if(gi) gi.value='';
-  if(gf) gf.style.display=isGroup?'block':'none';
-  if(sp) sp.style.display='none';
-  if(sl) sl.textContent='📷 Screenshot attach karo';
+  setEl('modal-title',title);setEl('modal-amt','₹'+price);
+  var txn=document.getElementById('txn-in'),gf=document.getElementById('grp-field'),gi=document.getElementById('grp-in'),sp=document.getElementById('ss-prev'),sl=document.getElementById('ss-lbl'),sb=document.getElementById('sub-btn');
+  if(txn)txn.value='';if(gi)gi.value='';if(gf)gf.style.display=isGroup?'block':'none';
+  if(sp)sp.style.display='none';if(sl)sl.textContent='📷 Screenshot attach karo';
   if(sb){sb.disabled=false;sb.textContent='✅ Submit Payment';}
-  var m=document.getElementById('pay-modal');
-  if(m) m.classList.add('on');
+  var m=document.getElementById('pay-modal');if(m)m.classList.add('on');
 }
-function closeModal(){
-  var m=document.getElementById('pay-modal');
-  if(m) m.classList.remove('on');
-}
+function closeModal(){var m=document.getElementById('pay-modal');if(m)m.classList.remove('on');}
 function copyUPI(){cp(UPI,'✅ UPI ID copied!');}
 function prevSS(inp){
-  if(!inp.files||!inp.files[0]) return;
-  var r=new FileReader();
-  r.onload=function(e){
-    var img=document.getElementById('ss-img');
-    var prev=document.getElementById('ss-prev');
-    var lbl=document.getElementById('ss-lbl');
-    if(img) img.src=e.target.result;
-    if(prev) prev.style.display='block';
-    if(lbl) lbl.textContent='✅ '+inp.files[0].name.slice(0,22);
-  };
-  r.readAsDataURL(inp.files[0]);
+  if(!inp.files||!inp.files[0])return;
+  var r=new FileReader();r.onload=function(e){
+    var img=document.getElementById('ss-img'),prev=document.getElementById('ss-prev'),lbl=document.getElementById('ss-lbl');
+    if(img)img.src=e.target.result;if(prev)prev.style.display='block';if(lbl)lbl.textContent='✅ '+inp.files[0].name.slice(0,22);
+  };r.readAsDataURL(inp.files[0]);
 }
 function submitPay(){
-  if(!selPlan) return;
-  if(!UID){toast('❌ Telegram se kholo');return;}
-  var txn=document.getElementById('txn-in');
-  if(!txn||!txn.value.trim()){toast('❌ TXN ID bharo!');if(txn) txn.focus();return;}
+  if(!selPlan)return;if(!UID){toast('❌ Telegram se kholo');return;}
+  var txn=document.getElementById('txn-in');if(!txn||!txn.value.trim()){toast('❌ TXN ID bharo!');if(txn)txn.focus();return;}
   if(selPlan.isGroup){
     var gi=document.getElementById('grp-in');
-    if(!gi||!gi.value.trim()){toast('❌ Group ID bharo!');if(gi) gi.focus();return;}
+    if(!gi||!gi.value.trim()){toast('❌ Group ID bharo!');if(gi)gi.focus();return;}
+    // FIX: Validate group_id is numeric
+    var gval=gi.value.trim();
+    if(!gval.startsWith('-')&&!gval.startsWith('@')&&isNaN(gval)){
+      toast('❌ Sahi Group ID daalo! (-100xxx ya @groupname)');gi.focus();return;
+    }
   }
-  var sb=document.getElementById('sub-btn');
-  if(sb){sb.disabled=true;sb.innerHTML='<span class="spi"></span>Submitting...';}
+  var sb=document.getElementById('sub-btn');if(sb){sb.disabled=true;sb.innerHTML='<span class="spi"></span>Submitting...';}
   var sf=document.getElementById('ss-file');
-  var ssPromise;
-  if(sf&&sf.files&&sf.files[0]){
-    ssPromise=new Promise(function(res){
-      var reader=new FileReader();
-      reader.onload=function(e){res(e.target.result);};
-      reader.onerror=function(){res('');};
-      reader.readAsDataURL(sf.files[0]);
-    });
-  } else {
-    ssPromise=Promise.resolve('');
-  }
+  var ssPromise=sf&&sf.files&&sf.files[0]?new Promise(function(res){var reader=new FileReader();reader.onload=function(e){res(e.target.result);};reader.onerror=function(){res('');};reader.readAsDataURL(sf.files[0]);}):Promise.resolve('');
   ssPromise.then(function(ss){
-    var gi=document.getElementById('grp-in');
-    var gid=selPlan.isGroup&&gi?gi.value.trim():null;
-    return fetch(BASE+'/api/submit_payment',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        user_id:UID,name:FNAME,
-        plan_id:selPlan.id,amount:selPlan.price,
-        txn_id:txn.value.trim(),screenshot:ss,
-        group_id:gid
-      })
-    });
-  })
-  .then(function(r){return r.json();})
+    var gi=document.getElementById('grp-in');var gid=selPlan.isGroup&&gi?gi.value.trim():null;
+    return fetch(BASE+'/api/submit_payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:UID,name:FNAME,plan_id:selPlan.id,amount:selPlan.price,txn_id:txn.value.trim(),screenshot:ss,group_id:gid})});
+  }).then(function(r){return r.json();})
   .then(function(d){
-    if(d.ok){closeModal();toast(d.message||'✅ Submit! Bot PM check karo — 1-2 ghante mein activate.');}
-    else{toast('❌ '+(d.error||d.message||'Submit fail — details check karo'));if(sb){sb.disabled=false;sb.textContent='✅ Submit Payment';}}
-  })
-  .catch(function(e){
-    toast('❌ '+(e.message||'Error'));
-    if(sb){sb.disabled=false;sb.textContent='✅ Submit Payment';}
-  });
+    if(d.ok){closeModal();toast(d.message||'✅ Submit! Bot PM check karo.');}
+    else{toast('❌ '+(d.error||d.message||'Error'));if(sb){sb.disabled=false;sb.textContent='✅ Submit Payment';}}
+  }).catch(function(e){toast('❌ '+(e.message||'Error'));if(sb){sb.disabled=false;sb.textContent='✅ Submit Payment';}});
 }
 function ctOwner(){closeModal();var u='https://t.me/asbhaibsr';tg?tg.openTelegramLink(u):window.open(u,'_blank');}
 
-/* ── REFER ── */
-function copyRef(){
-  var ru=document.getElementById('ref-url');
-  var t=ru?ru.textContent:'';
-  if(!t||!UID){toast('❌ Telegram se kholo');return;}
-  cp(t,'✅ Refer link copied!');
-}
-function shareRef(){
+/* ══ REFER ══ */
+function copyRef(){var ru=document.getElementById('ref-url');var t=ru?ru.textContent:'';if(!t||!UID){toast('❌ Telegram se kholo');return;}cp(t,'✅ Refer link copied!');}
+function shareRef(){if(!UID){toast('❌ Telegram se kholo');return;}var ru=document.getElementById('ref-url');var link=ru?ru.textContent:'';var url='https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent('🎬 Free movies is bot se!');tg?tg.openTelegramLink(url):window.open(url,'_blank');}
+
+/* ══ HELP ══ */
+function sendHelp(){
+  var inp=document.getElementById('help-msg');if(!inp||!inp.value.trim()){toast('❌ Message likho!');return;}
   if(!UID){toast('❌ Telegram se kholo');return;}
-  var ru=document.getElementById('ref-url');
-  var link=ru?ru.textContent:'';
-  var url='https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent('🎬 Free movies is bot se!');
-  tg?tg.openTelegramLink(url):window.open(url,'_blank');
+  fetch(BASE+'/api/help',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:UID,name:FNAME,message:inp.value.trim()})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){toast('✅ Message bhej diya!');inp.value='';}else toast('❌ '+(d.error||'Error'));})
+  .catch(function(e){toast('❌ '+(e.message||'Error'));});
 }
 
-/* ── STREAM ── */
+/* ════════════════════════════════════════ */
+/*  ULTRA HD STREAM PLAYER — v3.0          */
+/* ════════════════════════════════════════ */
 function checkStream(){
   var p=new URLSearchParams(window.location.search);
   var uid=p.get('uid')||UID;
   var mid=p.get('mid');
-  if(!mid && window.location.hash === '#stream') {
-    go('pg-stream'); return;
-  }
-  if(!mid) return;
-  go('pg-stream');
-  var how=document.getElementById('strm-how');
-  var sp=document.getElementById('strm-prem');
-  /* FIX: Check premium properly */
-  if(!uid && !isPrem){
-    if(sp) sp.style.display='block';
-    if(how) how.style.display='none';
+  if(!mid)return;
+  
+  switchTab('stream');
+  
+  if(!uid&&!isPrem){
+    document.getElementById('strm-prem').style.display='block';
+    document.getElementById('strm-player').style.display='none';
     return;
   }
-  if(how) how.style.display='none';
-  if(sp) sp.style.display='none';
-  /* FIX: Use proper stream URL with uid */
+  
+  document.getElementById('strm-prem').style.display='none';
+  document.getElementById('strm-player').style.display='block';
+  
+  curMid=mid;
   var streamUrl=BASE+'/stream_file/'+mid+'?uid='+(uid||UID||'');
   var dlUrl=BASE+'/download/'+mid+'?uid='+(uid||UID||'');
   loadVid(streamUrl,dlUrl,mid);
 }
+
 function loadVid(su,du,mid){
-  curVid=su;curDl=du||su;
-  var v=document.getElementById('vid');
-  var ph=document.getElementById('mxph');
-  var ld=document.getElementById('mxld');
-  var ov=document.getElementById('mxov');
-  if(v) v.style.display='none';
-  if(ph) ph.style.display='none';
-  if(ov) ov.style.display='none';
-  if(ld) ld.style.display='flex';
+  curVid=su;curDl=du||su;curMid=mid;
+  var v=document.getElementById('vid'),pld=document.getElementById('pld'),pph=document.getElementById('pph');
+  if(v)v.style.display='none';
+  if(pph)pph.style.display='none';
+  if(pld)pld.style.display='flex';
+  
+  // Load file info
   if(mid){
     fetch(BASE+'/file_info/'+mid)
-      .then(function(r){return r.json();})
-      .then(function(info){
-        setEl('mxfname',info.file_name||'');
-        setEl('mxfn',info.file_name||'');
-      })
-      .catch(function(){});
+    .then(function(r){return r.json();})
+    .then(function(info){
+      setEl('fib-name',info.file_name||'Video');
+      setEl('ctrl-fname',info.file_name||'');
+      var sz=info.file_size||0;
+      var szTxt=sz>1073741824?(sz/1073741824).toFixed(1)+' GB':sz>1048576?(sz/1048576).toFixed(1)+' MB':sz>1024?(sz/1024).toFixed(0)+' KB':'—';
+      var durTxt=info.duration?fmt(info.duration):'';
+      setEl('fib-detail',(szTxt||'—')+(durTxt?' • '+durTxt:'')+(info.mime_type?' • '+info.mime_type:''));
+    }).catch(function(){});
   }
-  if(!v) return;
-  /* FIX: Set video attributes for better streaming */
-  v.preload='auto';
-  v.playsInline=true;
-  v.crossOrigin='anonymous';
+  
+  if(!v)return;
+  v.preload='auto';v.playsInline=true;
   v.src=su;
-  v.onloadstart=function(){
-    if(v)v.style.display='block';
-    showCtrl();
-  };
-  v.onloadeddata=function(){
-    if(ld)ld.style.display='none';
-    if(v){v.style.display='block';}
-  };
+  
+  v.onloadstart=function(){if(v)v.style.display='block';showCtrl();};
+  v.onloadeddata=function(){if(pld)pld.style.display='none';if(v)v.style.display='block';};
   v.oncanplay=function(){
-    if(ld)ld.style.display='none';
-    if(v){
-      v.style.display='block';
-      v.play().catch(function(e){
-        toast('▶ Play button dabao');
-        updPl();
-      });
-    }
+    if(pld)pld.style.display='none';
+    if(v){v.style.display='block';v.play().catch(function(){toast('▶ Play button dabao');updPl();});}
     updPl();
   };
   v.ontimeupdate=function(){updSeek();updPl();};
-  v.onwaiting=function(){if(ld)ld.style.display='flex';};
-  v.onplaying=function(){if(ld)ld.style.display='none';updPl();};
+  v.onwaiting=function(){if(pld)pld.style.display='flex';};
+  v.onplaying=function(){if(pld)pld.style.display='none';updPl();};
   v.onended=function(){updPl();toast('🎬 Video khatam!');};
-  v.onerror=function(e){
-    console.error('Video error:',v.error);
-    if(v)v.style.display='none';
-    if(ld)ld.style.display='none';
-    if(ph){
-      ph.style.display='flex';
-      var m=ph.querySelector('p');
-      if(m) m.innerHTML='❌ Stream error — Premium check karo<br><br><button onclick="doDl()" style="background:var(--grn);color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer">⬇ Download Karo</button>';
+  v.onerror=function(){
+    if(v)v.style.display='none';if(pld)pld.style.display='none';
+    if(pph){
+      pph.style.display='flex';
+      var m=pph.querySelector('p');
+      if(m)m.innerHTML='❌ Stream error<br><br><button onclick="retryStream()" style="background:var(--acc);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;margin:4px">🔄 Retry</button><button onclick="doDl()" style="background:var(--grn);color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;margin:4px">⬇ Download</button><br><button onclick="openExtPlayer()" style="background:var(--sky);color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;margin:4px">📱 External Player</button>';
     }
   };
   v.load();
 }
-function togCtrl(){var mx=document.getElementById('mxp');if(!mx) return;if(mx.classList.contains('cv')){clearTimeout(ctlT);mx.classList.remove('cv');}else showCtrl();}
-function showCtrl(){var mx=document.getElementById('mxp');if(!mx) return;mx.classList.add('cv');clearTimeout(ctlT);var v=document.getElementById('vid');if(curVid&&v&&!v.paused)ctlT=setTimeout(function(){mx.classList.remove('cv');},3500);}
-function updPl(){var v=document.getElementById('vid'),b=document.getElementById('mxpl');if(b&&v)b.textContent=v.paused?'▶':'⏸';}
-function updSeek(){var v=document.getElementById('vid'),s=document.getElementById('mxsk');if(!v||!s||!v.duration) return;s.max=v.duration;s.value=v.currentTime;setEl('mxct',fmt(v.currentTime));setEl('mxdt',fmt(v.duration));}
-function fmt(s){var m=Math.floor(s/60),ss=Math.floor(s%60);return m+':'+(ss<10?'0':'')+ss;}
-function playPause(){var v=document.getElementById('vid');if(!curVid){toast('❌ Koi video nahi');return;}if(v.paused)v.play().catch(function(){toast('❌ Play failed');});else v.pause();updPl();showCtrl();}
-function seekV(val){var v=document.getElementById('vid');if(v&&v.duration)v.currentTime=parseFloat(val);showCtrl();}
-function skip(s){var v=document.getElementById('vid');if(!curVid||!v) return;v.currentTime=Math.max(0,Math.min(v.currentTime+s,v.duration||0));showCtrl();}
-function setVol(val){var v=document.getElementById('vid');if(v)v.volume=val/100;var vi=document.querySelector('.mx-vi');if(vi)vi.textContent=val==0?'🔇':'🔊';}
-function togMute(){var v=document.getElementById('vid'),vb=document.getElementById('mxvl'),vi=document.querySelector('.mx-vi');if(!v) return;v.muted=!v.muted;if(vb)vb.value=v.muted?0:v.volume*100;if(vi)vi.textContent=v.muted?'🔇':'🔊';}
-function cycSpd(){spIdx=(spIdx+1)%SPDS.length;var v=document.getElementById('vid');if(v)v.playbackRate=SPDS[spIdx];var l=SPDS[spIdx]+'×';setEl('mxspd',l);setEl('spd-lbl',l);toast('⚡ Speed: '+l);showCtrl();}
-function doFull(){var v=document.getElementById('vid');if(!curVid){toast('❌ Koi video nahi');return;}(v.requestFullscreen||v.webkitRequestFullscreen||v.mozRequestFullScreen).call(v);}
-function doPiP(){var v=document.getElementById('vid');if(!curVid||!v) return;if(document.pictureInPictureEnabled&&v.requestPictureInPicture)v.requestPictureInPicture().catch(function(){});}
-function doDl(){var u=curDl||curVid;if(!u){toast('❌ Koi video nahi');return;}window.open(u,'_blank');toast('⬇ Download starting...');}
 
-/* ── NAV ── */
-function go(id){
-  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});
-  var el=document.getElementById(id);
-  if(el) el.classList.add('on');
-  window.scrollTo({top:0,behavior:'smooth'});
+function retryStream(){
+  if(curMid){
+    toast('🔄 Retrying...');
+    var uid=new URLSearchParams(window.location.search).get('uid')||UID;
+    var su=BASE+'/stream_file/'+curMid+'?uid='+(uid||'')+'&t='+Date.now();
+    var du=BASE+'/download/'+curMid+'?uid='+(uid||'');
+    loadVid(su,du,curMid);
+  }
 }
 
-/* ── UTILS ── */
+/* ── Player Engine Switcher ── */
+function switchEngine(eng){
+  curEngine=eng;
+  document.querySelectorAll('.eng-btn').forEach(function(b){b.classList.remove('on');});
+  event.target.classList.add('on');
+  
+  var v=document.getElementById('vid'),wrap=document.getElementById('player-wrap');
+  if(!v)return;
+  
+  // Reset styles
+  v.style.filter='';wrap.style.background='#000';
+  
+  switch(eng){
+    case 'html5':
+      toast('🎬 HTML5 Player — Standard');break;
+    case 'mx':
+      v.style.filter='contrast(1.05) saturate(1.1)';
+      toast('📱 MX Style — Enhanced colors');break;
+    case 'vlc':
+      v.style.filter='brightness(1.05) contrast(1.02)';
+      wrap.style.background='#1a1a2e';
+      toast('🔶 VLC Style — Cinema mode');break;
+    case 'mini':
+      toast('⚡ Mini Player — Lightweight');break;
+  }
+}
+
+/* ── Player Controls ── */
+function togCtrl(){
+  var bar=document.getElementById('ctrl-bar');if(!bar)return;
+  if(bar.classList.contains('hide')){showCtrl();}
+  else{clearTimeout(ctlT);bar.classList.add('hide');}
+}
+function showCtrl(){
+  var bar=document.getElementById('ctrl-bar');if(!bar)return;
+  bar.classList.remove('hide');clearTimeout(ctlT);
+  var v=document.getElementById('vid');
+  if(curVid&&v&&!v.paused)ctlT=setTimeout(function(){bar.classList.add('hide');},4000);
+}
+function updPl(){var v=document.getElementById('vid'),b=document.getElementById('ctrl-play');if(b&&v)b.textContent=v.paused?'▶':'⏸';}
+function updSeek(){
+  var v=document.getElementById('vid'),s=document.getElementById('ctrl-seek');
+  if(!v||!s||!v.duration)return;
+  s.max=v.duration;s.value=v.currentTime;
+  setEl('ct-cur',fmt(v.currentTime));setEl('ct-dur',fmt(v.duration));
+}
+function fmt(s){if(isNaN(s))return'0:00';var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=Math.floor(s%60);return(h?h+':':'')+(h&&m<10?'0':'')+m+':'+(ss<10?'0':'')+ss;}
+function playPause(){
+  var v=document.getElementById('vid');if(!curVid){toast('❌ Koi video nahi');return;}
+  if(v.paused)v.play().catch(function(){toast('❌ Play failed');});else v.pause();
+  updPl();showCtrl();
+}
+function seekV(val){var v=document.getElementById('vid');if(v&&v.duration)v.currentTime=parseFloat(val);showCtrl();}
+function skip(s){var v=document.getElementById('vid');if(!curVid||!v)return;v.currentTime=Math.max(0,Math.min(v.currentTime+s,v.duration||0));showCtrl();toast((s>0?'⏩':'⏪')+' '+Math.abs(s)+'s');}
+function setVol(val){var v=document.getElementById('vid');if(v)v.volume=val/100;}
+function togMute(){var v=document.getElementById('vid'),vb=document.getElementById('ctrl-vol');if(!v)return;v.muted=!v.muted;if(vb)vb.value=v.muted?0:v.volume*100;toast(v.muted?'🔇 Muted':'🔊 Unmuted');}
+function cycSpd(){
+  spIdx=(spIdx+1)%SPDS.length;var v=document.getElementById('vid');
+  if(v)v.playbackRate=SPDS[spIdx];var l=SPDS[spIdx]+'×';
+  setEl('ctrl-spd',l);toast('⚡ Speed: '+l);showCtrl();
+}
+
+/* ── Fullscreen / PiP / Rotate / Zoom ── */
+function doFull(){
+  var wrap=document.getElementById('player-wrap');if(!wrap)return;
+  if(document.fullscreenElement){document.exitFullscreen();}
+  else{(wrap.requestFullscreen||wrap.webkitRequestFullscreen||wrap.mozRequestFullScreen).call(wrap);}
+}
+function doPiP(){
+  var v=document.getElementById('vid');if(!curVid||!v){toast('❌ Video load karo pehle');return;}
+  if(document.pictureInPictureElement){document.exitPictureInPicture();}
+  else if(document.pictureInPictureEnabled&&v.requestPictureInPicture){v.requestPictureInPicture().then(function(){toast('🖼 PiP mode ON!');}).catch(function(){toast('❌ PiP not supported');});}
+  else toast('❌ PiP not supported');
+  closeQuality();
+}
+function doRotate(){
+  curRotation=(curRotation+90)%360;
+  var v=document.getElementById('vid');if(!v)return;
+  v.style.transform='rotate('+curRotation+'deg)'+(curZoom!==1?' scale('+curZoom+')':'');
+  if(curRotation===90||curRotation===270){v.style.width='100vh';v.style.height='100vw';}
+  else{v.style.width='100%';v.style.height='100%';}
+  toast('🔄 Rotated: '+curRotation+'°');
+  closeQuality();
+}
+function doZoom(){
+  curZoom=curZoom>=2?1:curZoom+0.5;
+  var v=document.getElementById('vid');if(!v)return;
+  v.style.transform=(curRotation?'rotate('+curRotation+'deg) ':'')+'scale('+curZoom+')';
+  toast('🔍 Zoom: '+curZoom+'×');
+  closeQuality();
+}
+function setAspect(fit){
+  var v=document.getElementById('vid');if(!v)return;
+  v.style.objectFit=fit;toast('📐 Aspect: '+fit);
+  closeQuality();
+}
+function openQuality(){var m=document.getElementById('quality-modal');if(m)m.classList.add('on');}
+function closeQuality(){var m=document.getElementById('quality-modal');if(m)m.classList.remove('on');}
+
+/* ── External Player ── */
+function openExtPlayer(){
+  if(!curVid){toast('❌ Koi video nahi');return;}
+  // Try intent for Android MX Player / VLC
+  var intentUrl='intent:'+curVid+'#Intent;type=video/*;end';
+  var vlcUrl='vlc://'+curVid;
+  // Try MX Player first
+  try{window.location.href=intentUrl;}catch(e){}
+  // Fallback: open stream URL directly
+  setTimeout(function(){window.open(curVid,'_blank');},1000);
+  toast('📱 External player mein khol raha...');
+  closeQuality();
+}
+
+/* ── Download ── */
+function doDl(){
+  var u=curDl||curVid;if(!u){toast('❌ Koi video nahi');return;}
+  window.open(u,'_blank');toast('⬇ Download starting...');
+}
+
+/* ── Stream Link Copy ── */
+function copyStreamLink(){
+  if(!curMid){toast('❌ Koi file load nahi hai');return;}
+  var uid=new URLSearchParams(window.location.search).get('uid')||UID;
+  var link=BASE+'/?uid='+(uid||'')+'&mid='+curMid;
+  cp(link,'🔗 Stream link copied! Share karo.');
+}
+
+/* ── Stream Link Generator (Premium Panel) ── */
+function openStreamGen(){
+  var mid=prompt('File ka Message ID daalo (bot se milega):');
+  if(!mid||isNaN(mid)){toast('❌ Valid message ID daalo');return;}
+  var uid=UID||'';
+  var link=BASE+'/?uid='+uid+'&mid='+mid;
+  cp(link,'🔗 Stream link generated & copied!');
+  toast('🔗 Link: '+link);
+}
+
+/* ══ UTILS ══ */
 var _tt;
-function toast(msg){var t=document.getElementById('toast');if(!t) return;t.textContent=msg;t.classList.add('on');clearTimeout(_tt);_tt=setTimeout(function(){t.classList.remove('on');},3200);}
+function toast(msg){var t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('on');clearTimeout(_tt);_tt=setTimeout(function(){t.classList.remove('on');},3200);}
 function cp(txt,msg){if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){toast(msg||'✅ Copied!');}).catch(function(){fbCp(txt,msg);});}else fbCp(txt,msg);}
 function fbCp(txt,msg){var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast(msg||'✅ Copied!');}
 
 init();
 </script>
 </body>
-            </html>
+</html>
