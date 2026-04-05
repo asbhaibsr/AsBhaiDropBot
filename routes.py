@@ -1,7 +1,6 @@
 # ╔══════════════════════════════════════╗
 # ║  routes.py — AsBhai Drop Bot         ║
 # ║  aiohttp Streaming Server & API      ║
-# ║  © 2025 @asbhaibsr | @asbhai_bsr     ║
 # ╚══════════════════════════════════════╝
 import asyncio
 import base64
@@ -19,10 +18,9 @@ from config import (
 )
 from database import (
     premium_col, free_trial_col, users_col, payments_col, help_msgs_col,
-    is_premium, send_log
+    is_premium, send_log, add_premium
 )
 
-# ── Client references — set from bot.py ──
 bot = None
 userbot = None
 
@@ -31,16 +29,13 @@ def set_clients(b, u):
     bot = b
     userbot = u
 
-# ── aiohttp app ──
-aio_app = aio_web.Application()
+aio_app = aio_web.Application(client_max_size=50*1024*1024)  # 50MB max upload
 routes = aio_web.RouteTableDef()
 
 # ═══════════════════════════════════════
 #  STREAMING HELPERS
 # ═══════════════════════════════════════
-
 async def get_file_info(msg_id: int):
-    """File message se streaming info nikalo"""
     try:
         file_msg = await bot.get_messages(FILE_CHANNEL, msg_id)
         if not file_msg or file_msg.empty:
@@ -48,10 +43,12 @@ async def get_file_info(msg_id: int):
         f = None
         fname = f"file_{msg_id}"
         mime = "application/octet-stream"
+        duration = 0
         if file_msg.video:
             f = file_msg.video
             fname = f.file_name or f"video_{msg_id}.mp4"
             mime = f.mime_type or "video/mp4"
+            duration = f.duration or 0
         elif file_msg.document:
             f = file_msg.document
             fname = f.file_name or f"file_{msg_id}"
@@ -60,6 +57,7 @@ async def get_file_info(msg_id: int):
             f = file_msg.audio
             fname = f.file_name or f"audio_{msg_id}.mp3"
             mime = f.mime_type or "audio/mpeg"
+            duration = f.duration or 0
         if not f:
             return None
         return {
@@ -67,6 +65,7 @@ async def get_file_info(msg_id: int):
             "file_size": f.file_size or 0,
             "file_name": fname,
             "mime_type": mime,
+            "duration": duration,
             "msg": file_msg,
         }
     except Exception as e:
@@ -80,7 +79,6 @@ async def get_file_info(msg_id: int):
 
 @routes.get("/")
 async def home_handler(request):
-    """Mini app HTML serve karo"""
     try:
         with open("miniapp.html", "r", encoding="utf-8") as f:
             html = f.read()
@@ -104,7 +102,6 @@ async def stream_page_handler(request):
 
 @routes.get(r"/file_info/{msg_id:\d+}")
 async def file_info_handler(request: aio_web.Request):
-    """File metadata — mini app ke liye"""
     msg_id = int(request.match_info["msg_id"])
     info = await get_file_info(msg_id)
     if not info:
@@ -114,6 +111,7 @@ async def file_info_handler(request: aio_web.Request):
             "file_name": info["file_name"],
             "file_size": info["file_size"],
             "mime_type": info["mime_type"],
+            "duration": info.get("duration", 0),
         },
         headers={"Access-Control-Allow-Origin": "*"},
     )
@@ -122,8 +120,8 @@ async def file_info_handler(request: aio_web.Request):
 @routes.get(r"/stream_file/{msg_id:\d+}", allow_head=True)
 async def stream_file_handler(request: aio_web.Request):
     """
-    Pyrogram stream_media — unlimited size, range requests.
-    Browser mein seedha video play hogi.
+    FIX: Improved streaming with proper range requests and CORS.
+    Supports seeking, quality control, and all browsers.
     """
     msg_id = int(request.match_info["msg_id"])
 
@@ -133,6 +131,7 @@ async def stream_file_handler(request: aio_web.Request):
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
             "Access-Control-Allow-Headers": "Range, Content-Type",
+            "Access-Control-Max-Age": "86400",
         })
 
     # UID check — premium only for streaming
@@ -147,7 +146,6 @@ async def stream_file_handler(request: aio_web.Request):
         except Exception:
             pass
 
-    # File info
     info = await get_file_info(msg_id)
     if not info:
         return aio_web.json_response({"error": "File not found"}, status=404)
@@ -183,20 +181,25 @@ async def stream_file_handler(request: aio_web.Request):
         "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
         "Access-Control-Allow-Headers": "Range, Content-Type",
         "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
+        # Cache for 1 hour — better performance
+        "Cache-Control": "public, max-age=3600",
     }
 
     status   = 206 if range_header else 200
+    
+    # HEAD request — just return headers
+    if request.method == "HEAD":
+        return aio_web.Response(status=status, headers=headers)
+    
     response = aio_web.StreamResponse(status=status, headers=headers)
     await response.prepare(request)
 
-    # Stream via Pyrogram
     try:
         client = userbot if userbot else bot
         if not client:
             return aio_web.json_response({"error": "No client"}, status=503)
 
-        # 256 KB chunks — Pyrogram default
-        CHUNK = 1024 * 256
+        CHUNK = 1024 * 256  # 256 KB
         offset_kb    = from_bytes // CHUNK
         first_cut    = from_bytes - offset_kb * CHUNK
         bytes_written = 0
@@ -205,7 +208,6 @@ async def stream_file_handler(request: aio_web.Request):
         async for chunk in client.stream_media(file_msg, offset=offset_kb):
             if not chunk:
                 break
-            # First chunk — skip already-sent bytes
             if chunk_num == 0 and first_cut > 0:
                 chunk = chunk[first_cut:]
             chunk_num += 1
@@ -220,14 +222,16 @@ async def stream_file_handler(request: aio_web.Request):
 
             try:
                 await response.write(chunk)
-            except (ConnectionResetError, aio_web.ConnectionResetError):
-                break   # Client disconnected — normal
+            except (ConnectionResetError, ConnectionAbortedError):
+                break
+            except Exception:
+                break
             bytes_written += len(chunk)
             if bytes_written >= req_length:
                 break
 
-    except (aio_web.ConnectionResetError, ConnectionResetError):
-        pass   # User ne close kiya
+    except (ConnectionResetError, ConnectionAbortedError):
+        pass
     except Exception as e:
         logger.error(f"stream_file error msg_id={msg_id}: {type(e).__name__}: {e}")
 
@@ -240,7 +244,6 @@ async def stream_file_handler(request: aio_web.Request):
 
 @routes.get(r"/download/{msg_id:\d+}", allow_head=True)
 async def download_handler(request: aio_web.Request):
-    """Direct file download (attachment)"""
     msg_id = int(request.match_info["msg_id"])
     info = await get_file_info(msg_id)
     if not info:
@@ -258,6 +261,10 @@ async def download_handler(request: aio_web.Request):
         "Accept-Ranges":       "bytes",
         "Access-Control-Allow-Origin": "*",
     }
+    
+    if request.method == "HEAD":
+        return aio_web.Response(status=200, headers=headers)
+    
     response = aio_web.StreamResponse(status=200, headers=headers)
     await response.prepare(request)
 
@@ -268,9 +275,9 @@ async def download_handler(request: aio_web.Request):
                 break
             try:
                 await response.write(chunk)
-            except (ConnectionResetError, aio_web.ConnectionResetError):
+            except (ConnectionResetError, ConnectionAbortedError):
                 break
-    except (aio_web.ConnectionResetError, ConnectionResetError):
+    except (ConnectionResetError, ConnectionAbortedError):
         pass
     except Exception as e:
         logger.error(f"download error msg_id={msg_id}: {e}")
@@ -330,6 +337,7 @@ async def api_user_status(request):
 
 @routes.post("/api/submit_payment")
 async def api_submit_payment(request):
+    """FIX: Payment submit — PM mein message + approve/reject buttons"""
     try:
         data = await request.json()
     except Exception:
@@ -343,15 +351,29 @@ async def api_submit_payment(request):
     screenshot = data.get("screenshot", "")
     group_id   = data.get("group_id")
 
-    if not all([user_id, plan_id, txn_id]):
-        return aio_web.json_response({"ok": False, "error": "Saari details bharo!"}, status=400)
+    if not user_id:
+        return aio_web.json_response({"ok": False, "error": "Telegram se kholo — user ID nahi mila!"}, status=400)
+    
+    if not plan_id:
+        return aio_web.json_response({"ok": False, "error": "Plan select karo!"}, status=400)
+    
+    if not txn_id:
+        return aio_web.json_response({"ok": False, "error": "Transaction ID bharo!"}, status=400)
+
+    # Convert user_id to int safely
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        return aio_web.json_response({"ok": False, "error": "Invalid user ID!"}, status=400)
 
     existing = await payments_col.find_one({"txn_id": txn_id})
     if existing:
         return aio_web.json_response({"ok": False, "error": "Yeh TXN ID already submit ho chuki!"})
 
-    plan_days = {"10days": 10, "30days": 30, "60days": 60, "150days": 150,
-                 "365days": 365, "group_1m": 30, "group_2m": 60}
+    plan_days = {
+        "10days": 10, "30days": 30, "60days": 60, "150days": 150,
+        "365days": 365, "group_1m": 30, "group_2m": 60
+    }
     days = plan_days.get(str(plan_id), 30)
     is_group = str(plan_id).startswith("group_")
 
@@ -367,12 +389,12 @@ async def api_submit_payment(request):
     pay_id = str(result.inserted_id)
 
     pay_type = "🏘 GROUP PREMIUM" if is_group else "💎 USER PREMIUM"
-    group_info = f"\n🏘 Group: {group_id}" if is_group and group_id else ""
+    group_info = f"\n🏘 Group: `{group_id}`" if is_group and group_id else ""
     msg_text = (
-        f"💰 Naya Payment — {pay_type}\n\n"
+        f"💰 #NewPayment — {pay_type}\n\n"
         f"👤 {name} (`{user_id}`)\n"
-        f"📦 Plan: {plan_id} ({days} din)\n"
-        f"💵 Amount: ₹{amount}\n"
+        f"📦 Plan: **{plan_id}** ({days} din)\n"
+        f"💵 Amount: **₹{amount}**\n"
         f"🔖 TXN: `{txn_id}`"
         f"{group_info}\n"
         f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
@@ -382,34 +404,64 @@ async def api_submit_payment(request):
         InlineKeyboardButton("❌ Reject",  callback_data=f"pay_reject_{pay_id}_{user_id}"),
     ]])
 
-    # Screenshot ke saath ya bina
+    # Send to log channel + owner PM
+    sent_to_log = False
+    sent_to_owner = False
+    
     if screenshot and screenshot.startswith("data:image"):
         try:
             img_data = base64.b64decode(screenshot.split(",")[1])
             with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf:
                 tf.write(img_data)
                 tf_path = tf.name
-            await bot.send_photo(int(LOG_CHANNEL), tf_path, caption=msg_text, reply_markup=kb)
+            try:
+                await bot.send_photo(int(LOG_CHANNEL), tf_path, caption=msg_text, reply_markup=kb)
+                sent_to_log = True
+            except Exception as e:
+                logger.error(f"Log channel photo send error: {e}")
             try:
                 await bot.send_photo(int(OWNER_ID), tf_path, caption=msg_text, reply_markup=kb)
-            except Exception:
-                # Fallback: text PM
-                try:
-                    await bot.send_message(int(OWNER_ID), msg_text, reply_markup=kb)
-                except Exception: pass
+                sent_to_owner = True
+            except Exception as e:
+                logger.error(f"Owner PM photo error: {e}")
             _os.unlink(tf_path)
-        except Exception:
-            await send_log(msg_text, kb)
-    else:
-        await send_log(msg_text, kb)
-        # Also PM to owner
-        try:
-            if bot and OWNER_ID:
-                await bot.send_message(int(OWNER_ID), msg_text, reply_markup=kb)
         except Exception as e:
-            logger.debug(f"owner PM failed: {e}")
+            logger.error(f"Screenshot processing error: {e}")
+    
+    # Fallback: text message
+    if not sent_to_log:
+        try:
+            await bot.send_message(int(LOG_CHANNEL), msg_text, reply_markup=kb)
+            sent_to_log = True
+        except Exception as e:
+            logger.error(f"Log channel text error: {e}")
+    
+    if not sent_to_owner:
+        try:
+            await bot.send_message(int(OWNER_ID), msg_text, reply_markup=kb)
+            sent_to_owner = True
+        except Exception as e:
+            logger.error(f"Owner PM text error: {e}")
 
-    return aio_web.json_response({"ok": True, "message": "Request submit ho gayi! 1-2 ghante mein activate hoga."})
+    # Send confirmation to user PM
+    try:
+        if bot and user_id:
+            confirm_text = (
+                f"✅ **Payment Submit Ho Gayi!**\n\n"
+                f"📦 Plan: **{plan_id}** ({days} din)\n"
+                f"💵 Amount: **₹{amount}**\n"
+                f"🔖 TXN: `{txn_id}`\n\n"
+                f"⏳ Owner verify karega — **1-2 ghante** mein activate hoga!\n"
+                f"📩 Koi problem ho to @asbhaibsr se baat karo."
+            )
+            await bot.send_message(user_id, confirm_text)
+    except Exception as e:
+        logger.debug(f"User confirm PM failed: {e}")
+
+    return aio_web.json_response({
+        "ok": True, 
+        "message": "✅ Payment submit ho gayi! Bot PM check karo — 1-2 ghante mein activate hoga."
+    })
 
 
 @routes.post("/api/claim_trial")
@@ -421,19 +473,18 @@ async def api_claim_trial(request):
 
     user_id = data.get("user_id")
     if not user_id:
-        return aio_web.json_response({"ok": False, "error": "User ID missing"}, status=400)
+        return aio_web.json_response({"ok": False, "error": "Telegram se kholo — user ID nahi mila"}, status=400)
 
     try:
         user_id = int(user_id)
     except Exception:
         return aio_web.json_response({"ok": False, "error": "Invalid user ID"}, status=400)
 
-    # Already used?
+    from database import free_trial_col, premium_col
     doc = await free_trial_col.find_one({"user_id": user_id})
     if doc:
-        return aio_web.json_response({"ok": False, "message": "Trial pehle le chuke ho! Premium lo."})
+        return aio_web.json_response({"ok": False, "message": "❌ Trial pehle le chuke ho! Premium lo."})
 
-    # Set 5 minute premium
     expiry = now() + timedelta(minutes=5)
     await free_trial_col.insert_one({"user_id": user_id, "claimed_at": now()})
     await premium_col.update_one(
@@ -448,12 +499,11 @@ async def api_claim_trial(request):
         upsert=True,
     )
 
-    # PM send
     try:
         if bot:
             await bot.send_message(
                 user_id,
-                "🆓 Free Trial Shuru!\n\n"
+                "🆓 **Free Trial Shuru!**\n\n"
                 "5 minute ke liye Premium active hai!\n"
                 "Abhi group mein movie naam type karo!\n\n"
                 "⏰ 5 min baad khatam hoga.\n"
@@ -462,13 +512,12 @@ async def api_claim_trial(request):
     except Exception as e:
         logger.warning(f"Trial PM failed uid={user_id}: {e}")
 
-    # Log
     await send_log(
         f"🆓 #FreeTrial\n\n"
-        f"ɪᴅ - {user_id}\n"
+        f"ɪᴅ - `{user_id}`\n"
         f"ᴛɪᴍᴇ - {now_ist().strftime('%d %b %H:%M')} IST"
     )
-    return aio_web.json_response({"ok": True, "message": "Trial shuru! 5 min ke liye Premium active."})
+    return aio_web.json_response({"ok": True, "message": "✅ Trial shuru! 5 min ke liye Premium active. Bot PM check karo!"})
 
 
 @routes.post("/api/help")
@@ -484,7 +533,6 @@ async def api_help(request):
     if not msg_text:
         return aio_web.json_response({"ok": False, "error": "Message empty"}, status=400)
 
-    # DB save
     await help_msgs_col.insert_one({
         "user_id": user_id, "name": name,
         "message": msg_text, "time": now()
@@ -496,26 +544,20 @@ async def api_help(request):
         f"💬 {msg_text}\n"
         f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
     )
-
-    # Log channel
     await send_log(log_text)
-
-    # Owner PM
     try:
         if bot and OWNER_ID:
             await bot.send_message(int(OWNER_ID), log_text, disable_web_page_preview=True)
     except Exception as e:
         logger.debug(f"help owner PM failed: {e}")
 
-    return aio_web.json_response({"ok": True})
+    return aio_web.json_response({"ok": True, "message": "✅ Message bhej diya! Owner jaldi reply karega."})
 
 
 # ═══════════════════════════════════════
 #  SERVER START
 # ═══════════════════════════════════════
-
 async def run_aiohttp_server():
-    """aiohttp server start karo"""
     aio_app.add_routes(routes)
     runner = aio_web.AppRunner(aio_app)
     await runner.setup()
