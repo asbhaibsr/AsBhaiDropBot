@@ -212,14 +212,17 @@ async def stream_file_handler(request: aio_web.Request):
     await response.prepare(request)
 
     async def _do_stream(stream_client, stream_msg, from_b, req_len):
-        """Inner streaming function with retry on FILE_REFERENCE_EXPIRED"""
-        CHUNK = 1024 * 256  # 256 KB
-        offset_kb = from_b // CHUNK
-        first_cut = from_b - offset_kb * CHUNK
+        """
+        stream_media offset = chunk index to skip (each chunk = 1MB = 1024*1024 bytes).
+        So: offset = from_b // 1048576, first_cut = from_b % 1048576
+        """
+        STREAM_CHUNK = 1024 * 1024  # 1 MB — matches stream_media internal chunk size
+        offset = from_b // STREAM_CHUNK
+        first_cut = from_b % STREAM_CHUNK
         bytes_written = 0
         chunk_num = 0
 
-        async for chunk in stream_client.stream_media(stream_msg, offset=offset_kb):
+        async for chunk in stream_client.stream_media(stream_msg, offset=offset):
             if not chunk:
                 break
             if chunk_num == 0 and first_cut > 0:
