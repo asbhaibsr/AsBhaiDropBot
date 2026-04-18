@@ -49,6 +49,12 @@ warn_col          = db["warnings"]       # link warnings
 action_log_col    = db["action_logs"]    # all action logs
 search_cache_col  = db["search_cache"]   # temp search cache (MongoDB TTL auto-deletes)
 
+
+# ── db module signature ──
+_DB_SIG = "asbhaibsr:db:bccb363372fe71c4"  # © asbhaibsr — do not remove
+# ────────────────────────
+
+
 bot = None
 userbot = None
 
