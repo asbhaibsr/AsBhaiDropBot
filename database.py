@@ -1,7 +1,11 @@
-# ╔══════════════════════════════════════╗
-# ║  database.py — AsBhai Drop Bot       ║
-# ║  MongoDB Collections & Helper Fns    ║
-# ╚══════════════════════════════════════╝
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║         AsBhai Drop Bot — Database Engine                       ║
+# ║  © 2024-2025 asbhaibsr | https://github.com/asbhaibsr          ║
+# ║                                                                  ║
+# ║  Licensed under AsBhai Custom License.                          ║
+# ║  Unauthorized use or redistribution is prohibited.              ║
+# ║  GitHub: https://github.com/asbhaibsr/AsBhaiDropBot             ║
+# ╚══════════════════════════════════════════════════════════════════╝
 import asyncio, re, string, random
 from datetime import timedelta
 from pyrogram import enums
