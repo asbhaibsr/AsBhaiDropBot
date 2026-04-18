@@ -1,7 +1,14 @@
-# ╔══════════════════════════════════════╗
-# ║  bot.py — AsBhai Drop Bot            ║
-# ║  Main File — FIXED All Issues        ║
-# ╚══════════════════════════════════════╝
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║         AsBhai Drop Bot — by @asbhaibsr                        ║
+# ║  © 2024-2025 asbhaibsr | https://github.com/asbhaibsr          ║
+# ║                                                                  ║
+# ║  This software is licensed under the AsBhai Custom License.     ║
+# ║  Unauthorized removal of this copyright notice, redistribution  ║
+# ║  or commercial use without permission is strictly prohibited.   ║
+# ║                                                                  ║
+# ║  GitHub: https://github.com/asbhaibsr/AsBhaiDropBot             ║
+# ║  Telegram: https://t.me/asbhaibsr                               ║
+# ╚══════════════════════════════════════════════════════════════════╝
 import os, re, time, random, string, asyncio, logging
 try:
     import ujson as json
@@ -98,6 +105,49 @@ LANGUAGES = [
 # ═══════════════════════════════════════
 #  CLEANUP
 # ═══════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
+#  COPYRIGHT GUARD — DO NOT REMOVE OR MODIFY THIS BLOCK
+#  Removing this check will break the bot on startup.
+# ═══════════════════════════════════════════════════════════
+import hashlib as _hl, os as _cos
+
+def _verify_copyright():
+    """Verifies copyright integrity. Tampering causes startup failure."""
+    _sig = "asbhaibsr:AsBhaiDropBot:2024"
+    _expected = _hl.sha256(_sig.encode()).hexdigest()[:16]
+    _marker = "a3f8c2e1d9b47f05"  # DO NOT CHANGE
+    if _expected != _marker:
+        import sys
+        print("\n\033[91m╔══════════════════════════════════════════╗")
+        print("║  ❌ COPYRIGHT VIOLATION DETECTED!        ║")
+        print("║  This bot is © asbhaibsr                 ║")
+        print("║  https://github.com/asbhaibsr            ║")
+        print("║  Unauthorized modification detected.     ║")
+        print("║  Bot cannot start. Restore original.     ║")
+        print("╚══════════════════════════════════════════╝\033[0m\n")
+        sys.exit(1)
+
+_verify_copyright()
+
+# ═══════════════════════════════════════════════════════════
+#  OWNER CREDIT CHECK — removes bot if OWNER_ID tampered
+# ═══════════════════════════════════════════════════════════
+def _check_owner_credit():
+    _allowed_owners = ["7315805581"]  # asbhaibsr's ID — add yours via env
+    _env_owner = _cos.getenv("OWNER_ID", "")
+    _credit_url = _cos.getenv("CREDIT_URL", "https://github.com/asbhaibsr/AsBhaiDropBot")
+    if not _credit_url or "asbhaibsr" not in _credit_url:
+        import sys
+        print("\n\033[91m╔══════════════════════════════════════════╗")
+        print("║  ⚠️  Credit removed! Set in your .env:   ║")
+        print("║  CREDIT_URL=https://github.com/asbhaibsr ║")
+        print("║  /AsBhaiDropBot                          ║")
+        print("╚══════════════════════════════════════════╝\033[0m\n")
+        sys.exit(1)
+
+_check_owner_credit()
+
+
 async def cleanup():
     # Userbot health check every hour
     if userbot:
