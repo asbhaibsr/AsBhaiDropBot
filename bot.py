@@ -56,6 +56,7 @@ from database import (
     clean_caption, get_file_name, get_file_size, del_later, send_log,
     do_search, send_file_to_pm,
     check_link_in_message, get_user_warns, add_user_warn, reset_user_warns,
+    ensure_search_cache_ttl,
     set_clients as db_set_clients,
 )
 from routes import (
@@ -98,6 +99,16 @@ LANGUAGES = [
 #  CLEANUP
 # ═══════════════════════════════════════
 async def cleanup():
+    # ── Userbot health check & auto-reconnect ──
+    if userbot:
+        try:
+            if not userbot.is_connected:
+                logger.warning("⚠️ Userbot disconnected — reconnecting...")
+                await userbot.start()
+                logger.info("✅ Userbot reconnected!")
+        except Exception as ue:
+            logger.error(f"Userbot reconnect failed in cleanup: {ue}")
+
     one_day_ago = now() - timedelta(hours=24)
     req_deleted = await requests_col.delete_many({"time": {"$lt": one_day_ago}})
     if req_deleted.deleted_count:
@@ -2210,12 +2221,39 @@ def start_bot():
             if not loop or not loop.is_running(): return
             async def _start():
                 await run_aiohttp_server()
+
+                # ── Setup MongoDB TTL index for search cache ──
+                await ensure_search_cache_ttl()
+
+                # ── Userbot Watchdog: reconnects every 15 min if disconnected ──
+                async def _userbot_watchdog():
+                    while True:
+                        await asyncio.sleep(15 * 60)  # check every 15 minutes
+                        if userbot:
+                            try:
+                                if not userbot.is_connected:
+                                    logger.warning("⚠️ [Watchdog] Userbot disconnected — reconnecting...")
+                                    for attempt in range(1, 4):
+                                        try:
+                                            await userbot.start()
+                                            logger.info("✅ [Watchdog] Userbot reconnected!")
+                                            break
+                                        except Exception as e:
+                                            logger.error(f"[Watchdog] Reconnect attempt {attempt}/3: {e}")
+                                            await asyncio.sleep(15 * attempt)
+                                else:
+                                    logger.info("💚 [Watchdog] Userbot OK")
+                            except Exception as e:
+                                logger.error(f"[Watchdog] Error: {e}")
+
+                asyncio.ensure_future(_userbot_watchdog())
+
                 def _run_cleanup():
                     if bot.loop and bot.loop.is_running():
                         asyncio.run_coroutine_threadsafe(cleanup(), bot.loop)
                 scheduler.add_job(_run_cleanup, 'interval', hours=1)
                 scheduler.start()
-                logger.info("✅ Scheduler + aiohttp started")
+                logger.info("✅ Scheduler + aiohttp + userbot watchdog started")
             asyncio.run_coroutine_threadsafe(_start(), loop)
         except Exception as e:
             logger.error(f"Startup thread error: {e}")
