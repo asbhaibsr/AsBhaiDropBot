@@ -1,0 +1,72 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║              AsBhai Custom Source License (ACSL) v1.0                  ║
+║         Copyright © 2024–2025  asbhaibsr  |  @asbhaibsr               ║
+║              https://github.com/asbhaibsr/AsBhaiDropBot                ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+IMPORTANT — READ CAREFULLY BEFORE USING THIS SOFTWARE.
+
+By downloading, cloning, deploying, or using this software (AsBhai Drop Bot),
+you agree to be bound by the terms of this license. If you do not agree,
+you must not use this software.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. GRANT OF LICENSE
+   You are granted a limited, non-exclusive, non-transferable, revocable
+   license to use and deploy this software for personal, non-commercial
+   purposes only, provided that all conditions below are met.
+
+2. PERMITTED USE
+   ✅ Personal deployment on your own Telegram bot
+   ✅ Studying the source code for educational purposes
+   ✅ Reporting bugs or contributing improvements via Pull Request
+   ✅ Forking for personal use with attribution intact
+
+3. STRICTLY PROHIBITED
+   ❌ Selling or monetizing this software or any derivative without
+      written permission from the original author (@asbhaibsr)
+   ❌ Removing, altering, or hiding copyright notices in ANY file
+   ❌ Removing the CREDIT_URL or OWNER attribution checks from the code
+   ❌ Redistributing this software (publicly or privately) without
+      clearly crediting @asbhaibsr as the original author
+   ❌ Claiming this software as your own original work
+   ❌ Using this bot as a SaaS/service to charge end users without license
+
+4. COPYRIGHT NOTICE REQUIREMENT
+   All copies, forks, or deployments of this software MUST:
+   - Retain this LICENSE file in the repository
+   - Keep the copyright headers at the top of every source file
+   - Set CREDIT_URL=https://github.com/asbhaibsr/AsBhaiDropBot in .env
+   - Not modify or bypass the _verify_copyright() function in bot.py
+
+5. NO WARRANTY
+   This software is provided "as is", without warranty of any kind,
+   express or implied. The author shall not be liable for any damages
+   arising from use of this software.
+
+6. TERMINATION
+   Any violation of these terms automatically terminates your license.
+   Upon termination you must immediately cease all use and delete all
+   copies of the software.
+
+7. COMMERCIAL LICENSING
+   For commercial use, SaaS deployment, white-labeling, or selling bot
+   services built on this codebase — contact the author for a commercial
+   license:
+   
+   📱 Telegram: https://t.me/asbhaibsr
+   🔗 GitHub:   https://github.com/asbhaibsr
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HOW TO USE LEGALLY:
+  1. Deploy with CREDIT_URL=https://github.com/asbhaibsr/AsBhaiDropBot in .env
+  2. Keep all copyright headers in source files
+  3. Do not sell access to bots built on this code
+  4. Star the repo: https://github.com/asbhaibsr/AsBhaiDropBot ⭐
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                © 2024–2025 asbhaibsr. All rights reserved.
+              "Jo apni mehnat churaaye, woh chor hota hai." 🔒
