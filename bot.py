@@ -99,15 +99,15 @@ LANGUAGES = [
 #  CLEANUP
 # ═══════════════════════════════════════
 async def cleanup():
-    # ── Userbot health check & auto-reconnect ──
+    # Userbot health check every hour
     if userbot:
         try:
             if not userbot.is_connected:
-                logger.warning("⚠️ Userbot disconnected — reconnecting...")
+                logger.warning("⚠️ [Cleanup] Userbot disconnected — reconnecting...")
                 await userbot.start()
-                logger.info("✅ Userbot reconnected!")
-        except Exception as ue:
-            logger.error(f"Userbot reconnect failed in cleanup: {ue}")
+                logger.info("✅ [Cleanup] Userbot reconnected!")
+        except Exception as _ue:
+            logger.error(f"[Cleanup] Userbot reconnect: {_ue}")
 
     one_day_ago = now() - timedelta(hours=24)
     req_deleted = await requests_col.delete_many({"time": {"$lt": one_day_ago}})
@@ -734,16 +734,7 @@ async def search_handler(client, message: Message):
 
         result_msg = await message.reply(result_text, reply_markup=kb)
 
-        # Log search
-        await send_log(
-            f"🔍 #Search\n\n"
-            f"👤 {message.from_user.mention} (`{uid}`)\n"
-            f"🔍 `{query}`\n"
-            f"📦 Results: {count_text}\n"
-            f"💎 Premium: {'✅' if prem else '❌'}\n"
-            f"🏘 {message.chat.title}\n"
-            f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
-        )
+        # Search log removed
 
         if gs.get("auto_delete", True):
             asyncio.create_task(del_later(result_msg, t))
@@ -2208,6 +2199,23 @@ def start_bot():
     if userbot:
         userbot.start()
         logger.info("✅ Userbot started")
+        # CHANNEL_INVALID fix: userbot ko FILE_CHANNEL join karwao
+        import threading as _threading
+        def _join_file_channel():
+            import time as _t; _t.sleep(5)
+            async def _do_join():
+                try:
+                    await userbot.get_chat(FILE_CHANNEL)
+                    logger.info("✅ Userbot already in FILE_CHANNEL")
+                except Exception:
+                    try:
+                        await userbot.join_chat(FILE_CHANNEL)
+                        logger.info("✅ Userbot joined FILE_CHANNEL!")
+                    except Exception as _je:
+                        logger.warning(f"⚠️ Userbot channel join: {_je}")
+            if userbot.loop and userbot.loop.is_running():
+                asyncio.run_coroutine_threadsafe(_do_join(), userbot.loop)
+        _threading.Thread(target=_join_file_channel, daemon=True).start()
     else:
         logger.warning("⚠️ STRING_SESSION missing!")
 
@@ -2222,30 +2230,29 @@ def start_bot():
             async def _start():
                 await run_aiohttp_server()
 
-                # ── Setup MongoDB TTL index for search cache ──
+                # MongoDB TTL index for search cache
                 await ensure_search_cache_ttl()
 
-                # ── Userbot Watchdog: reconnects every 15 min if disconnected ──
+                # Userbot watchdog — reconnects every 15 min if disconnected
                 async def _userbot_watchdog():
                     while True:
-                        await asyncio.sleep(15 * 60)  # check every 15 minutes
+                        await asyncio.sleep(15 * 60)
                         if userbot:
                             try:
                                 if not userbot.is_connected:
-                                    logger.warning("⚠️ [Watchdog] Userbot disconnected — reconnecting...")
-                                    for attempt in range(1, 4):
+                                    logger.warning("⚠️ [Watchdog] Userbot down — reconnecting...")
+                                    for _att in range(1, 4):
                                         try:
                                             await userbot.start()
                                             logger.info("✅ [Watchdog] Userbot reconnected!")
                                             break
-                                        except Exception as e:
-                                            logger.error(f"[Watchdog] Reconnect attempt {attempt}/3: {e}")
-                                            await asyncio.sleep(15 * attempt)
+                                        except Exception as _e:
+                                            logger.error(f"[Watchdog] Attempt {_att}/3: {_e}")
+                                            await asyncio.sleep(15 * _att)
                                 else:
                                     logger.info("💚 [Watchdog] Userbot OK")
-                            except Exception as e:
-                                logger.error(f"[Watchdog] Error: {e}")
-
+                            except Exception as _we:
+                                logger.error(f"[Watchdog] Error: {_we}")
                 asyncio.ensure_future(_userbot_watchdog())
 
                 def _run_cleanup():
@@ -2253,7 +2260,7 @@ def start_bot():
                         asyncio.run_coroutine_threadsafe(cleanup(), bot.loop)
                 scheduler.add_job(_run_cleanup, 'interval', hours=1)
                 scheduler.start()
-                logger.info("✅ Scheduler + aiohttp + userbot watchdog started")
+                logger.info("✅ Scheduler + aiohttp + watchdog started")
             asyncio.run_coroutine_threadsafe(_start(), loop)
         except Exception as e:
             logger.error(f"Startup thread error: {e}")
