@@ -43,26 +43,21 @@ group_sl_col      = db["group_shortlinks"]
 group_settings_col = db["group_settings"]
 warn_col          = db["warnings"]       # link warnings
 action_log_col    = db["action_logs"]    # all action logs
-search_cache_col  = db["search_cache"]   # temporary search result cache (auto-expires)
+search_cache_col  = db["search_cache"]   # temp search cache (MongoDB TTL auto-deletes)
 
 bot = None
 userbot = None
 
 # ═══════════════════════════════════════
-#  SEARCH CACHE — TTL INDEX SETUP
-#  MongoDB automatically deletes docs after 'expire_at'
+#  SEARCH CACHE TTL INDEX
 # ═══════════════════════════════════════
 async def ensure_search_cache_ttl():
-    """Create TTL index on search_cache so MongoDB auto-deletes expired entries."""
+    """MongoDB TTL index — auto-delete search cache docs after expire_at."""
     try:
-        await search_cache_col.create_index(
-            "expire_at",
-            expireAfterSeconds=0,
-            background=True
-        )
+        await search_cache_col.create_index("expire_at", expireAfterSeconds=0, background=True)
         logger.info("✅ search_cache TTL index ready")
     except Exception as e:
-        logger.warning(f"search_cache TTL index warning: {e}")
+        logger.warning(f"search_cache TTL index: {e}")
 
 # ═══════════════════════════════════════
 #  SETTINGS
@@ -613,14 +608,7 @@ async def verify_check(client, message, prem=False):
         reply_markup=kb
     )
 
-    # Log shortlink shown
-    await send_log(
-        f"🔗 #ShortlinkShown\n\n"
-        f"👤 `{uid}` | {message.from_user.first_name}\n"
-        f"🔗 {sl_label} | Step {done_count+1}/{total}\n"
-        f"🔍 Query: `{query_text[:40]}`\n"
-        f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
-    )
+    # ShortlinkShown log removed
 
     asyncio.create_task(del_later(msg, 300))
     return False
@@ -700,17 +688,14 @@ async def send_log(text, reply_markup=None):
         logger.debug(f"send_log failed: {e}")
 
 # ═══════════════════════════════════════
-#  SEARCH
+#  SEARCH — 3-Layer: Userbot → Bot → MongoDB Cache
 # ═══════════════════════════════════════
 async def do_search(query, limit=5):
     """
-    Search Strategy (3-layer):
-    1. Try userbot search_messages (fastest, full Telegram search)
-    2. If userbot fails → try bot search_messages (fallback)
-    3. If both fail → serve from MongoDB search_cache (offline fallback)
-
-    On success → save results to MongoDB search_cache (expires in 10 min).
-    Cache keeps msg_id + metadata only (no file_reference, always re-fetched fresh).
+    Layer 1: Userbot search_messages (best — full Telegram search)
+    Layer 2: Bot fallback (limited but better than nothing)
+    Layer 3: MongoDB search_cache (offline backup, serves stale results)
+    On success: saves to MongoDB cache (expires 10 min via TTL index)
     """
     query = query.strip()
     words = [w.lower() for w in query.split() if len(w) > 1]
@@ -718,7 +703,7 @@ async def do_search(query, limit=5):
 
     cache_key = query.lower()[:100]
 
-    # ── Build search query variants ──
+    # Build search query variants
     search_queries = []
     if len(words) > 1:
         search_queries.append(query)
@@ -727,12 +712,10 @@ async def do_search(query, limit=5):
     if longest not in search_queries:
         search_queries.append(longest)
 
-    # ── LAYER 1 & 2: Try live Telegram search ──
+    # Layer 1 & 2 — live Telegram search
     clients_to_try = []
-    if userbot:
-        clients_to_try.append(("userbot", userbot))
-    if bot:
-        clients_to_try.append(("bot", bot))
+    if userbot: clients_to_try.append(("userbot", userbot))
+    if bot:     clients_to_try.append(("bot", bot))
 
     for client_name, search_client in clients_to_try:
         results = []
@@ -756,74 +739,57 @@ async def do_search(query, limit=5):
             if results:
                 results.sort(key=lambda x: x[0], reverse=True)
                 top_msgs = [m for _, m in results[:limit]]
-
-                # ── Save to MongoDB cache (expires in 10 min) ──
+                # Save to cache in background
                 asyncio.ensure_future(_save_search_cache(cache_key, top_msgs))
-
                 logger.info(f"✅ Search [{query}] via {client_name} → {len(top_msgs)} results")
                 return top_msgs
 
-            # Search ran fine but no results — still return empty (don't try next client)
-            logger.info(f"Search [{query}] via {client_name} → 0 results")
+            logger.info(f"Search [{query}] via {client_name} → 0 results (no match)")
             return []
 
         except Exception as e:
             logger.error(f"search error [{query}] via {client_name}: {e}")
-
-            # ── Userbot disconnect? Try reconnect in background ──
             if client_name == "userbot":
                 asyncio.ensure_future(_reconnect_userbot())
-
-            # Continue to next client
             continue
 
-    # ── LAYER 3: All live clients failed — serve from MongoDB cache ──
-    logger.warning(f"⚠️ Live search failed for [{query}] — checking cache...")
+    # Layer 3 — MongoDB cache fallback
+    logger.warning(f"⚠️ Live search failed [{query}] — checking cache...")
     cached = await _get_search_cache(cache_key)
     if cached:
-        logger.info(f"📦 Serving [{query}] from cache ({len(cached)} results)")
+        logger.info(f"📦 Cache hit [{query}] → {len(cached)} results")
         return cached
 
-    logger.error(f"❌ All search layers failed for [{query}]")
+    logger.error(f"❌ All search layers failed [{query}]")
     return []
 
 
 async def _reconnect_userbot():
-    """Reconnect userbot in background — retries 3 times with delay."""
+    """Background userbot reconnect — 3 attempts with backoff."""
     global userbot
-    if not userbot:
-        return
+    if not userbot: return
     for attempt in range(1, 4):
         try:
-            if userbot.is_connected:
-                return  # Already reconnected
+            if userbot.is_connected: return
             logger.info(f"🔄 Userbot reconnect attempt {attempt}/3...")
             await userbot.start()
             logger.info("✅ Userbot reconnected!")
             return
         except Exception as e:
-            logger.error(f"Userbot reconnect attempt {attempt} failed: {e}")
-            await asyncio.sleep(10 * attempt)  # 10s, 20s, 30s
+            logger.error(f"Userbot reconnect {attempt}/3 failed: {e}")
+            await asyncio.sleep(10 * attempt)
 
 
 async def _save_search_cache(cache_key: str, msgs: list):
-    """
-    Save search results to MongoDB search_cache.
-    Stores only msg_id + display metadata (no stale file_reference).
-    MongoDB TTL index auto-deletes after expire_at (10 min).
-    """
+    """Save top search results to MongoDB — auto-expires in 10 min via TTL."""
     from datetime import datetime, timezone, timedelta
     try:
         docs = []
         for msg in msgs:
             name = ""
-            if msg.caption:
-                name = msg.caption[:200]
-            elif msg.document and msg.document.file_name:
-                name = msg.document.file_name[:200]
-            elif msg.text:
-                name = msg.text[:200]
-
+            if msg.caption: name = msg.caption[:200]
+            elif msg.document and msg.document.file_name: name = msg.document.file_name[:200]
+            elif msg.text: name = msg.text[:200]
             docs.append({
                 "msg_id": msg.id,
                 "name": name,
@@ -831,60 +797,39 @@ async def _save_search_cache(cache_key: str, msgs: list):
                 "file_size": msg.document.file_size if msg.document else None,
                 "mime_type": msg.document.mime_type if msg.document else None,
             })
-
         expire_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-
         await search_cache_col.update_one(
             {"_id": cache_key},
-            {"$set": {
-                "results": docs,
-                "expire_at": expire_at,
-                "saved_at": datetime.now(timezone.utc)
-            }},
+            {"$set": {"results": docs, "expire_at": expire_at}},
             upsert=True
         )
-        logger.info(f"💾 Cache saved for [{cache_key}] — expires in 10 min ({len(docs)} files)")
+        logger.info(f"💾 Cache saved [{cache_key}] — {len(docs)} files, expires 10min")
     except Exception as e:
         logger.error(f"Cache save error: {e}")
 
 
 async def _get_search_cache(cache_key: str) -> list:
-    """
-    Fetch cached search results from MongoDB.
-    Returns list of Telegram messages fetched fresh by msg_id.
-    """
+    """Read cached results from MongoDB, re-fetch fresh messages by ID."""
     from datetime import datetime, timezone
     try:
         doc = await search_cache_col.find_one({"_id": cache_key})
-        if not doc:
-            return []
-
-        # Double-check expiry (TTL might have tiny lag)
+        if not doc: return []
         if doc.get("expire_at") and doc["expire_at"] < datetime.now(timezone.utc):
             await search_cache_col.delete_one({"_id": cache_key})
             return []
-
         msg_ids = [r["msg_id"] for r in doc.get("results", []) if "msg_id" in r]
-        if not msg_ids:
-            return []
-
-        # Re-fetch fresh messages by ID (avoids stale file_reference)
-        fresh_msgs = []
+        if not msg_ids: return []
         fetch_client = userbot if (userbot and userbot.is_connected) else bot
-        if not fetch_client:
-            return []
-
+        if not fetch_client: return []
+        fresh_msgs = []
         for mid in msg_ids:
             try:
                 msg = await fetch_client.get_messages(FILE_CHANNEL, mid)
                 if msg and not msg.empty:
                     fresh_msgs.append(msg)
             except Exception as e:
-                logger.warning(f"Cache re-fetch failed for msg {mid}: {e}")
-                continue
-
+                logger.warning(f"Cache re-fetch msg {mid}: {e}")
         return fresh_msgs
-
     except Exception as e:
         logger.error(f"Cache read error: {e}")
         return []
@@ -1004,14 +949,7 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
                 "Ek aur file deliver! 📦", "File pahunch gayi! ✈️",
                 "Mission accomplished! 🎯", "File bheji — ab save karo! 💪"
             ])
-            await send_log(
-                f"📤 #FileSent — {roast}\n\n"
-                f"👤 {user.mention} (`{user.id}`)\n"
-                f"🗂 `{fname}`\n"
-                f"📦 {fsize}\n"
-                f"💎 Premium: {'✅ VIP' if prem else '❌ Free'}\n"
-                f"🕐 {now_ist().strftime('%d %b %H:%M')} IST"
-            )
+            pass  # FileSent log removed
         except: pass
 
         return True, fname
