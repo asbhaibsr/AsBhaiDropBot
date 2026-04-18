@@ -9,16 +9,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ═══════════════════════════════════════
-#  COPYRIGHT VALIDATION
-# ═══════════════════════════════════════
-CREDIT_URL = os.getenv("CREDIT_URL", "https://github.com/asbhaibsr/AsBhaiDropBot")
-if not CREDIT_URL or "asbhaibsr" not in CREDIT_URL:
-    import sys
-    print("\033[91m[ERROR] CREDIT_URL env var must contain 'asbhaibsr'. "
-          "Set: CREDIT_URL=https://github.com/asbhaibsr/AsBhaiDropBot\033[0m")
-    sys.exit(1)
-
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
