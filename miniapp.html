@@ -108,7 +108,7 @@ body{padding-bottom:64px}
 .p-meta{flex:1;min-width:0}.p-lbl{font-size:8px;font-weight:800;letter-spacing:1.5px;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:2px}
 .pl-s{background:rgba(56,189,248,.2);color:var(--sky)}.pl-g{background:rgba(245,158,11,.2);color:var(--gold)}.pl-d{background:rgba(108,99,255,.2);color:var(--acc3)}.pl-e{background:rgba(239,68,68,.2);color:#fca5a5}
 .p-name{font-size:14px;font-weight:800}.p-tag{font-size:10px;color:var(--t2)}
-.p-price{text-align:right}.p-amt{font-size:22px;font-weight:900}.p-amt sup{font-size:12px}.p-dur{font-size:9px;color:var(--t3);margin-top:1px}
+.p-price{text-align:right}.p-amt{font-size:32px;font-weight:900;line-height:1}.p-amt sup{font-size:14px}.p-dur{font-size:9px;color:var(--t3);margin-top:3px}
 .plan-feats{padding:10px 16px}
 .feat{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px;color:var(--t2)}.feat .fi{font-size:13px;flex-shrink:0}
 .p-btn{display:block;width:calc(100% - 32px);margin:8px 16px 14px;padding:11px;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;color:#fff;transition:.2s}
@@ -330,79 +330,160 @@ body{padding-bottom:64px}
 
 <!-- ════ PREMIUM PAGE ════ -->
 <div class="pg" id="pg-premium">
-  <div class="hero">
-    <h1>💎 <span>Premium</span> Plans</h1>
-    <p>Premium = No verify, no force join, HD stream, unlimited files, download links! 🤑</p>
+
+  <!-- Premium Hero Banner -->
+  <div style="margin:14px;border-radius:20px;background:linear-gradient(135deg,#0d0820 0%,#1a0a3a 50%,#0d0820 100%);border:1px solid rgba(108,99,255,.35);padding:20px 18px;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(108,99,255,.25),transparent 70%);border-radius:50%;"></div>
+    <div style="position:absolute;bottom:-20px;left:-20px;width:80px;height:80px;background:radial-gradient(circle,rgba(167,139,250,.15),transparent 70%);border-radius:50%;"></div>
+    <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:var(--acc3);margin-bottom:6px;">⚡ PREMIUM MEMBERSHIP</div>
+    <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;line-height:1.2;margin-bottom:8px;">Unlimited Movies<br><span style="background:linear-gradient(90deg,var(--acc2),var(--acc3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Zero Restrictions 🔥</span></div>
+    <div style="font-size:11px;color:var(--t2);line-height:1.6;">No shortlink • No force join • HD Stream • Unlimited downloads • Priority support</div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);border-radius:6px;padding:3px 10px;font-size:10px;color:var(--grn2);font-weight:700;">✅ No Verify</div>
+      <div style="background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);border-radius:6px;padding:3px 10px;font-size:10px;color:var(--acc3);font-weight:700;">💎 10 Results</div>
+      <div style="background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25);border-radius:6px;padding:3px 10px;font-size:10px;color:var(--sky);font-weight:700;">📺 HD Stream</div>
+      <div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);border-radius:6px;padding:3px 10px;font-size:10px;color:var(--gold2);font-weight:700;">♾️ Unlimited</div>
+    </div>
   </div>
 
-  <!-- Starter -->
-  <div class="plan-card">
-    <div class="plan-hd">
-      <div class="p-ico pi-s">⚡</div>
-      <div class="p-meta"><div class="p-lbl pl-s">STARTER</div><div class="p-name">Starter</div><div class="p-tag">Try karo 10 din</div></div>
-      <div class="p-price"><div class="p-amt" style="color:var(--sky)"><sup>₹</sup>50</div><div class="p-dur">10 din</div></div>
+  <!-- Compare bar -->
+  <div style="margin:0 14px 4px;display:flex;gap:8px;">
+    <div style="flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;text-align:center;">
+      <div style="font-size:18px;margin-bottom:4px;">🆓</div>
+      <div style="font-size:11px;font-weight:700;color:var(--t2);">Free</div>
+      <div style="font-size:9px;color:var(--t3);margin-top:3px;line-height:1.5;">5 results<br>Shortlink required<br>Daily limit: 10</div>
     </div>
-    <div class="plan-feats">
-      <div class="feat"><span class="fi">✅</span><span class="ft">No daily limit</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">No shortlink verify</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">10 search results</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">Send All button</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft"><b>HD Stream + Download</b></span></div>
+    <div style="display:flex;align-items:center;font-size:18px;">→</div>
+    <div style="flex:1;background:linear-gradient(135deg,#0d0820,#130a2e);border:1px solid rgba(108,99,255,.35);border-radius:12px;padding:10px 12px;text-align:center;">
+      <div style="font-size:18px;margin-bottom:4px;">💎</div>
+      <div style="font-size:11px;font-weight:700;color:var(--acc3);">Premium</div>
+      <div style="font-size:9px;color:var(--acc3);opacity:.8;margin-top:3px;line-height:1.5;">10 results<br>No verify ever<br>Unlimited ♾️</div>
     </div>
-    <button class="p-btn pb-s" onclick="buyPlan('10days','Starter',10,50)">Starter Lo — ₹50 →</button>
   </div>
 
-  <!-- Gold -->
-  <div class="plan-card" style="border-color:rgba(245,158,11,.3)">
-    <div class="plan-hd">
-      <div class="p-ico pi-g">🏆</div>
-      <div class="p-meta"><div class="p-lbl pl-g">GOLD 🔥</div><div class="p-name">Gold</div><div class="p-tag">Best seller — 1 mahina</div></div>
-      <div class="p-price"><div class="p-amt" style="color:var(--gold)"><sup>₹</sup>150</div><div class="p-dur">30 din</div></div>
+  <div style="margin:14px 14px 6px;font-size:11px;font-weight:800;color:var(--t3);letter-spacing:1px;text-transform:uppercase;">👇 Plan Chuno</div>
+
+
+  <!-- ── STARTER PLAN ── -->
+  <div style="margin:8px 14px;border-radius:20px;border:1.5px solid rgba(56,189,248,.3);overflow:hidden;background:linear-gradient(135deg,#071520,#0a1e2d);">
+    <div style="padding:16px 18px 12px;display:flex;align-items:center;gap:14px;">
+      <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--sky),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 4px 15px rgba(56,189,248,.3);">⚡</div>
+      <div style="flex:1;">
+        <div style="font-size:9px;font-weight:800;letter-spacing:2px;color:var(--sky);margin-bottom:3px;">STARTER PLAN</div>
+        <div style="font-size:18px;font-weight:900;">Starter</div>
+        <div style="font-size:10px;color:var(--t2);">Perfect for first try ✨</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:32px;font-weight:900;color:var(--sky);line-height:1;"><sup style="font-size:16px;">₹</sup>50</div>
+        <div style="font-size:10px;color:var(--t3);background:rgba(56,189,248,.1);padding:2px 8px;border-radius:4px;margin-top:3px;">10 din</div>
+      </div>
     </div>
-    <div class="plan-feats">
-      <div class="feat"><span class="fi">✅</span><span class="ft">Sab Starter features</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">No force join</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">All filters + Send All</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft"><b>HD Stream + Multi-Player</b></span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">PM Search unlimited</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft"><b>Stream Link Generator</b></span></div>
+    <div style="margin:0 18px;height:1px;background:rgba(56,189,248,.1);"></div>
+    <div style="padding:12px 18px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>No shortlink verify</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>No daily limit</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>10 search results</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>HD Stream</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>PM search</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Download link</div>
     </div>
-    <button class="p-btn pb-g" onclick="buyPlan('30days','Gold',30,150)">Gold Lo — ₹150 →</button>
+    <div style="padding:0 14px 14px;">
+      <button onclick="buyPlan('10days','Starter',10,50)" style="width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--sky),var(--cyan));color:#000;font-size:14px;font-weight:900;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 20px rgba(56,189,248,.35);transition:.2s;" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform='scale(1)'">⚡ Starter Lo — ₹50 →</button>
+    </div>
   </div>
 
-  <!-- Diamond -->
-  <div class="plan-card" style="border-color:rgba(108,99,255,.3)">
-    <div class="plan-hd">
-      <div class="p-ico pi-d">💎</div>
-      <div class="p-meta"><div class="p-lbl pl-d">DIAMOND</div><div class="p-name">Diamond</div><div class="p-tag">Power user — 2 mahine</div></div>
-      <div class="p-price"><div class="p-amt" style="color:var(--acc3)"><sup>₹</sup>200</div><div class="p-dur">60 din</div></div>
+  <!-- ── GOLD PLAN (POPULAR) ── -->
+  <div style="margin:8px 14px;border-radius:20px;border:1.5px solid rgba(245,158,11,.5);overflow:hidden;background:linear-gradient(135deg,#150f00,#2a1f00);position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;background:linear-gradient(90deg,rgba(245,158,11,.8),rgba(251,191,36,.8));padding:5px;text-align:center;font-size:10px;font-weight:900;color:#000;letter-spacing:2px;">🔥 MOST POPULAR</div>
+    <div style="padding:36px 18px 12px;display:flex;align-items:center;gap:14px;">
+      <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 4px 15px rgba(245,158,11,.4);">🏆</div>
+      <div style="flex:1;">
+        <div style="font-size:9px;font-weight:800;letter-spacing:2px;color:var(--gold);margin-bottom:3px;">GOLD PLAN</div>
+        <div style="font-size:18px;font-weight:900;">Gold</div>
+        <div style="font-size:10px;color:var(--t2);">Best value — 1 mahina 💰</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:32px;font-weight:900;color:var(--gold);line-height:1;"><sup style="font-size:16px;">₹</sup>150</div>
+        <div style="font-size:10px;color:var(--gold);background:rgba(245,158,11,.1);padding:2px 8px;border-radius:4px;margin-top:3px;">30 din</div>
+      </div>
     </div>
-    <div class="plan-feats">
-      <div class="feat"><span class="fi">✅</span><span class="ft">Sab Gold features</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft"><b>Priority support</b></span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">New features early access</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">Diamond badge 💎</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft"><b>Premium Panel Access</b></span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft"><b>Zoom + Rotate + PiP</b></span></div>
+    <div style="margin:0 18px;height:1px;background:rgba(245,158,11,.15);"></div>
+    <div style="padding:12px 18px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Sab Starter features</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>No force join</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>All language filters</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Send All button</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span><b style="color:var(--gold);">PM search unlimited</b></div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span><b style="color:var(--gold);">Stream link generator</b></div>
     </div>
-    <button class="p-btn pb-d" onclick="buyPlan('60days','Diamond',60,200)">Diamond Lo — ₹200 →</button>
+    <div style="padding:0 14px 14px;">
+      <button onclick="buyPlan('30days','Gold',30,150)" style="width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--gold),#d97706);color:#000;font-size:14px;font-weight:900;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 20px rgba(245,158,11,.4);transition:.2s;" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform='scale(1)'">🏆 Gold Lo — ₹150 →</button>
+    </div>
   </div>
 
-  <!-- Elite -->
-  <div class="plan-card" style="border-color:rgba(239,68,68,.3)">
-    <div class="plan-hd">
-      <div class="p-ico pi-e">👑</div>
-      <div class="p-meta"><div class="p-lbl pl-e">ELITE 🔥</div><div class="p-name">Elite</div><div class="p-tag">1 saal — best deal ever</div></div>
-      <div class="p-price"><div class="p-amt" style="color:#fca5a5"><sup>₹</sup>800</div><div class="p-dur">365 din</div></div>
+  <!-- ── DIAMOND PLAN ── -->
+  <div style="margin:8px 14px;border-radius:20px;border:1.5px solid rgba(108,99,255,.4);overflow:hidden;background:linear-gradient(135deg,#0d0820,#130a2e);">
+    <div style="padding:16px 18px 12px;display:flex;align-items:center;gap:14px;">
+      <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 4px 15px rgba(108,99,255,.4);">💎</div>
+      <div style="flex:1;">
+        <div style="font-size:9px;font-weight:800;letter-spacing:2px;color:var(--acc3);margin-bottom:3px;">DIAMOND PLAN</div>
+        <div style="font-size:18px;font-weight:900;">Diamond</div>
+        <div style="font-size:10px;color:var(--t2);">Power user — 2 mahine 💪</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:32px;font-weight:900;color:var(--acc3);line-height:1;"><sup style="font-size:16px;">₹</sup>200</div>
+        <div style="font-size:9px;color:var(--acc3);background:rgba(108,99,255,.1);padding:2px 8px;border-radius:4px;margin-top:3px;">60 din • ₹3.3/din</div>
+      </div>
     </div>
-    <div class="plan-feats">
-      <div class="feat"><span class="fi">✅</span><span class="ft">Sab Diamond features</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft"><b>1 saal = ₹2.2/din!</b></span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">Lifetime updates</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft">Elite badge 👑</span></div>
-      <div class="feat"><span class="fi">✅</span><span class="ft"><b>All future features FREE</b></span></div>
+    <div style="margin:0 18px;height:1px;background:rgba(108,99,255,.1);"></div>
+    <div style="padding:12px 18px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Sab Gold features</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Priority support</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Early feature access</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Diamond badge 💎</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span><b style="color:var(--acc3);">Zoom + PiP player</b></div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span><b style="color:var(--acc3);">Premium panel</b></div>
     </div>
-    <button class="p-btn pb-e" onclick="buyPlan('365days','Elite',365,800)">Elite Lo — ₹800 →</button>
+    <div style="padding:0 14px 14px;">
+      <button onclick="buyPlan('60days','Diamond',60,200)" style="width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--acc),#4f46e5);color:#fff;font-size:14px;font-weight:900;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 20px rgba(108,99,255,.4);transition:.2s;" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform='scale(1)'">💎 Diamond Lo — ₹200 →</button>
+    </div>
+  </div>
+
+  <!-- ── ELITE PLAN ── -->
+  <div style="margin:8px 14px;border-radius:20px;border:1.5px solid rgba(239,68,68,.5);overflow:hidden;background:linear-gradient(135deg,#1a0505,#2d0a0a);position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;background:linear-gradient(90deg,rgba(239,68,68,.7),rgba(236,72,153,.7));padding:5px;text-align:center;font-size:10px;font-weight:900;color:#fff;letter-spacing:2px;">👑 BEST DEAL — SAVE 60%</div>
+    <div style="padding:36px 18px 12px;display:flex;align-items:center;gap:14px;">
+      <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#ef4444,var(--pink));display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 4px 15px rgba(239,68,68,.4);">👑</div>
+      <div style="flex:1;">
+        <div style="font-size:9px;font-weight:800;letter-spacing:2px;color:#fca5a5;margin-bottom:3px;">ELITE PLAN</div>
+        <div style="font-size:18px;font-weight:900;">Elite</div>
+        <div style="font-size:10px;color:var(--t2);">1 pura saal — sirf ₹2.2/din! 🎯</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:var(--t3);text-decoration:line-through;line-height:1;">₹1800</div>
+        <div style="font-size:32px;font-weight:900;color:#fca5a5;line-height:1.1;"><sup style="font-size:16px;">₹</sup>800</div>
+        <div style="font-size:9px;color:#fca5a5;background:rgba(239,68,68,.1);padding:2px 8px;border-radius:4px;margin-top:3px;">365 din</div>
+      </div>
+    </div>
+    <div style="margin:0 18px;height:1px;background:rgba(239,68,68,.15);"></div>
+    <div style="padding:12px 18px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Sab Diamond features</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Elite badge 👑</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span><b style="color:#fca5a5;">₹2.2/din only!</b></div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span><b style="color:#fca5a5;">All future features</b></div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>Lifetime updates</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);"><span style="color:var(--grn);font-size:14px;">✅</span>VIP support 24/7</div>
+    </div>
+    <div style="padding:0 14px 14px;">
+      <button onclick="buyPlan('365days','Elite',365,800)" style="width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;font-size:14px;font-weight:900;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 20px rgba(239,68,68,.4);transition:.2s;" onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform='scale(1)'">👑 Elite Lo — ₹800 →</button>
+    </div>
+  </div>
+
+  <!-- Contact -->
+  <div style="margin:12px 14px;background:var(--s2);border:1px solid var(--bd);border-radius:16px;padding:14px 16px;text-align:center;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:6px;">💬 Help chahiye?</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:10px;">Payment ke baad owner ko screenshot bhejo</div>
+    <a href="https://t.me/asbhaibsr" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;text-decoration:none;padding:10px 20px;border-radius:10px;font-size:12px;font-weight:800;">📱 @asbhaibsr ko message karo</a>
   </div>
 
   <div class="foot"><a href="https://t.me/asbhaibsr">@asbhaibsr</a><p>© AsBhai Drop Bot v3.0</p></div>
@@ -1139,4 +1220,4 @@ function fbCp(txt,msg){var ta=document.createElement('textarea');ta.value=txt;ta
 init();
 </script>
 </body>
-</html>
+  </html>
