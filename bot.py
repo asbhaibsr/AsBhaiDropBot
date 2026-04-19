@@ -651,11 +651,27 @@ async def search_handler(client, message: Message):
             asyncio.create_task(del_later(msg, 300))
             return
 
-        # FIX: Force sub check — agar fail to return (don't proceed)
+        # FIX: Force sub check
         if not await force_sub_check(client, message, prem): return
-        
-        # FIX: Shortlink verify check — ye channel join ke BAAD aata hai
-        if not await verify_check(client, message, prem): return
+
+        # FIX 6: Group premium check — agar group premium hai to shortlink SKIP karo
+        # Group owner ne premium liya hai to uske users ko shortlink nahi dikhegi
+        async def _is_group_premium(cid):
+            doc = await group_prem_col.find_one({"chat_id": cid, "status": "approved"})
+            if not doc: return False
+            from config import make_aware, now
+            expiry = make_aware(doc.get("expiry"))
+            if expiry and now() > expiry:
+                await group_prem_col.update_one({"chat_id": cid}, {"$set": {"status": "expired"}})
+                return False
+            return True
+
+        grp_prem = await _is_group_premium(chat_id)
+
+        # Shortlink verify — group premium hai to skip, warna normal verify
+        if not grp_prem:
+            if not await verify_check(client, message, prem): return
+        # agar group premium hai — shortlink nahi aayegi, seedha search hoga
 
         if not prem:
             count = await get_daily_count(uid)
@@ -1770,6 +1786,127 @@ async def cb_handler(client, query: CallbackQuery):
         await query.answer("✅ Group Premium removed!")
         return
 
+    # ── Global Settings toggle callbacks ──
+    if data.startswith("gs_global_"):
+        if query.from_user.id not in ADMINS:
+            await query.answer("❌ Sirf owner!", show_alert=True); return
+        key = data[10:]  # remove "gs_global_"
+        s = await get_settings()
+
+        cycle_map = {
+            "dailylimit": ([5,10,15,20,30,50], "daily_limit"),
+            "freeresults": ([3,5,7,10], "free_results"),
+            "premresults": ([5,10,15,20], "premium_results"),
+            "deletetime": ([60,120,180,300,600,900], "auto_delete_time"),
+        }
+        toggle_map = {
+            "maintenance": "maintenance",
+            "shortlink": "shortlink_enabled",
+            "forcesub": "force_sub",
+            "linkprotect": "link_protection",
+            "autodelete": "auto_delete",
+        }
+
+        if key in toggle_map:
+            db_key = toggle_map[key]
+            new_val = not s.get(db_key, True)
+            await update_setting(db_key, new_val)
+            await query.answer(f"{'✅ ON' if new_val else '❌ OFF'}")
+        elif key in cycle_map:
+            cycle, db_key = cycle_map[key]
+            cur = s.get(db_key, cycle[0])
+            try: idx = cycle.index(cur)
+            except: idx = 0
+            new_val = cycle[(idx + 1) % len(cycle)]
+            await update_setting(db_key, new_val)
+            await query.answer(f"➡️ {db_key}: {new_val}")
+        elif key == "refresh":
+            await query.answer("🔄 Refreshed!")
+
+        s = await get_settings()
+        kb = _build_global_settings_kb(s)
+        try:
+            await query.message.edit_reply_markup(kb)
+        except: pass
+        return
+
+    # ── Stats admin callbacks ──
+    if data.startswith("admin_"):
+        if query.from_user.id not in ADMINS:
+            await query.answer("❌ Sirf owner!", show_alert=True); return
+        sub = data[6:]
+
+        if sub == "clear_banned":
+            count = await banned_col.count_documents({})
+            await banned_col.delete_many({})
+            await query.answer(f"✅ {count} banned users clear!", show_alert=True)
+            return
+
+        if sub == "clear_requests":
+            count = await requests_col.count_documents({})
+            await requests_col.delete_many({})
+            await query.answer(f"✅ {count} requests clear!", show_alert=True)
+            return
+
+        if sub == "clear_payments":
+            count = await payments_col.count_documents({"status": "pending"})
+            await payments_col.delete_many({"status": "pending"})
+            await query.answer(f"✅ {count} pending payments clear!", show_alert=True)
+            return
+
+        if sub == "refresh_stats":
+            u = await users_col.count_documents({})
+            g = await groups_col.count_documents({})
+            p = await premium_col.count_documents({})
+            b = await banned_col.count_documents({})
+            r = await requests_col.count_documents({})
+            total_refers = await refers_col.count_documents({})
+            pending_pay = await payments_col.count_documents({"status": "pending"})
+            try:
+                await query.message.edit_text(
+                    f"📊 **Bot Statistics**\n"
+                    f"{'─'*28}\n"
+                    f"👥 Users: **{u}** | 🏘 Groups: **{g}**\n"
+                    f"💎 Premium: **{p}** | 🚫 Banned: **{b}**\n"
+                    f"📩 Requests: **{r}** | 🔗 Refers: **{total_refers}**\n"
+                    f"💰 Pending Payments: **{pending_pay}**\n"
+                    f"{'─'*28}\n"
+                    f"🕐 {now_ist().strftime('%d %b %Y %H:%M')} IST",
+                    reply_markup=query.message.reply_markup
+                )
+            except: pass
+            await query.answer("🔄 Refreshed!")
+            return
+
+        if sub == "pending_pay":
+            docs = []
+            async for doc in payments_col.find({"status": "pending"}).limit(10):
+                docs.append(doc)
+            if not docs:
+                await query.answer("✅ Koi pending payment nahi!", show_alert=True); return
+            text = f"💰 **Pending Payments ({len(docs)})**\n\n"
+            for d in docs:
+                text += f"👤 `{d.get('user_id')}` | ₹{d.get('amount','?')} | {d.get('plan','?')}\n"
+            await query.message.reply(text)
+            await query.answer()
+            return
+
+        if sub == "view_requests":
+            docs = []
+            async for doc in requests_col.find({}).sort("time", -1).limit(10):
+                docs.append(doc)
+            if not docs:
+                await query.answer("✅ Koi request nahi!", show_alert=True); return
+            text = f"📩 **Recent Requests ({len(docs)})**\n\n"
+            for d in docs:
+                text += f"👤 `{d.get('user_id')}` | 📁 {d.get('request','?')[:30]}\n"
+            await query.message.reply(text)
+            await query.answer()
+            return
+
+        await query.answer()
+        return
+
     await query.answer()
 
 # ═══════════════════════════════════════
@@ -1873,29 +2010,64 @@ async def stats_cmd(client, message: Message):
     r = await requests_col.count_documents({})
     total_refers = await refers_col.count_documents({})
     pending_pay = await payments_col.count_documents({"status": "pending"})
-    today = now_ist().strftime("%Y-%m-%d")
     await message.reply(
-        f"📊 **Stats**\n\n"
-        f"👥 Users: **{u}** | Groups: **{g}**\n"
+        f"📊 **Bot Statistics**\n"
+        f"{'─'*28}\n"
+        f"👥 Users: **{u}** | 🏘 Groups: **{g}**\n"
         f"💎 Premium: **{p}** | 🚫 Banned: **{b}**\n"
         f"📩 Requests: **{r}** | 🔗 Refers: **{total_refers}**\n"
-        f"💰 Pending Payments: **{pending_pay}**\n\n"
-        f"🕐 {now_ist().strftime('%d %b %Y %H:%M')} IST"
+        f"💰 Pending Payments: **{pending_pay}**\n"
+        f"{'─'*28}\n"
+        f"🕐 {now_ist().strftime('%d %b %Y %H:%M')} IST",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("💰 Pending Payments", callback_data="admin_pending_pay"),
+                InlineKeyboardButton("📩 Requests", callback_data="admin_view_requests"),
+            ],
+            [
+                InlineKeyboardButton("🚫 Banned Users Clear", callback_data="admin_clear_banned"),
+                InlineKeyboardButton("📩 Requests Clear", callback_data="admin_clear_requests"),
+            ],
+            [
+                InlineKeyboardButton("💰 Payments Clear", callback_data="admin_clear_payments"),
+                InlineKeyboardButton("🔄 Refresh", callback_data="admin_refresh_stats"),
+            ],
+        ])
     )
+
+def _build_global_settings_kb(s):
+    """Global settings inline keyboard — toggle buttons"""
+    def tog(val): return "✅ ON" if val else "❌ OFF"
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(f"🔧 Maintenance: {tog(s.get('maintenance'))}", callback_data="gs_global_maintenance"),
+            InlineKeyboardButton(f"🔗 Shortlink: {tog(s.get('shortlink_enabled',True))}", callback_data="gs_global_shortlink"),
+        ],
+        [
+            InlineKeyboardButton(f"📢 Force Sub: {tog(s.get('force_sub',True))}", callback_data="gs_global_forcesub"),
+            InlineKeyboardButton(f"🛡 Link Protect: {tog(s.get('link_protection',True))}", callback_data="gs_global_linkprotect"),
+        ],
+        [
+            InlineKeyboardButton(f"🗑 Auto Delete: {tog(s.get('auto_delete',True))}", callback_data="gs_global_autodelete"),
+            InlineKeyboardButton(f"⏱ {s.get('auto_delete_time',300)//60} min", callback_data="gs_global_deletetime"),
+        ],
+        [
+            InlineKeyboardButton(f"📊 Daily Limit: {s.get('daily_limit',10)}", callback_data="gs_global_dailylimit"),
+            InlineKeyboardButton(f"🆓 Free: {s.get('free_results',5)} res", callback_data="gs_global_freeresults"),
+            InlineKeyboardButton(f"💎 Prem: {s.get('premium_results',10)} res", callback_data="gs_global_premresults"),
+        ],
+        [InlineKeyboardButton("🔄 Refresh", callback_data="gs_global_refresh")],
+    ])
 
 @bot.on_message(filters.command("settings") & filters.user(ADMINS))
 async def show_settings(client, message: Message):
     s = await get_settings()
+    kb = _build_global_settings_kb(s)
     await message.reply(
-        f"⚙️ **Global Settings**\n\n"
-        f"Auto Delete: {'ON' if s.get('auto_delete') else 'OFF'} ({s.get('auto_delete_time',300)//60} min)\n"
-        f"Force Sub: {'ON' if s.get('force_sub') else 'OFF'}\n"
-        f"Shortlink: {'ON' if s.get('shortlink_enabled') else 'OFF'}\n"
-        f"Daily Limit: {s.get('daily_limit',10)}\n"
-        f"Free Results: {s.get('free_results',5)}\n"
-        f"Premium Results: {s.get('premium_results',10)}\n"
-        f"Maintenance: {'ON' if s.get('maintenance') else 'OFF'}\n"
-        f"Link Protection: {'ON' if s.get('link_protection', True) else 'OFF'}"
+        f"⚙️ **Global Bot Settings**\n"
+        f"{'─'*28}\n"
+        f"Button dabao — settings toggle ho jaayegi!",
+        reply_markup=kb
     )
 
 @bot.on_message(filters.command("ping") & filters.user(ADMINS))
@@ -1982,6 +2154,299 @@ async def file_request(client, message: Message):
 # Keep remaining admin commands: broadcast, shortlinks, fsub, gshortlink, setcommands, admin panel, etc
 # (These are the same as original — too long to duplicate, only the fixes above matter)
 
+# ═══════════════════════════════════════
+#  FIX: ALL MISSING ADMIN COMMANDS
+# ═══════════════════════════════════════
+
+@bot.on_message(filters.command("setdelete") & filters.user(ADMINS))
+async def setdelete_cmd(client, message: Message):
+    """
+    Usage:
+    /setdelete 300       → 5 min set karo
+    /setdelete on        → auto delete ON
+    /setdelete off       → auto delete OFF
+    """
+    args = message.command
+    if len(args) < 2:
+        await message.reply(
+            "⚙️ **Auto Delete Settings**\n\n"
+            "`/setdelete on` — Auto delete ON\n"
+            "`/setdelete off` — Auto delete OFF\n"
+            "`/setdelete 300` — 5 min (seconds mein)\n"
+            "`/setdelete 600` — 10 min\n\n"
+            "**Common values:**\n"
+            "• 60 = 1 min | 180 = 3 min\n"
+            "• 300 = 5 min | 600 = 10 min"
+        ); return
+    val = args[1].lower()
+    if val == "on":
+        await update_setting("auto_delete", True)
+        await message.reply("✅ Auto Delete: **ON**")
+    elif val == "off":
+        await update_setting("auto_delete", False)
+        await message.reply("✅ Auto Delete: **OFF**")
+    else:
+        try:
+            secs = int(val)
+            if secs < 30: await message.reply("❌ Minimum 30 seconds!"); return
+            await update_setting("auto_delete_time", secs)
+            await update_setting("auto_delete", True)
+            await message.reply(f"✅ Auto Delete: **{secs} sec ({secs//60} min)**")
+        except:
+            await message.reply("❌ `/setdelete on/off/<seconds>`")
+
+
+@bot.on_message(filters.command("setlimit") & filters.user(ADMINS))
+async def setlimit_cmd(client, message: Message):
+    """
+    Usage: /setlimit 10
+    Free users ke liye daily download limit set karo.
+    """
+    args = message.command
+    if len(args) < 2:
+        s = await get_settings()
+        cur = s.get("daily_limit", 10)
+        await message.reply(
+            f"📊 **Daily Limit Settings**\n\n"
+            f"Current limit: **{cur}** files/din\n\n"
+            f"Usage: `/setlimit <number>`\n"
+            f"Example: `/setlimit 10`\n\n"
+            f"• 0 = Unlimited (free users ke liye)\n"
+            f"• Premium users = Always unlimited"
+        ); return
+    try:
+        n = int(args[1])
+        await update_setting("daily_limit", n)
+        await message.reply(f"✅ Daily Limit: **{n}** {'(Unlimited)' if n == 0 else f'files/din'}")
+    except:
+        await message.reply("❌ `/setlimit <number>` — Number chahiye")
+
+
+@bot.on_message(filters.command("setresults") & filters.user(ADMINS))
+async def setresults_cmd(client, message: Message):
+    """
+    Usage: /setresults <free> <premium>
+    Search results count set karo.
+    """
+    args = message.command
+    if len(args) < 3:
+        s = await get_settings()
+        await message.reply(
+            f"🔢 **Results Count Settings**\n\n"
+            f"Free results: **{s.get('free_results', 5)}**\n"
+            f"Premium results: **{s.get('premium_results', 10)}**\n\n"
+            f"Usage: `/setresults <free> <premium>`\n"
+            f"Example: `/setresults 5 10`"
+        ); return
+    try:
+        free = int(args[1]); prem = int(args[2])
+        await update_setting("free_results", free)
+        await update_setting("premium_results", prem)
+        await message.reply(f"✅ Results — Free: **{free}** | Premium: **{prem}**")
+    except:
+        await message.reply("❌ `/setresults <free_count> <premium_count>`")
+
+
+@bot.on_message(filters.command("maintenance") & filters.user(ADMINS))
+async def maintenance_cmd(client, message: Message):
+    """
+    Usage: /maintenance on/off
+    Maintenance mode toggle — sirf admins use kar payenge.
+    """
+    args = message.command
+    if len(args) < 2:
+        s = await get_settings()
+        cur = s.get("maintenance", False)
+        await message.reply(
+            f"🔧 **Maintenance Mode**\n\n"
+            f"Current: **{'ON ✅' if cur else 'OFF ❌'}**\n\n"
+            f"Usage: `/maintenance on` ya `/maintenance off`\n\n"
+            f"ON hone par normal users bot use nahi kar sakte."
+        ); return
+    val = args[1].lower()
+    if val in ["on", "1", "true"]:
+        await update_setting("maintenance", True)
+        await message.reply("🔧 Maintenance: **ON** ✅\n\nAb sirf admins bot use kar sakte hain.")
+    elif val in ["off", "0", "false"]:
+        await update_setting("maintenance", False)
+        await message.reply("✅ Maintenance: **OFF**\n\nBot sab ke liye available hai!")
+    else:
+        await message.reply("❌ `/maintenance on` ya `/maintenance off`")
+
+
+@bot.on_message(filters.command(["forcesub", "fsub"]) & filters.user(ADMINS))
+async def forcesub_cmd(client, message: Message):
+    """
+    Usage: /forcesub on/off
+    Force subscribe toggle.
+    """
+    args = message.command
+    if len(args) < 2:
+        s = await get_settings()
+        cur = s.get("force_sub", True)
+        await message.reply(
+            f"📢 **Force Subscribe**\n\n"
+            f"Current: **{'ON ✅' if cur else 'OFF ❌'}**\n\n"
+            f"Usage: `/forcesub on` ya `/forcesub off`\n\n"
+            f"Force sub channels `/addforcechannel` se add karo."
+        ); return
+    val = args[1].lower()
+    if val in ["on", "1"]:
+        await update_setting("force_sub", True)
+        await message.reply("📢 Force Subscribe: **ON** ✅")
+    elif val in ["off", "0"]:
+        await update_setting("force_sub", False)
+        await message.reply("✅ Force Subscribe: **OFF**")
+    else:
+        await message.reply("❌ `/forcesub on` ya `/forcesub off`")
+
+
+@bot.on_message(filters.command("addforcechannel") & filters.user(ADMINS))
+async def add_force_channel_cmd(client, message: Message):
+    """
+    Usage: /addforcechannel @username ya -100xxxxxxx
+    Force subscribe mein channel add karo.
+    """
+    args = message.command
+    if len(args) < 2:
+        # Show current channels
+        s = await get_settings()
+        channels = s.get("fsub_channels", [])
+        text = f"📢 **Force Subscribe Channels**\n\n"
+        if channels:
+            for i, ch in enumerate(channels, 1):
+                text += f"{i}. {ch.get('title','?')} (`{ch.get('id','?')}`)"
+        else:
+            text += "Koi channel nahi.\n"
+        text += (
+            f"\n**Commands:**\n"
+            f"`/addforcechannel @username` — Channel add\n"
+            f"`/removeforcechannel @username` — Channel remove\n"
+            f"`/forcesub on/off` — Toggle"
+        )
+        await message.reply(text); return
+
+    ch_input = args[1].strip()
+    try:
+        chat = await client.get_chat(ch_input)
+        ch_data = {"id": chat.id, "title": chat.title or ch_input, "username": chat.username or ""}
+        s = await get_settings()
+        channels = s.get("fsub_channels", [])
+        # Check not already added
+        existing_ids = [c.get("id") for c in channels]
+        if chat.id in existing_ids:
+            await message.reply(f"⚠️ **{chat.title}** already added hai!"); return
+        channels.append(ch_data)
+        await update_setting("fsub_channels", channels)
+        await message.reply(
+            f"✅ **{chat.title}** force sub mein add ho gaya!\n"
+            f"ID: `{chat.id}`\n\n"
+            f"Total channels: **{len(channels)}**"
+        )
+    except Exception as e:
+        await message.reply(f"❌ Channel nahi mila: `{ch_input}`\n\nError: {e}\n\nBot us channel ka admin hona chahiye!")
+
+
+@bot.on_message(filters.command("removeforcechannel") & filters.user(ADMINS))
+async def remove_force_channel_cmd(client, message: Message):
+    """
+    Usage: /removeforcechannel @username ya -100xxxxxxx
+    Force subscribe se channel hatao.
+    """
+    args = message.command
+    if len(args) < 2:
+        s = await get_settings()
+        channels = s.get("fsub_channels", [])
+        if not channels:
+            await message.reply("📢 Koi force sub channel nahi hai."); return
+        text = "📢 **Current Force Sub Channels:**\n\n"
+        for i, ch in enumerate(channels, 1):
+            text += f"`{i}.` {ch.get('title','?')} — `{ch.get('id','?')}`\n"
+        text += "\nUsage: `/removeforcechannel @username`"
+        await message.reply(text); return
+
+    ch_input = args[1].strip()
+    s = await get_settings()
+    channels = s.get("fsub_channels", [])
+    new_channels = []
+    removed = None
+    for ch in channels:
+        if str(ch.get("id")) == str(ch_input) or ch.get("username") == ch_input.lstrip("@"):
+            removed = ch
+        else:
+            new_channels.append(ch)
+    if removed:
+        await update_setting("fsub_channels", new_channels)
+        await message.reply(f"✅ **{removed.get('title')}** force sub se hata diya!\nRemaining: {len(new_channels)}")
+    else:
+        await message.reply(f"❌ `{ch_input}` list mein nahi mila.")
+
+
+@bot.on_message(filters.command("removeshortlink") & filters.user(ADMINS))
+async def remove_shortlink_cmd(client, message: Message):
+    """
+    Usage: /removeshortlink <number>
+    Shortlink list mein se hatao.
+    """
+    links = []
+    async for doc in shortlinks_col.find({}).sort("order", 1):
+        links.append(doc)
+
+    args = message.command
+    if len(args) < 2:
+        if not links:
+            await message.reply("📭 Koi shortlink nahi.\n`/addshortlink` se add karo."); return
+        text = "🔗 **Shortlinks — Hatane ke liye number likho:**\n\n"
+        for i, sl in enumerate(links, 1):
+            text += f"`{i}.` {'✅' if sl.get('active') else '❌'} **{sl.get('label','?')}** — {sl.get('url','?')}\n"
+        text += "\nUsage: `/removeshortlink 1`"
+        await message.reply(text); return
+
+    try:
+        idx = int(args[1]) - 1
+        if idx < 0 or idx >= len(links):
+            await message.reply(f"❌ Number 1 se {len(links)} ke beech hona chahiye!"); return
+        sl = links[idx]
+        await shortlinks_col.delete_one({"_id": sl["_id"]})
+        await message.reply(f"✅ Shortlink **{sl.get('label','?')}** hata diya!")
+    except:
+        await message.reply("❌ `/removeshortlink <number>` — Pehle `/removeshortlink` likho list dekhne ke liye")
+
+
+@bot.on_message(filters.command("notify") & filters.user(ADMINS))
+async def notify_cmd(client, message: Message):
+    """
+    Usage: /notify <user_id> <message>
+    Kisi specific user ko message bhejo.
+    """
+    args = message.command
+    reply_msg = message.reply_to_message
+    if len(args) < 2:
+        await message.reply(
+            "🔔 **Notify Command**\n\n"
+            "`/notify <user_id> <message>` — User ko message bhejo\n"
+            "Ya kisi message ko reply karke:\n"
+            "`/notify <user_id>` — Reply wala message forward karo\n\n"
+            "Example: `/notify 123456789 Aapki file ready hai!`"
+        ); return
+    try:
+        target_uid = int(args[1])
+        if len(args) > 2:
+            text = " ".join(args[2:])
+            await client.send_message(target_uid, f"🔔 **Owner ka message:**\n\n{text}")
+        elif reply_msg:
+            await reply_msg.copy(chat_id=target_uid)
+        else:
+            await message.reply("❌ Ya text likho ya kisi message ko reply karke notify karo!"); return
+        await message.reply(f"✅ `{target_uid}` ko message bhej diya!")
+    except PeerIdInvalid:
+        await message.reply(f"❌ User `{args[1]}` nahi mila. User ne bot start kiya hoga?")
+    except UserIsBlocked:
+        await message.reply(f"❌ User ne bot block kar rakha hai.")
+    except Exception as e:
+        await message.reply(f"❌ Error: {e}")
+
+
 @bot.on_message(filters.command("addshortlink") & filters.user(ADMINS))
 async def add_shortlink_cmd(client, message: Message):
     args = message.command
@@ -2047,11 +2512,29 @@ async def group_shortlink_add(client, message: Message):
 @bot.on_message(filters.command("broadcast") & filters.user(ADMINS) & filters.private)
 async def broadcast(client, message: Message):
     args = message.command
-    if len(args) < 3: await message.reply("Usage: `/broadcast users/groups/all <msg>`\n\nReply to a message to broadcast that instead."); return
-    target = args[1].lower(); text = " ".join(args[2:])
-    
-    # Support replying to a message for broadcast
     reply_msg = message.reply_to_message
+
+    # FIX: Reply-to se broadcast — /broadcast users (bina text ke bhi chalega)
+    if len(args) < 2:
+        await message.reply(
+            "📡 **Broadcast Usage:**\n\n"
+            "`/broadcast users <text>` — Sirf users\n"
+            "`/broadcast groups <text>` — Sirf groups\n"
+            "`/broadcast all <text>` — Sabko\n\n"
+            "**Ya kisi message ko reply karke:**\n"
+            "`/broadcast users` — reply wala message bhejo\n"
+            "`/broadcast all` — reply wala message sabko"
+        )
+        return
+
+    target = args[1].lower()
+    if target not in ["users", "groups", "all"]:
+        await message.reply("❌ Target: `users` / `groups` / `all`"); return
+
+    # Text ya reply — dono accept karo
+    text = " ".join(args[2:]) if len(args) > 2 else ""
+    if not text and not reply_msg:
+        await message.reply("❌ Ya text likho ya kisi message ko reply karke broadcast karo!\n\nExample: `/broadcast all Kal bot band rahega`"); return
     
     sm = await message.reply(f"📡 **Broadcast shuru!** Target: `{target}`\n⏳ Please wait...")
     total = done = failed = blocked = flood_wait_total = 0
