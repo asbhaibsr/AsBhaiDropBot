@@ -246,10 +246,36 @@ async def start_handler(client, message: Message):
             all_done, next_sl, _ = await get_user_verify_state(uid)
             if all_done:
                 user_doc = await users_col.find_one({"user_id": uid})
+                pending_file_id = user_doc.get("pending_file_id", 0) if user_doc else 0
                 pending_q = user_doc.get("pending_search", "") if user_doc else ""
                 pending_chat = user_doc.get("pending_chat", 0) if user_doc else 0
 
-                if pending_q and pending_chat:
+                # ── Priority 1: Pending file (button click se aaya tha) ──
+                if pending_file_id:
+                    await users_col.update_one(
+                        {"user_id": uid},
+                        {"$unset": {"pending_file_id": "", "pending_file_chat": ""}}
+                    )
+                    prem_user = await is_premium(uid)
+                    # Force sub check after verify
+                    joined, not_joined = await check_member_multi(uid, prem_user)
+                    if not joined:
+                        kb = await build_fsub_keyboard(not_joined, uid)
+                        names = ", ".join(ch.get("title", "Channel") for ch in not_joined)
+                        await message.reply(
+                            f"✅ Verify ho gaya! 🎉\n\n"
+                            f"📢 Ab **{names}** join karo — phir file milegi!",
+                            reply_markup=kb
+                        )
+                    else:
+                        wait = await message.reply("📥 File aa rahi hai... ⏳")
+                        success, info = await send_file_to_pm(client, message.from_user, pending_file_id, prem_user)
+                        await wait.delete()
+                        if not success:
+                            await message.reply(f"✅ Verify done!\n❌ File nahi aayi: `{info}`")
+
+                # ── Priority 2: Pending search ──
+                elif pending_q and pending_chat:
                     await users_col.update_one(
                         {"user_id": uid},
                         {"$unset": {"pending_search": "", "pending_chat": ""}}
@@ -267,8 +293,6 @@ async def start_handler(client, message: Message):
                             btns = _build_result_buttons(found[:5], uid, me_obj.username, qkey)
                             s = await get_settings()
                             t = s.get("auto_delete_time", 300)
-                            
-                            # FIX: Try sending to group first, if fails send to PM
                             result_sent = False
                             try:
                                 result = await client.send_message(
@@ -281,8 +305,6 @@ async def start_handler(client, message: Message):
                                 result_sent = True
                             except Exception as e:
                                 logger.error(f"auto-search group send error: {e}")
-                            
-                            # FIX: Also send results to PM so user doesn't miss them
                             if not result_sent:
                                 try:
                                     await client.send_message(
@@ -334,6 +356,7 @@ async def start_handler(client, message: Message):
 
     # ── getfile_ — file PM mein bhejo ──
     if args.startswith("getfile_"):
+        # Legacy URL-based links — same flow as getf_ callback
         parts = args[8:].split("_", 1)
         if len(parts) != 2:
             await message.reply("❌ Invalid link.")
@@ -348,21 +371,85 @@ async def start_handler(client, message: Message):
             await message.reply("❌ Yeh file aapke liye nahi! Apna search karo.")
             return
 
+        if await is_banned(uid):
+            await message.reply("🚫 Aap banned hain!")
+            return
+
         s = await get_settings()
         prem = await is_premium(uid)
+
+        # STEP 1: Shortlink verify (global only — no group context in PM)
+        if not prem and s.get("shortlink_enabled", True):
+            all_done, next_sl, _ = await get_user_verify_state(uid)
+            if not all_done:
+                me_obj = await client.get_me()
+                if next_sl:
+                    sl_id = str(next_sl["_id"])
+                    sl_label = next_sl.get("label", "Verify")
+                    hours = next_sl.get("hours", 24)
+                    token = await make_token(uid, f"sv_{sl_id}")
+                    verify_url = f"https://t.me/{me_obj.username}?start=sv_{uid}_{token}_{sl_id}"
+                    short = await get_cached_shortlink(uid, 0, verify_url, next_sl)
+                else:
+                    if SHORTLINK_API:
+                        sl_label = "Verify"; hours = 24
+                        token = await make_token(uid, "sv_env")
+                        verify_url = f"https://t.me/{me_obj.username}?start=sv_{uid}_{token}"
+                        try:
+                            api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
+                            async with aiohttp.ClientSession() as sess:
+                                async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                                    result = (await r.text()).strip()
+                                    short = result if result.startswith("http") else verify_url
+                        except:
+                            short = verify_url
+                        all_done = False
+                    else:
+                        all_done = True
+
+                if not all_done:
+                    await users_col.update_one(
+                        {"user_id": uid},
+                        {"$set": {"pending_file_id": msg_id, "pending_file_chat": 0}},
+                        upsert=True
+                    )
+                    await message.reply(
+                        f"🔐 **Ek Chhota Sa Step!**\n\n"
+                        f"👇 Shortlink complete karo → file turant milegi!\n"
+                        f"⏰ Har {hours} ghante mein ek baar.\n\n"
+                        f"💎 Premium lo = verify kabhi nahi!",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                            [InlineKeyboardButton("💎 Premium lo — verify kabhi nahi", callback_data="show_premium")],
+                        ])
+                    )
+                    return
+
+        # STEP 2: Force Sub
+        if not prem:
+            joined, not_joined = await check_member_multi(uid, prem)
+            if not joined:
+                kb = await build_fsub_keyboard(not_joined, uid)
+                names = ", ".join(ch.get("title", "Channel") for ch in not_joined)
+                await message.reply(
+                    f"📢 **Pehle Join Karo!**\n\n**{names}** join karo — phir file milegi! ✅",
+                    reply_markup=kb
+                )
+                return
+
+        # STEP 3: Daily limit
         if not prem:
             count = await get_daily_count(uid)
             if count >= s.get("daily_limit", 10):
                 await message.reply(
-                    f"⚠️ **Daily Limit Khatam!**\n"
-                    f"💎 /premium lo unlimited ke liye!"
+                    f"⚠️ **Daily Limit Khatam!**\n💎 /premium lo unlimited ke liye!"
                 )
                 return
 
+        # STEP 4: Send file
         wait = await message.reply("📥 File aa rahi hai... ⏳")
         success, info = await send_file_to_pm(client, message.from_user, msg_id, prem)
         await wait.delete()
-
         if not success:
             await message.reply(f"❌ File nahi aa payi.\nError: `{info}`")
         return
@@ -394,10 +481,9 @@ async def start_handler(client, message: Message):
         f"Arre **{message.from_user.mention}**! Kya haal hai boss? 😎\n\n"
         f"Main hoon tera file wala dost — jo bhi chahiye, bas naam bol! 🎬\n\n"
         f"**Kaise kaam karta hai (ekdum easy):**\n"
-        f"1️⃣ Channel join kar — free hai re! 📢\n"
-        f"2️⃣ Din mein ek baar verify kar (2 sec ka kaam) 🔗\n"
-        f"3️⃣ Group mein file naam likh — bas! 🔍\n"
-        f"4️⃣ PM mein file aa jaayegi — jadoo! ✨\n\n"
+        f"1️⃣ Group mein file naam likh — seedha results aayenge! 🔍\n"
+        f"2️⃣ File ke button par click karo 📥\n"
+        f"3️⃣ Ek baar verify karo → file PM mein! ✨\n\n"
         f"💎 **Premium** = Verify skip + 10 results + HD Stream + Download! 🏆\n"
         f"🔗 **10 Refer** = 15 din FREE Premium! 🎁\n\n"
         f"Chal shuru karte hai — `/premium` | `/mystats` | `/referlink`",
@@ -406,10 +492,10 @@ async def start_handler(client, message: Message):
         f"Swagat hai **{message.from_user.mention}**! 🙏\n\n"
         f"Kya dekhna hai aaj? Movie? Series? Anime? Sab milega! 🎬🍿\n\n"
         f"**Simple steps:**\n"
-        f"1️⃣ 📢 Channel join karo (mandatory hai bhai)\n"
-        f"2️⃣ 🔗 Ek baar verify karo (shortlink)\n"
-        f"3️⃣ 🔍 Group mein type karo jo chahiye\n"
-        f"4️⃣ 📥 PM mein file — auto delivery!\n\n"
+        f"1️⃣ 🔍 Group mein type karo jo chahiye\n"
+        f"2️⃣ 📥 Results turant aayenge — button dabao\n"
+        f"3️⃣ 🔗 Ek baar verify karo (shortlink) → file milegi!\n"
+        f"4️⃣ 📢 Channel join hai to seedha file PM mein!\n\n"
         f"💎 **Premium = Boss Mode** — No verify, HD Stream, Unlimited! 🤑\n"
         f"🔗 Dosto ko bulao — **10 refer = 15 din FREE premium!**\n\n"
         f"Commands: `/premium` | `/mystats` | `/referlink`",
@@ -418,10 +504,10 @@ async def start_handler(client, message: Message):
         f"Kya bolti public! **{message.from_user.mention}** aa gaya scene mein! 🎉\n\n"
         f"Mujhse koi file maang — main refuse nahi karta! 😏\n\n"
         f"**Instructions (padh le zara):**\n"
-        f"1️⃣ Channel join kar pehle 📢\n"
-        f"2️⃣ Verify kar daily (free users ke liye) 🔗\n"
-        f"3️⃣ Group mein movie/show ka naam likh ✍️\n"
-        f"4️⃣ PM check kar — file ready! 📥\n\n"
+        f"1️⃣ Group mein movie/show ka naam likh ✍️\n"
+        f"2️⃣ Results turant dikhenge — koi wait nahi! ⚡\n"
+        f"3️⃣ File button dabao → verify karo (2 sec) → file! 📥\n"
+        f"4️⃣ PM check kar — file ready! 🎬\n\n"
         f"💎 **Premium loge to life set!** Stream + Download + No verify! 🔥\n"
         f"🔗 **10 Refer karke FREE premium le lo!** 🎁\n\n"
         f"`/premium` | `/mystats` | `/referlink`",
@@ -435,7 +521,7 @@ async def start_handler(client, message: Message):
 #  HELPER: Build result buttons with filter row
 # ═══════════════════════════════════════
 def _build_result_buttons(found_page, uid, bot_username, qkey, page=0, total_pages=1):
-    """Unified button builder for search results"""
+    """Unified button builder for search results - verify/fsub on click"""
     btns = []
     for idx, fmsg in enumerate(found_page):
         fname = get_file_name(fmsg)
@@ -443,8 +529,9 @@ def _build_result_buttons(found_page, uid, bot_username, qkey, page=0, total_pag
         fname_show = fname_clean[:36] if fname_clean else f"File {page*5+idx+1}"
         fsize = get_file_size(fmsg)
         sz = f" [{fsize}]" if fsize else ""
-        link = f"https://t.me/{bot_username}?start=getfile_{uid}_{fmsg.id}"
-        btns.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", url=link)])
+        # ══ NEW: callback_data instead of URL — verify/fsub tab hoga jab click ho ══
+        # Format: getf_{uid}_{msg_id}
+        btns.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", callback_data=f"getf_{uid}_{fmsg.id}")])
 
     # Pagination
     if total_pages > 1:
@@ -651,27 +738,9 @@ async def search_handler(client, message: Message):
             asyncio.create_task(del_later(msg, 300))
             return
 
-        # FIX: Force sub check
-        if not await force_sub_check(client, message, prem): return
-
-        # FIX 6: Group premium check — agar group premium hai to shortlink SKIP karo
-        # Group owner ne premium liya hai to uske users ko shortlink nahi dikhegi
-        async def _is_group_premium(cid):
-            doc = await group_prem_col.find_one({"chat_id": cid, "status": "approved"})
-            if not doc: return False
-            from config import make_aware, now
-            expiry = make_aware(doc.get("expiry"))
-            if expiry and now() > expiry:
-                await group_prem_col.update_one({"chat_id": cid}, {"$set": {"status": "expired"}})
-                return False
-            return True
-
-        grp_prem = await _is_group_premium(chat_id)
-
-        # Shortlink verify — group premium hai to skip, warna normal verify
-        if not grp_prem:
-            if not await verify_check(client, message, prem): return
-        # agar group premium hai — shortlink nahi aayegi, seedha search hoga
+        # ══ NEW FLOW: Seedha search — verify/fsub file button click pe hoga ══
+        # Force sub aur shortlink verify SEARCH pe nahi hoga
+        # Ye sab tab hoga jab user file button click karega (getfile_ start param)
 
         if not prem:
             count = await get_daily_count(uid)
@@ -985,6 +1054,181 @@ async def cb_handler(client, query: CallbackQuery):
             await query.answer(f"❌ Abhi join nahi kiya!\n{names}", show_alert=True)
         return
 
+    # ══════════════════════════════════════════════════════════
+    # ── getf_ — File Button Click: Shortlink → Force Sub → File ──
+    # ══════════════════════════════════════════════════════════
+    if data.startswith("getf_"):
+        # Format: getf_{owner_uid}_{msg_id}
+        parts = data.split("_", 2)
+        if len(parts) < 3:
+            await query.answer("❌ Invalid!", show_alert=True); return
+        try:
+            owner_uid = int(parts[1])
+            msg_id = int(parts[2])
+        except:
+            await query.answer("❌ Invalid!", show_alert=True); return
+
+        # Sirf original user hi file le sakta hai
+        if uid != owner_uid and uid not in ADMINS:
+            await query.answer("❌ Ye file aapke liye nahi! Apna search karo.", show_alert=True)
+            return
+
+        prem = await is_premium(uid)
+        s = await get_settings()
+
+        if await is_banned(uid):
+            await query.answer("🚫 Aap banned hain!", show_alert=True); return
+
+        # ── STEP 1: Shortlink Verify ──
+        # Group ka shortlink check karo (group premium ka apna shortlink)
+        chat_id_for_sl = 0
+        try:
+            if query.message and query.message.chat:
+                chat_id_for_sl = query.message.chat.id
+        except: pass
+
+        # Group shortlink — group premium wale ki own shortlink
+        async def _get_active_group_sl(cid):
+            sls = []
+            async for doc in group_sl_col.find({"chat_id": cid, "active": True}).sort("order", 1):
+                sls.append(doc)
+            return sls
+
+        grp_sl_list = await _get_active_group_sl(chat_id_for_sl) if chat_id_for_sl else []
+
+        if not prem:
+            # Check if user needs to verify (group shortlink ya global shortlink)
+            if grp_sl_list:
+                # Group ki apni shortlink use karo
+                sl = grp_sl_list[0]
+                sl_id = str(sl["_id"])
+                hours = sl.get("hours", 24)
+                # Check if already verified this group shortlink recently
+                log_doc = await verify_log_col.find_one(
+                    {"user_id": uid, "shortlink_id": sl_id},
+                    sort=[("verified_at", -1)]
+                )
+                needs_verify = True
+                if log_doc:
+                    verified_at = make_aware(log_doc.get("verified_at"))
+                    from datetime import timedelta
+                    if now() - verified_at < timedelta(hours=hours):
+                        needs_verify = False
+
+                if needs_verify:
+                    me = await client.get_me()
+                    token = await make_token(uid, f"sv_{sl_id}")
+                    verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
+                    short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, sl)
+                    sl_label = sl.get("label", "Verify")
+                    # Save pending file so after verify file mil jaaye
+                    await users_col.update_one(
+                        {"user_id": uid},
+                        {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
+                        upsert=True
+                    )
+                    kb = InlineKeyboardMarkup([
+                        [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                        [InlineKeyboardButton("💎 Premium lo — verify kabhi nahi", callback_data="show_premium")],
+                    ])
+                    await query.answer("🔐 Pehle verify karo!", show_alert=False)
+                    try:
+                        await query.message.reply(
+                            f"🔐 **Ek Chhota Sa Step!**\n\n"
+                            f"👇 Neeche link complete karo → wapas aao → file milegi!\n"
+                            f"⏰ Har {hours} ghante mein ek baar.",
+                            reply_markup=kb
+                        )
+                    except: pass
+                    return
+            else:
+                # Global shortlink check
+                all_done, next_sl, _ = await get_user_verify_state(uid)
+                if not all_done and s.get("shortlink_enabled", True):
+                    me = await client.get_me()
+                    if next_sl:
+                        sl_id = str(next_sl["_id"])
+                        sl_label = next_sl.get("label", "Verify")
+                        hours = next_sl.get("hours", 24)
+                        token = await make_token(uid, f"sv_{sl_id}")
+                        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
+                        short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, next_sl)
+                    else:
+                        if SHORTLINK_API:
+                            sl_label = "Verify"
+                            hours = 24
+                            token = await make_token(uid, "sv_env")
+                            verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
+                            try:
+                                api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
+                                async with aiohttp.ClientSession() as sess:
+                                    async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                                        result = (await r.text()).strip()
+                                        short = result if result.startswith("http") else verify_url
+                            except:
+                                short = verify_url
+                            all_done = False
+                        else:
+                            all_done = True
+
+                    if not all_done:
+                        # Save pending file
+                        await users_col.update_one(
+                            {"user_id": uid},
+                            {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
+                            upsert=True
+                        )
+                        kb = InlineKeyboardMarkup([
+                            [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                            [InlineKeyboardButton("💎 Premium lo — verify kabhi nahi", callback_data="show_premium")],
+                        ])
+                        await query.answer("🔐 Pehle verify karo!", show_alert=False)
+                        try:
+                            await query.message.reply(
+                                f"🔐 **Ek Chhota Sa Step!**\n\n"
+                                f"👇 Shortlink complete karo → file turant milegi!\n"
+                                f"⏰ Har {hours} ghante mein ek baar.\n\n"
+                                f"💎 Premium lo = verify kabhi nahi!",
+                                reply_markup=kb
+                            )
+                        except: pass
+                        return
+
+        # ── STEP 2: Force Sub Check ──
+        if not prem:
+            joined, not_joined = await check_member_multi(uid, prem)
+            if not joined:
+                kb = await build_fsub_keyboard(not_joined, uid)
+                names = ", ".join(ch.get("title", "Channel") for ch in not_joined)
+                await query.answer("📢 Pehle channel join karo!", show_alert=False)
+                try:
+                    await query.message.reply(
+                        f"📢 **Pehle Join Karo!**\n\n"
+                        f"**{names}** join karo — phir file milegi! ✅",
+                        reply_markup=kb
+                    )
+                except: pass
+                return
+
+        # ── STEP 3: Daily Limit ──
+        if not prem:
+            count = await get_daily_count(uid)
+            if count >= s.get("daily_limit", 10):
+                await query.answer(
+                    f"⚠️ Aaj ki limit {s.get('daily_limit',10)} ho gayi! /premium lo.",
+                    show_alert=True
+                )
+                return
+
+        # ── STEP 4: File Send ──
+        await query.answer("📥 File aa rahi hai...", show_alert=False)
+        success, info = await send_file_to_pm(client, query.from_user, msg_id, prem)
+        if not success:
+            try:
+                await query.message.reply(f"❌ File nahi aayi.\n`{info}`")
+            except: pass
+        return
+
     # ── Group settings toggle ──
     if data.startswith("gs_toggle_"):
         parts = data.split("_")
@@ -1031,20 +1275,26 @@ async def cb_handler(client, query: CallbackQuery):
         parts = data.split("_", 3)
         if len(parts) < 4:
             await query.answer("❌ Error", show_alert=True); return
-        r_uid = int(parts[1])
-        qkey = parts[2]
-        page = int(parts[3])
+        try:
+            r_uid = int(parts[1])
+            qkey = parts[2]
+            page = int(parts[3])
+        except:
+            await query.answer("❌ Invalid data", show_alert=True); return
+
         if query.from_user.id != r_uid and query.from_user.id not in ADMINS:
             await query.answer("❌ Ye aapka search nahi!", show_alert=True); return
+
         cache_key = f"{r_uid}_{qkey}"
         found = _result_cache.get(cache_key)
         if not found:
-            query_text = qkey.replace("_", " ")
-            prem = await is_premium(r_uid)
-            limit = 10 if prem else 5
-            found = await do_search(query_text, limit=limit)
+            query_text = qkey.replace("_", " ").strip()
+            prem_r = await is_premium(r_uid)
+            limit_r = 10 if prem_r else 5
+            found = await do_search(query_text, limit=limit_r)
             if not found:
-                await query.answer("😕 Results expired, dobara search karo", show_alert=True); return
+                await query.answer("😕 Results expire ho gaye, dobara search karo", show_alert=True)
+                return
             _result_cache[cache_key] = found
 
         page_size = 5
@@ -1054,12 +1304,17 @@ async def cb_handler(client, query: CallbackQuery):
 
         me = await client.get_me()
         btns = _build_result_buttons(page_found, r_uid, me.username, qkey, page, total_pages)
+        search_q_display = qkey.replace("_", " ").strip()
         try:
             await query.message.edit_text(
-                f"🔍 Results — Page {page+1}/{total_pages}",
+                f"🔍 **{len(found)} Results** — {search_q_display}\n"
+                f"📄 Page {page+1}/{total_pages}\n\n"
+                f"👇 File ka button dabao — PM mein aayegi! 📥",
                 reply_markup=InlineKeyboardMarkup(btns)
             )
-        except: pass
+        except Exception as e:
+            if "message is not modified" not in str(e).lower():
+                logger.warning(f"rpage edit error: {e}")
         await query.answer(f"Page {page+1}/{total_pages}")
         return
 
@@ -1110,8 +1365,7 @@ async def cb_handler(client, query: CallbackQuery):
             fname_show = fname_clean[:38] if fname_clean else f"File {i+1}"
             fsize = get_file_size(fmsg)
             sz = f" [{fsize}]" if fsize else ""
-            link = f"https://t.me/{me.username}?start=getfile_{r_uid}_{fmsg.id}"
-            btns.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", url=link)])
+            btns.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", callback_data=f"getf_{r_uid}_{fmsg.id}")])
         lang_row1, lang_row2 = [], []
         for j, (lname, lkey) in enumerate(LANGUAGES):
             tick = "✅ " if lkey == lang_key else ""
@@ -1179,8 +1433,7 @@ async def cb_handler(client, query: CallbackQuery):
             fname_show = fname_clean[:38] if fname_clean else f"File {i+1}"
             fsize = get_file_size(fmsg)
             sz = f" [{fsize}]" if fsize else ""
-            link = f"https://t.me/{me.username}?start=getfile_{r_uid}_{fmsg.id}"
-            btns.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", url=link)])
+            btns.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", callback_data=f"getf_{r_uid}_{fmsg.id}")])
         cur = int(season_key[1:]) if season_key.startswith("S") and season_key[1:].isdigit() else 0
         s_row = []
         for sn in [max(1,cur-1), cur, min(50,cur+1)]:
@@ -1271,8 +1524,7 @@ async def cb_handler(client, query: CallbackQuery):
             fname_show = fname_clean[:38] if fname_clean else f"File {i+1}"
             fsize = get_file_size(fmsg)
             sz = f" [{fsize}]" if fsize else ""
-            link = f"https://t.me/{me.username}?start=getfile_{r_uid}_{fmsg.id}"
-            btns.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", url=link)])
+            btns.append([InlineKeyboardButton(f"📥 {fname_show}{sz}", callback_data=f"getf_{r_uid}_{fmsg.id}")])
         cur = int(ep_key[1:]) if ep_key.startswith("E") and ep_key[1:].isdigit() else 0
         ep_row = []
         for en in [max(1,cur-1), cur, min(200,cur+1)]:
@@ -1321,14 +1573,98 @@ async def cb_handler(client, query: CallbackQuery):
         search_q = qkey.replace("_", " ").strip()
         if query.from_user.id != r_uid and query.from_user.id not in ADMINS:
             await query.answer("❌ Ye aapka button nahi!", show_alert=True); return
+
+        prem = await is_premium(uid)
+        s = await get_settings()
+
+        # STEP 1: Shortlink verify check
+        chat_id_sa = 0
+        try:
+            if query.message and query.message.chat:
+                chat_id_sa = query.message.chat.id
+        except: pass
+
+        if not prem:
+            # Group shortlink check
+            grp_sl_sa = []
+            if chat_id_sa:
+                async for doc in group_sl_col.find({"chat_id": chat_id_sa, "active": True}).sort("order", 1):
+                    grp_sl_sa.append(doc)
+
+            needs_verify_sa = False
+            short_sa = None; sl_label_sa = "Verify"; hours_sa = 24
+
+            if grp_sl_sa:
+                sl = grp_sl_sa[0]
+                sl_id = str(sl["_id"]); hours_sa = sl.get("hours", 24)
+                log_doc = await verify_log_col.find_one({"user_id": uid, "shortlink_id": sl_id}, sort=[("verified_at", -1)])
+                if not log_doc or now() - make_aware(log_doc.get("verified_at")) >= timedelta(hours=hours_sa):
+                    needs_verify_sa = True
+                    me_sa = await client.get_me()
+                    token_sa = await make_token(uid, f"sv_{sl_id}")
+                    verify_url_sa = f"https://t.me/{me_sa.username}?start=sv_{uid}_{token_sa}_{sl_id}"
+                    short_sa = await get_cached_shortlink(uid, chat_id_sa, verify_url_sa, sl)
+                    sl_label_sa = sl.get("label", "Verify")
+            else:
+                all_done_sa, next_sl_sa, _ = await get_user_verify_state(uid)
+                if not all_done_sa and s.get("shortlink_enabled", True):
+                    needs_verify_sa = True
+                    me_sa = await client.get_me()
+                    if next_sl_sa:
+                        sl_id = str(next_sl_sa["_id"]); sl_label_sa = next_sl_sa.get("label", "Verify"); hours_sa = next_sl_sa.get("hours", 24)
+                        token_sa = await make_token(uid, f"sv_{sl_id}")
+                        verify_url_sa = f"https://t.me/{me_sa.username}?start=sv_{uid}_{token_sa}_{sl_id}"
+                        short_sa = await get_cached_shortlink(uid, chat_id_sa, verify_url_sa, next_sl_sa)
+                    elif SHORTLINK_API:
+                        token_sa = await make_token(uid, "sv_env")
+                        verify_url_sa = f"https://t.me/{me_sa.username}?start=sv_{uid}_{token_sa}"
+                        try:
+                            api_url_sa = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url_sa}&format=text"
+                            async with aiohttp.ClientSession() as sess:
+                                async with sess.get(api_url_sa, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                                    result_sa = (await r.text()).strip()
+                                    short_sa = result_sa if result_sa.startswith("http") else verify_url_sa
+                        except: short_sa = verify_url_sa
+                    else:
+                        needs_verify_sa = False
+
+            if needs_verify_sa and short_sa:
+                await query.answer("🔐 Pehle verify karo!", show_alert=False)
+                try:
+                    await query.message.reply(
+                        f"🔐 **Ek Chhota Sa Step!**\n\n"
+                        f"👇 Shortlink complete karo → sab files milegi!\n"
+                        f"⏰ Har {hours_sa} ghante mein ek baar.\n\n"
+                        f"💎 Premium lo = verify kabhi nahi!",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton(f"🔗 {sl_label_sa} — Verify Karo", url=short_sa)],
+                            [InlineKeyboardButton("💎 Premium lo", callback_data="show_premium")],
+                        ])
+                    )
+                except: pass
+                return
+
+        # STEP 2: Force sub
+        if not prem:
+            joined_sa, not_joined_sa = await check_member_multi(uid, prem)
+            if not joined_sa:
+                kb_sa = await build_fsub_keyboard(not_joined_sa, uid)
+                await query.answer("📢 Pehle channel join karo!", show_alert=False)
+                try:
+                    names_sa = ", ".join(ch.get("title", "Channel") for ch in not_joined_sa)
+                    await query.message.reply(
+                        f"📢 **Pehle Join Karo!**\n\n**{names_sa}** join karo — phir files milegi! ✅",
+                        reply_markup=kb_sa
+                    )
+                except: pass
+                return
+
         await query.answer("📤 Sab files PM mein bhej raha hoon... Thoda wait karo!")
         cache_key = f"{r_uid}_{qkey}"
         found = _result_cache.get(cache_key) or await do_search(search_q, limit=10)
         if not found:
             await query.answer("😕 Koi file nahi mili!", show_alert=True); return
-        s = await get_settings()
         t = s.get("auto_delete_time", 300)
-        prem = await is_premium(r_uid)
         sent_count = 0
         fail_count = 0
         flood_hit = False
