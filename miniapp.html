@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <!-- © 2025 @asbhaibsr | @asbhai_bsr — AsBhai Drop Bot v3.0 Ultra -->
 <html lang="hi">
@@ -165,27 +164,61 @@ body{padding-bottom:64px}
 /* ════ ADVANCED HD PLAYER ════ */
 .player-wrap{margin:14px;border-radius:18px;background:#000;position:relative;border:1px solid var(--bd);overflow:hidden}
 .player-inner{position:relative;width:100%;padding-top:56.25%;background:#000;overflow:hidden}
-.player-inner video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;transform-origin:center center;transition:transform .3s ease}
-/* 90deg: video fills box rotated — swap w/h */
-.player-inner.rot90 video{
-  width:177.78% !important;
-  height:56.25% !important;
-  top:21.875% !important;
-  left:-38.89% !important;
-  transform:rotate(90deg);
+.player-inner video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;transform-origin:center center;transition:transform .25s ease}
+
+/* ── FULLSCREEN LANDSCAPE ROTATE MODE ── */
+/* Jab .rotated class ho — video pura screen le le landscape mein */
+body.rotated-mode{overflow:hidden}
+.player-wrap.rotated-mode{
+  position:fixed !important;
+  top:0 !important; left:0 !important;
+  width:100vw !important;
+  height:100vh !important;
+  margin:0 !important;
+  border-radius:0 !important;
+  z-index:9999 !important;
 }
-/* 180deg: same box size, just flipped */
-.player-inner.rot180 video{
+.player-wrap.rotated-mode .player-inner{
+  padding-top:0 !important;
+  width:100% !important;
+  height:100% !important;
+  position:absolute !important;
+  top:0 !important; left:0 !important;
+}
+.player-wrap.rotated-mode .player-inner video{
+  width:100% !important;
+  height:100% !important;
+  top:0 !important; left:0 !important;
+  transform:rotate(90deg) !important;
+  /* Landscape ke liye size swap */
+  max-width:100vh;
+  max-height:100vw;
+}
+/* 270 deg wali rotation */
+.player-wrap.rotated-mode.rot270 .player-inner video{
+  transform:rotate(270deg) !important;
+}
+/* 180 deg — sirf flip, landscape nahi */
+.player-wrap.rot180 .player-inner video{
   transform:rotate(180deg);
 }
-/* 270deg: same as 90 but other direction */
-.player-inner.rot270 video{
-  width:177.78% !important;
-  height:56.25% !important;
-  top:21.875% !important;
-  left:-38.89% !important;
-  transform:rotate(270deg);
+/* Rotate exit button — fullscreen mode mein */
+#rotate-exit-btn{
+  display:none;
+  position:fixed;
+  top:12px; right:12px;
+  z-index:10000;
+  background:rgba(0,0,0,.7);
+  color:#fff;
+  border:none;
+  border-radius:50%;
+  width:40px; height:40px;
+  font-size:18px;
+  cursor:pointer;
+  align-items:center;
+  justify-content:center;
 }
+body.rotated-mode #rotate-exit-btn{display:flex !important;}
 .player-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;cursor:pointer}
 .player-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.8);z-index:10}
 .player-loading .pl-spin{width:48px;height:48px;border:3px solid rgba(108,99,255,.2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
@@ -286,6 +319,9 @@ body{padding-bottom:64px}
 </style>
 </head>
 <body>
+<!-- Rotate Exit Button — fullscreen landscape mode mein dikhta hai -->
+<button id="rotate-exit-btn" onclick="exitRotate()" title="Exit Rotate">✕</button>
+
 <div class="bg-grid"></div>
 <div id="pts"></div>
 
@@ -767,7 +803,7 @@ body{padding-bottom:64px}
     <div class="qm-opt" onclick="setAspect('contain')"><div class="qm-i">📐</div><div><div class="qm-l">Fit to Screen</div><div class="qm-d">Default — black bars</div></div></div>
     <div class="qm-opt" onclick="setAspect('cover')"><div class="qm-i">🔲</div><div><div class="qm-l">Fill Screen</div><div class="qm-d">Crop to fill — no bars</div></div></div>
     <div class="qm-opt" onclick="setAspect('fill')"><div class="qm-i">⬜</div><div><div class="qm-l">Stretch</div><div class="qm-d">Stretch to fill</div></div></div>
-    <div class="qm-opt" onclick="doRotate()"><div class="qm-i">🔄</div><div><div class="qm-l">Rotate Video</div><div class="qm-d">90° rotate karo</div></div></div>
+    <div class="qm-opt" onclick="doRotate()"><div class="qm-i">🔄</div><div><div class="qm-l">Rotate Video</div><div class="qm-d">Landscape fullscreen — ✕ se exit</div></div></div>
     <div class="qm-opt" onclick="doZoom()"><div class="qm-i">🔍</div><div><div class="qm-l">Zoom Toggle</div><div class="qm-d">Zoom in/out karo</div></div></div>
     <div class="qm-opt" onclick="doPiP()"><div class="qm-i">🖼</div><div><div class="qm-l">Picture-in-Picture</div><div class="qm-d">Chhota window mein dekho</div></div></div>
     <div class="qm-opt" onclick="openExtPlayer()"><div class="qm-i">📱</div><div><div class="qm-l">Open in External Player</div><div class="qm-d">MX Player / VLC mein kholo</div></div></div>
@@ -1053,7 +1089,13 @@ function loadVid(su,du,mid){
     if(v)v.style.display='block';
     updPl();
   };
-  v.onloadeddata=function(){if(pld)pld.style.display='none';if(v)v.style.display='block';};
+  v.onloadeddata=function(){
+    if(pld)pld.style.display='none';
+    if(v)v.style.display='block';
+    // Volume slider sync
+    var vb=document.getElementById('ctrl-vol');
+    if(vb) vb.value=Math.round(v.volume*100);
+  };
   v.oncanplay=function(){
     if(pld)pld.style.display='none';
     if(window._stall_t){clearTimeout(window._stall_t);window._stall_t=null;}
@@ -1149,64 +1191,137 @@ function playPause(){
 }
 function seekV(val){var v=document.getElementById('vid');if(v&&v.duration)v.currentTime=parseFloat(val);showCtrl();}
 function skip(s){var v=document.getElementById('vid');if(!curVid||!v)return;v.currentTime=Math.max(0,Math.min(v.currentTime+s,v.duration||0));showCtrl();toast((s>0?'⏩':'⏪')+' '+Math.abs(s)+'s');}
-function setVol(val){var v=document.getElementById('vid');if(v)v.volume=val/100;}
-function togMute(){var v=document.getElementById('vid'),vb=document.getElementById('ctrl-vol');if(!v)return;v.muted=!v.muted;if(vb)vb.value=v.muted?0:v.volume*100;toast(v.muted?'🔇 Muted':'🔊 Unmuted');}
+function setVol(val){
+  var v=document.getElementById('vid');
+  if(!v)return;
+  var vol=parseFloat(val)/100;
+  v.volume=vol;
+  v.muted=(vol===0);
+  // Volume button icon update
+  var btn=document.querySelector('.ctrl-btn[onclick="togMute()"]');
+  if(btn){
+    if(vol===0||v.muted) btn.textContent='🔇';
+    else if(vol<0.5) btn.textContent='🔉';
+    else btn.textContent='🔊';
+  }
+}
+function togMute(){
+  var v=document.getElementById('vid');
+  var vb=document.getElementById('ctrl-vol');
+  if(!v)return;
+  v.muted=!v.muted;
+  if(vb){
+    vb.value=v.muted?0:Math.round(v.volume*100);
+  }
+  var btn=document.querySelector('.ctrl-btn[onclick="togMute()"]');
+  if(btn) btn.textContent=v.muted?'🔇':'🔊';
+  toast(v.muted?'🔇 Muted':'🔊 Unmuted');
+}
 function cycSpd(){
-  spIdx=(spIdx+1)%SPDS.length;var v=document.getElementById('vid');
-  if(v)v.playbackRate=SPDS[spIdx];var l=SPDS[spIdx]+'×';
-  setEl('ctrl-spd',l);toast('⚡ Speed: '+l);showCtrl();
+  spIdx=(spIdx+1)%SPDS.length;
+  var v=document.getElementById('vid');
+  if(v) v.playbackRate=SPDS[spIdx];
+  var label=SPDS[spIdx]+'×';
+  var btn=document.getElementById('ctrl-spd');
+  if(btn) btn.textContent=label;
+  toast('⚡ Speed: '+label);
+  showCtrl();
 }
 
-/* ── Fullscreen / PiP / Rotate / Zoom ── */
+/* ── Fullscreen Rotate — Pura screen landscape ── */
+var isRotated=false;
+var rotDir=90; // 90 ya 270
+
+function doRotate(){
+  curRotation=(curRotation+90)%360;
+  var wrap=document.getElementById('player-wrap');
+  var inner=document.getElementById('player-inner');
+  var v=document.getElementById('vid');
+  if(!wrap||!inner||!v)return;
+
+  if(curRotation===0){
+    // Wapas normal
+    exitRotate();
+    return;
+  }
+
+  if(curRotation===90||curRotation===270){
+    // Landscape fullscreen mode
+    isRotated=true;
+    wrap.classList.add('rotated-mode');
+    document.body.classList.add('rotated-mode');
+    if(curRotation===270){
+      wrap.classList.add('rot270');
+    } else {
+      wrap.classList.remove('rot270');
+    }
+    // Screen orientation lock try karo (agar browser support kare)
+    try{
+      if(screen.orientation&&screen.orientation.lock){
+        screen.orientation.lock('landscape').catch(function(){});
+      }
+    }catch(e){}
+    toast('🔄 Landscape Mode ON — ✕ dabao exit ke liye');
+  } else if(curRotation===180){
+    // 180 = seedha box mein flip
+    exitRotate();
+    wrap.classList.remove('rot270');
+    wrap.classList.add('rot180');
+    v.style.transform='rotate(180deg)';
+    toast('🔄 Rotated 180°');
+  }
+  closeQuality();
+}
+
+function exitRotate(){
+  curRotation=0;
+  isRotated=false;
+  var wrap=document.getElementById('player-wrap');
+  var v=document.getElementById('vid');
+  if(wrap){
+    wrap.classList.remove('rotated-mode','rot270','rot180');
+  }
+  document.body.classList.remove('rotated-mode');
+  if(v){
+    v.style.transform='none';
+  }
+  // Orientation unlock
+  try{
+    if(screen.orientation&&screen.orientation.unlock){
+      screen.orientation.unlock();
+    }
+  }catch(e){}
+  toast('🔄 Normal Mode');
+}
+
+/* ── Fullscreen ── */
 function doFull(){
   var wrap=document.getElementById('player-wrap');if(!wrap)return;
   if(document.fullscreenElement){document.exitFullscreen();}
-  else{(wrap.requestFullscreen||wrap.webkitRequestFullscreen||wrap.mozRequestFullScreen).call(wrap);}
+  else{
+    var fn=wrap.requestFullscreen||wrap.webkitRequestFullscreen||wrap.mozRequestFullScreen;
+    if(fn) fn.call(wrap);
+  }
+  closeQuality();
 }
+
+/* ── PiP ── */
 function doPiP(){
   var v=document.getElementById('vid');if(!curVid||!v){toast('❌ Video load karo pehle');return;}
   if(document.pictureInPictureElement){document.exitPictureInPicture();}
-  else if(document.pictureInPictureEnabled&&v.requestPictureInPicture){v.requestPictureInPicture().then(function(){toast('🖼 PiP mode ON!');}).catch(function(){toast('❌ PiP not supported');});}
-  else toast('❌ PiP not supported');
+  else if(document.pictureInPictureEnabled&&v.requestPictureInPicture){
+    v.requestPictureInPicture().then(function(){toast('🖼 PiP ON!');}).catch(function(){toast('❌ PiP not supported');});
+  } else toast('❌ PiP not supported');
   closeQuality();
 }
-function doRotate(){
-  curRotation=(curRotation+90)%360;
-  var v=document.getElementById('vid');
-  var inner=document.getElementById('player-inner');
-  if(!v||!inner)return;
-  // Pehle sab classes hatao
-  inner.classList.remove('rot90','rot180','rot270');
-  // Zoom bhi saath mein apply karo
-  var zoom=curZoom!==1?' scale('+curZoom+')':'';
-  if(curRotation===90){
-    inner.classList.add('rot90');
-    v.style.transform='rotate(90deg)'+zoom;
-  }else if(curRotation===180){
-    inner.classList.add('rot180');
-    v.style.transform='rotate(180deg)'+zoom;
-  }else if(curRotation===270){
-    inner.classList.add('rot270');
-    v.style.transform='rotate(270deg)'+zoom;
-  }else{
-    // 0deg — original
-    v.style.width='100%';
-    v.style.height='100%';
-    v.style.top='0';
-    v.style.left='0';
-    v.style.transform=zoom||'none';
-  }
-  toast('🔄 Rotated: '+curRotation+'°');
-  closeQuality();
-}
+
+/* ── Zoom ── */
 function doZoom(){
   curZoom=curZoom>=2?1:curZoom+0.5;
   var v=document.getElementById('vid');if(!v)return;
-  var zoom=curZoom!==1?' scale('+curZoom+')':'';
-  if(curRotation===90){v.style.transform='rotate(90deg)'+zoom;}
-  else if(curRotation===180){v.style.transform='rotate(180deg)'+zoom;}
-  else if(curRotation===270){v.style.transform='rotate(270deg)'+zoom;}
-  else{v.style.transform=zoom.trim()||'none';}
+  if(!isRotated){
+    v.style.transform=curZoom!==1?'scale('+curZoom+')':'none';
+  }
   toast('🔍 Zoom: '+curZoom+'×');
   closeQuality();
 }
