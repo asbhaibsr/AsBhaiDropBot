@@ -354,6 +354,119 @@ async def start_handler(client, message: Message):
             )
         return
 
+    # ── gf_ — Group se PM redirect hua, ab file process karo ──
+    if args.startswith("gf_"):
+        # Format: gf_{msg_id}_{chat_id_for_sl}
+        parts = args[3:].split("_", 1)
+        if len(parts) != 2:
+            await message.reply("❌ Invalid link."); return
+        try:
+            msg_id = int(parts[0])
+            chat_id_for_sl = int(parts[1])
+        except:
+            await message.reply("❌ Invalid link."); return
+
+        if await is_banned(uid):
+            await message.reply("🚫 Aap banned hain!"); return
+
+        s = await get_settings()
+        prem = await is_premium(uid)
+        me = await client.get_me()
+
+        # STEP 1: Shortlink Verify
+        if not prem:
+            async def _grp_sl_gf(cid):
+                sls = []
+                async for doc in group_sl_col.find({"chat_id": cid, "active": True}).sort("order", 1):
+                    sls.append(doc)
+                return sls
+
+            grp_sl_list = await _grp_sl_gf(chat_id_for_sl) if chat_id_for_sl else []
+            needs_verify = False
+            short = None; sl_label = "Verify"; hours = 24
+
+            if grp_sl_list:
+                sl = grp_sl_list[0]
+                sl_id = str(sl["_id"]); hours = sl.get("hours", 24)
+                log_doc = await verify_log_col.find_one(
+                    {"user_id": uid, "shortlink_id": sl_id}, sort=[("verified_at", -1)]
+                )
+                if not log_doc or now() - make_aware(log_doc.get("verified_at")) >= timedelta(hours=hours):
+                    needs_verify = True
+                if needs_verify:
+                    token = await make_token(uid, f"sv_{sl_id}")
+                    verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
+                    short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, sl)
+                    sl_label = sl.get("label", "Verify")
+            else:
+                all_done, next_sl, _ = await get_user_verify_state(uid)
+                if not all_done and s.get("shortlink_enabled", True):
+                    needs_verify = True
+                    if next_sl:
+                        sl_id = str(next_sl["_id"]); sl_label = next_sl.get("label", "Verify"); hours = next_sl.get("hours", 24)
+                        token = await make_token(uid, f"sv_{sl_id}")
+                        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
+                        short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, next_sl)
+                    elif SHORTLINK_API:
+                        token = await make_token(uid, "sv_env")
+                        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
+                        try:
+                            api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
+                            async with aiohttp.ClientSession() as sess:
+                                async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                                    res_text = (await r.text()).strip()
+                                    short = res_text if res_text.startswith("http") else verify_url
+                        except: short = verify_url
+                    else:
+                        needs_verify = False
+
+            if needs_verify and short:
+                await users_col.update_one(
+                    {"user_id": uid},
+                    {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
+                    upsert=True
+                )
+                await message.reply(
+                    f"🔐 **Ek Chhota Sa Step!**\n\n"
+                    f"👇 Link complete karo → file turant milegi!\n"
+                    f"⏰ Har {hours} ghante mein ek baar.\n\n"
+                    f"💎 Premium = verify kabhi nahi!",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                        [InlineKeyboardButton("💎 Premium lo", callback_data="show_premium")],
+                    ])
+                )
+                return
+
+        # STEP 2: Force Sub
+        if not prem:
+            joined, not_joined = await check_member_multi(uid, prem)
+            if not joined:
+                kb = await build_fsub_keyboard(not_joined, uid)
+                names = ", ".join(ch.get("title", "Channel") for ch in not_joined)
+                await message.reply(
+                    f"📢 **Pehle Join Karo!**\n\n**{names}** join karo — phir file milegi! ✅",
+                    reply_markup=kb
+                )
+                return
+
+        # STEP 3: Daily Limit
+        if not prem:
+            count = await get_daily_count(uid)
+            if count >= s.get("daily_limit", 10):
+                await message.reply(
+                    f"⚠️ **Daily Limit Khatam!**\n💎 /premium lo unlimited ke liye!"
+                )
+                return
+
+        # STEP 4: File Send
+        wait = await message.reply("📥 File aa rahi hai... ⏳")
+        success, info = await send_file_to_pm(client, message.from_user, msg_id, prem)
+        await wait.delete()
+        if not success:
+            await message.reply(f"❌ File nahi aayi.\n`{info}`")
+        return
+
     # ── getfile_ — file PM mein bhejo ──
     if args.startswith("getfile_"):
         # Legacy URL-based links — same flow as getf_ callback
@@ -1055,10 +1168,11 @@ async def cb_handler(client, query: CallbackQuery):
         return
 
     # ══════════════════════════════════════════════════════════
-    # ── getf_ — File Button Click: Shortlink → Force Sub → File ──
+    # ══════════════════════════════════════════════════════════
+    # ── getf_ — File Button Click → Bot PM mein le jaaye ──
+    # Flow: Group button click → PM mein Verify/ForceSub/File
     # ══════════════════════════════════════════════════════════
     if data.startswith("getf_"):
-        # Format: getf_{owner_uid}_{msg_id}
         parts = data.split("_", 2)
         if len(parts) < 3:
             await query.answer("❌ Invalid!", show_alert=True); return
@@ -1068,164 +1182,141 @@ async def cb_handler(client, query: CallbackQuery):
         except:
             await query.answer("❌ Invalid!", show_alert=True); return
 
-        # Sirf original user hi file le sakta hai
         if uid != owner_uid and uid not in ADMINS:
             await query.answer("❌ Ye file aapke liye nahi! Apna search karo.", show_alert=True)
             return
 
-        prem = await is_premium(uid)
-        s = await get_settings()
-
         if await is_banned(uid):
             await query.answer("🚫 Aap banned hain!", show_alert=True); return
 
-        # ── STEP 1: Shortlink Verify ──
-        # Group ka shortlink check karo (group premium ka apna shortlink)
+        me = await client.get_me()
+        prem = await is_premium(uid)
+        s = await get_settings()
+
+        # Group/PM detect
         chat_id_for_sl = 0
+        is_group = False
         try:
             if query.message and query.message.chat:
                 chat_id_for_sl = query.message.chat.id
+                is_group = query.message.chat.type in [
+                    enums.ChatType.GROUP, enums.ChatType.SUPERGROUP
+                ]
         except: pass
 
-        # Group shortlink — group premium wale ki own shortlink
-        async def _get_active_group_sl(cid):
-            sls = []
-            async for doc in group_sl_col.find({"chat_id": cid, "active": True}).sort("order", 1):
-                sls.append(doc)
-            return sls
-
-        grp_sl_list = await _get_active_group_sl(chat_id_for_sl) if chat_id_for_sl else []
-
-        if not prem:
-            # Check if user needs to verify (group shortlink ya global shortlink)
-            if grp_sl_list:
-                # Group ki apni shortlink use karo
-                sl = grp_sl_list[0]
-                sl_id = str(sl["_id"])
-                hours = sl.get("hours", 24)
-                # Check if already verified this group shortlink recently
-                log_doc = await verify_log_col.find_one(
-                    {"user_id": uid, "shortlink_id": sl_id},
-                    sort=[("verified_at", -1)]
+        # ── GROUP: seedha PM mein le jaao — koi popup nahi ──
+        # Button click = PM open with start param gf_{msg_id}_{chat_id}
+        if is_group:
+            start_param = f"gf_{msg_id}_{chat_id_for_sl}"
+            pm_url = f"https://t.me/{me.username}?start={start_param}"
+            await query.answer()
+            # Group mein ek chhota "PM mein lo" button dikhao
+            try:
+                await query.message.reply(
+                    f"📥 **File lo PM mein!**",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📥 File Lo", url=pm_url)]
+                    ])
                 )
-                needs_verify = True
-                if log_doc:
-                    verified_at = make_aware(log_doc.get("verified_at"))
-                    from datetime import timedelta
-                    if now() - verified_at < timedelta(hours=hours):
-                        needs_verify = False
+            except: pass
+            return
 
+        # ── PM mein hai — pura flow ──
+
+        # STEP 1: Shortlink Verify
+        if not prem:
+            async def _grp_sl(cid):
+                sls = []
+                async for doc in group_sl_col.find({"chat_id": cid, "active": True}).sort("order", 1):
+                    sls.append(doc)
+                return sls
+
+            grp_sl_list = await _grp_sl(chat_id_for_sl) if chat_id_for_sl else []
+            needs_verify = False
+            short = None; sl_label = "Verify"; hours = 24
+
+            if grp_sl_list:
+                sl = grp_sl_list[0]
+                sl_id = str(sl["_id"]); hours = sl.get("hours", 24)
+                log_doc = await verify_log_col.find_one(
+                    {"user_id": uid, "shortlink_id": sl_id}, sort=[("verified_at", -1)]
+                )
+                if not log_doc or now() - make_aware(log_doc.get("verified_at")) >= timedelta(hours=hours):
+                    needs_verify = True
                 if needs_verify:
-                    me = await client.get_me()
                     token = await make_token(uid, f"sv_{sl_id}")
                     verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
                     short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, sl)
                     sl_label = sl.get("label", "Verify")
-                    # Save pending file so after verify file mil jaaye
-                    await users_col.update_one(
-                        {"user_id": uid},
-                        {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
-                        upsert=True
-                    )
-                    kb = InlineKeyboardMarkup([
-                        [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
-                        [InlineKeyboardButton("💎 Premium lo — verify kabhi nahi", callback_data="show_premium")],
-                    ])
-                    await query.answer("🔐 Pehle verify karo!", show_alert=False)
-                    try:
-                        await query.message.reply(
-                            f"🔐 **Ek Chhota Sa Step!**\n\n"
-                            f"👇 Neeche link complete karo → wapas aao → file milegi!\n"
-                            f"⏰ Har {hours} ghante mein ek baar.",
-                            reply_markup=kb
-                        )
-                    except: pass
-                    return
             else:
-                # Global shortlink check
                 all_done, next_sl, _ = await get_user_verify_state(uid)
                 if not all_done and s.get("shortlink_enabled", True):
-                    me = await client.get_me()
+                    needs_verify = True
                     if next_sl:
-                        sl_id = str(next_sl["_id"])
-                        sl_label = next_sl.get("label", "Verify")
-                        hours = next_sl.get("hours", 24)
+                        sl_id = str(next_sl["_id"]); sl_label = next_sl.get("label", "Verify"); hours = next_sl.get("hours", 24)
                         token = await make_token(uid, f"sv_{sl_id}")
                         verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
                         short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, next_sl)
-                    else:
-                        if SHORTLINK_API:
-                            sl_label = "Verify"
-                            hours = 24
-                            token = await make_token(uid, "sv_env")
-                            verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
-                            try:
-                                api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
-                                async with aiohttp.ClientSession() as sess:
-                                    async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
-                                        result = (await r.text()).strip()
-                                        short = result if result.startswith("http") else verify_url
-                            except:
-                                short = verify_url
-                            all_done = False
-                        else:
-                            all_done = True
-
-                    if not all_done:
-                        # Save pending file
-                        await users_col.update_one(
-                            {"user_id": uid},
-                            {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
-                            upsert=True
-                        )
-                        kb = InlineKeyboardMarkup([
-                            [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
-                            [InlineKeyboardButton("💎 Premium lo — verify kabhi nahi", callback_data="show_premium")],
-                        ])
-                        await query.answer("🔐 Pehle verify karo!", show_alert=False)
+                    elif SHORTLINK_API:
+                        token = await make_token(uid, "sv_env")
+                        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
                         try:
-                            await query.message.reply(
-                                f"🔐 **Ek Chhota Sa Step!**\n\n"
-                                f"👇 Shortlink complete karo → file turant milegi!\n"
-                                f"⏰ Har {hours} ghante mein ek baar.\n\n"
-                                f"💎 Premium lo = verify kabhi nahi!",
-                                reply_markup=kb
-                            )
-                        except: pass
-                        return
+                            api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
+                            async with aiohttp.ClientSession() as sess:
+                                async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                                    res_text = (await r.text()).strip()
+                                    short = res_text if res_text.startswith("http") else verify_url
+                        except: short = verify_url
+                    else:
+                        needs_verify = False
 
-        # ── STEP 2: Force Sub Check ──
+            if needs_verify and short:
+                await users_col.update_one(
+                    {"user_id": uid},
+                    {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
+                    upsert=True
+                )
+                await query.answer()
+                await query.message.reply(
+                    f"🔐 **Ek Chhota Sa Step!**\n\n"
+                    f"👇 Link complete karo → file turant milegi!\n"
+                    f"⏰ Har {hours} ghante mein ek baar.\n\n"
+                    f"💎 Premium = verify kabhi nahi!",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                        [InlineKeyboardButton("💎 Premium lo", callback_data="show_premium")],
+                    ])
+                )
+                return
+
+        # STEP 2: Force Sub
         if not prem:
             joined, not_joined = await check_member_multi(uid, prem)
             if not joined:
                 kb = await build_fsub_keyboard(not_joined, uid)
                 names = ", ".join(ch.get("title", "Channel") for ch in not_joined)
-                await query.answer("📢 Pehle channel join karo!", show_alert=False)
-                try:
-                    await query.message.reply(
-                        f"📢 **Pehle Join Karo!**\n\n"
-                        f"**{names}** join karo — phir file milegi! ✅",
-                        reply_markup=kb
-                    )
-                except: pass
+                await query.answer()
+                await query.message.reply(
+                    f"📢 **Pehle Join Karo!**\n\n**{names}** join karo — phir file milegi! ✅",
+                    reply_markup=kb
+                )
                 return
 
-        # ── STEP 3: Daily Limit ──
+        # STEP 3: Daily Limit
         if not prem:
             count = await get_daily_count(uid)
             if count >= s.get("daily_limit", 10):
                 await query.answer(
-                    f"⚠️ Aaj ki limit {s.get('daily_limit',10)} ho gayi! /premium lo.",
+                    f"⚠️ Aaj ki limit {s.get('daily_limit', 10)} ho gayi! /premium lo.",
                     show_alert=True
                 )
                 return
 
-        # ── STEP 4: File Send ──
-        await query.answer("📥 File aa rahi hai...", show_alert=False)
+        # STEP 4: File Send
+        await query.answer("📥 File aa rahi hai...")
         success, info = await send_file_to_pm(client, query.from_user, msg_id, prem)
         if not success:
-            try:
-                await query.message.reply(f"❌ File nahi aayi.\n`{info}`")
+            try: await query.message.reply(f"❌ File nahi aayi.\n`{info}`")
             except: pass
         return
 
@@ -1629,9 +1720,10 @@ async def cb_handler(client, query: CallbackQuery):
                         needs_verify_sa = False
 
             if needs_verify_sa and short_sa:
-                await query.answer("🔐 Pehle verify karo!", show_alert=False)
+                await query.answer()
                 try:
-                    await query.message.reply(
+                    await client.send_message(
+                        uid,
                         f"🔐 **Ek Chhota Sa Step!**\n\n"
                         f"👇 Shortlink complete karo → sab files milegi!\n"
                         f"⏰ Har {hours_sa} ghante mein ek baar.\n\n"
@@ -1649,10 +1741,11 @@ async def cb_handler(client, query: CallbackQuery):
             joined_sa, not_joined_sa = await check_member_multi(uid, prem)
             if not joined_sa:
                 kb_sa = await build_fsub_keyboard(not_joined_sa, uid)
-                await query.answer("📢 Pehle channel join karo!", show_alert=False)
+                await query.answer()
                 try:
                     names_sa = ", ".join(ch.get("title", "Channel") for ch in not_joined_sa)
-                    await query.message.reply(
+                    await client.send_message(
+                        uid,
                         f"📢 **Pehle Join Karo!**\n\n**{names_sa}** join karo — phir files milegi! ✅",
                         reply_markup=kb_sa
                     )
