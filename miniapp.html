@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- © 2025 @asbhaibsr | @asbhai_bsr — AsBhai Drop Bot v3.0 Ultra -->
 <html lang="hi">
@@ -162,9 +163,29 @@ body{padding-bottom:64px}
 .pp-feat .ppf-d{font-size:10px;color:var(--t2)}
 
 /* ════ ADVANCED HD PLAYER ════ */
-.player-wrap{margin:14px;border-radius:18px;overflow:hidden;background:#000;position:relative;border:1px solid var(--bd)}
-.player-inner{position:relative;width:100%;padding-top:56.25%;background:#000}
-.player-inner video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.player-wrap{margin:14px;border-radius:18px;background:#000;position:relative;border:1px solid var(--bd);overflow:hidden}
+.player-inner{position:relative;width:100%;padding-top:56.25%;background:#000;overflow:hidden}
+.player-inner video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;transform-origin:center center;transition:transform .3s ease}
+/* 90deg: video fills box rotated — swap w/h */
+.player-inner.rot90 video{
+  width:177.78% !important;
+  height:56.25% !important;
+  top:21.875% !important;
+  left:-38.89% !important;
+  transform:rotate(90deg);
+}
+/* 180deg: same box size, just flipped */
+.player-inner.rot180 video{
+  transform:rotate(180deg);
+}
+/* 270deg: same as 90 but other direction */
+.player-inner.rot270 video{
+  width:177.78% !important;
+  height:56.25% !important;
+  top:21.875% !important;
+  left:-38.89% !important;
+  transform:rotate(270deg);
+}
 .player-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;cursor:pointer}
 .player-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.8);z-index:10}
 .player-loading .pl-spin{width:48px;height:48px;border:3px solid rgba(108,99,255,.2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
@@ -1151,17 +1172,41 @@ function doPiP(){
 }
 function doRotate(){
   curRotation=(curRotation+90)%360;
-  var v=document.getElementById('vid');if(!v)return;
-  v.style.transform='rotate('+curRotation+'deg)'+(curZoom!==1?' scale('+curZoom+')':'');
-  if(curRotation===90||curRotation===270){v.style.width='100vh';v.style.height='100vw';}
-  else{v.style.width='100%';v.style.height='100%';}
+  var v=document.getElementById('vid');
+  var inner=document.getElementById('player-inner');
+  if(!v||!inner)return;
+  // Pehle sab classes hatao
+  inner.classList.remove('rot90','rot180','rot270');
+  // Zoom bhi saath mein apply karo
+  var zoom=curZoom!==1?' scale('+curZoom+')':'';
+  if(curRotation===90){
+    inner.classList.add('rot90');
+    v.style.transform='rotate(90deg)'+zoom;
+  }else if(curRotation===180){
+    inner.classList.add('rot180');
+    v.style.transform='rotate(180deg)'+zoom;
+  }else if(curRotation===270){
+    inner.classList.add('rot270');
+    v.style.transform='rotate(270deg)'+zoom;
+  }else{
+    // 0deg — original
+    v.style.width='100%';
+    v.style.height='100%';
+    v.style.top='0';
+    v.style.left='0';
+    v.style.transform=zoom||'none';
+  }
   toast('🔄 Rotated: '+curRotation+'°');
   closeQuality();
 }
 function doZoom(){
   curZoom=curZoom>=2?1:curZoom+0.5;
   var v=document.getElementById('vid');if(!v)return;
-  v.style.transform=(curRotation?'rotate('+curRotation+'deg) ':'')+'scale('+curZoom+')';
+  var zoom=curZoom!==1?' scale('+curZoom+')':'';
+  if(curRotation===90){v.style.transform='rotate(90deg)'+zoom;}
+  else if(curRotation===180){v.style.transform='rotate(180deg)'+zoom;}
+  else if(curRotation===270){v.style.transform='rotate(270deg)'+zoom;}
+  else{v.style.transform=zoom.trim()||'none';}
   toast('🔍 Zoom: '+curZoom+'×');
   closeQuality();
 }
