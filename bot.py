@@ -42,6 +42,7 @@ from config import (
     OWNER_ID, FILE_CHANNEL, LOG_CHANNEL, MAIN_CHANNEL,
     FORCE_SUB_ID, FORCE_SUB_CHANNEL, SHORTLINK_API, SHORTLINK_URL,
     KOYEB_URL, ADMINS, IST, UPI_ID, PORT,
+    BLOGGER_VERIFY_ENABLED,
     _shortlink_cache, _search_locks, _search_cooldown, _user_warnings,
     DEFAULT_SETTINGS, GROUP_DEFAULTS,
     now, now_ist, make_aware, logger
@@ -52,6 +53,7 @@ from database import (
     requests_col, banned_col, refers_col, free_trial_col, help_msgs_col,
     payments_col, shortlinks_col, verify_log_col, group_prem_col,
     group_sl_col, group_settings_col, warn_col, action_log_col,
+    blogger_posts_col,
     get_settings, update_setting, get_group_settings, update_group_setting,
     save_user, save_group, is_banned, ban_user, unban_user,
     get_free_trial_status, is_premium, add_premium, remove_premium, get_premium_expiry,
@@ -60,6 +62,8 @@ from database import (
     get_fsub_list, check_member_multi, build_fsub_keyboard, force_sub_check,
     get_active_shortlinks, make_shortlink_with, make_shortlink,
     get_user_verify_state, mark_sl_verified, get_cached_shortlink, verify_check,
+    blogger_verify_check, make_blogger_verify_url,
+    add_blogger_post, remove_blogger_post, list_blogger_posts,
     clean_caption, get_file_name, get_file_size, del_later, send_log,
     do_search, send_file_to_pm,
     check_link_in_message, get_user_warns, add_user_warn, reset_user_warns,
@@ -381,44 +385,56 @@ async def start_handler(client, message: Message):
                     sls.append(doc)
                 return sls
 
+            # ── BLOGGER VERIFY SYSTEM (replaces shortlink) ──
             grp_sl_list = await _grp_sl_gf(chat_id_for_sl) if chat_id_for_sl else []
             needs_verify = False
             short = None; sl_label = "Verify"; hours = 24
 
-            if grp_sl_list:
-                sl = grp_sl_list[0]
-                sl_id = str(sl["_id"]); hours = sl.get("hours", 24)
-                log_doc = await verify_log_col.find_one(
-                    {"user_id": uid, "shortlink_id": sl_id}, sort=[("verified_at", -1)]
-                )
-                if not log_doc or now() - make_aware(log_doc.get("verified_at")) >= timedelta(hours=hours):
+            if BLOGGER_VERIFY_ENABLED:
+                # Blogger mode: send user to random blog post
+                all_done_b, next_sl_b, _ = await get_user_verify_state(uid)
+                if not all_done_b and s.get("shortlink_enabled", True):
                     needs_verify = True
-                if needs_verify:
-                    token = await make_token(uid, f"sv_{sl_id}")
-                    verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
-                    short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, sl)
-                    sl_label = sl.get("label", "Verify")
+                    sl_id_b = str(next_sl_b["_id"]) if next_sl_b else "blogger_default"
+                    hours = next_sl_b.get("hours", 24) if next_sl_b else 24
+                    token_b = await make_token(uid, f"sv_{sl_id_b}")
+                    short = await make_blogger_verify_url(uid, token_b, sl_id_b)
+                    sl_label = "Blog Visit"
             else:
-                all_done, next_sl, _ = await get_user_verify_state(uid)
-                if not all_done and s.get("shortlink_enabled", True):
-                    needs_verify = True
-                    if next_sl:
-                        sl_id = str(next_sl["_id"]); sl_label = next_sl.get("label", "Verify"); hours = next_sl.get("hours", 24)
+                if grp_sl_list:
+                    sl = grp_sl_list[0]
+                    sl_id = str(sl["_id"]); hours = sl.get("hours", 24)
+                    log_doc = await verify_log_col.find_one(
+                        {"user_id": uid, "shortlink_id": sl_id}, sort=[("verified_at", -1)]
+                    )
+                    if not log_doc or now() - make_aware(log_doc.get("verified_at")) >= timedelta(hours=hours):
+                        needs_verify = True
+                    if needs_verify:
                         token = await make_token(uid, f"sv_{sl_id}")
                         verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
-                        short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, next_sl)
-                    elif SHORTLINK_API:
-                        token = await make_token(uid, "sv_env")
-                        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
-                        try:
-                            api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
-                            async with aiohttp.ClientSession() as sess:
-                                async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
-                                    res_text = (await r.text()).strip()
-                                    short = res_text if res_text.startswith("http") else verify_url
-                        except: short = verify_url
-                    else:
-                        needs_verify = False
+                        short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, sl)
+                        sl_label = sl.get("label", "Verify")
+                else:
+                    all_done, next_sl, _ = await get_user_verify_state(uid)
+                    if not all_done and s.get("shortlink_enabled", True):
+                        needs_verify = True
+                        if next_sl:
+                            sl_id = str(next_sl["_id"]); sl_label = next_sl.get("label", "Verify"); hours = next_sl.get("hours", 24)
+                            token = await make_token(uid, f"sv_{sl_id}")
+                            verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
+                            short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, next_sl)
+                        elif SHORTLINK_API:
+                            token = await make_token(uid, "sv_env")
+                            verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
+                            try:
+                                api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
+                                async with aiohttp.ClientSession() as sess:
+                                    async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                                        res_text = (await r.text()).strip()
+                                        short = res_text if res_text.startswith("http") else verify_url
+                            except: short = verify_url
+                        else:
+                            needs_verify = False
 
             if needs_verify and short:
                 await users_col.update_one(
@@ -426,13 +442,14 @@ async def start_handler(client, message: Message):
                     {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
                     upsert=True
                 )
+                btn_label = "🌐 Blog Visit Karo — Get File!" if BLOGGER_VERIFY_ENABLED else f"🔗 {sl_label} — Verify Karo"
                 await message.reply(
                     f"🔐 **Ek Chhota Sa Step!**\n\n"
-                    f"👇 Link complete karo → file turant milegi!\n"
+                    f"👇 Link dabao → {'Blog pe jao → Get File dabao' if BLOGGER_VERIFY_ENABLED else 'Shortlink complete karo'} → file milegi!\n"
                     f"⏰ Har {hours} ghante mein ek baar.\n\n"
                     f"💎 Premium = verify kabhi nahi!",
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                        [InlineKeyboardButton(btn_label, url=short)],
                         [InlineKeyboardButton("💎 Premium lo", callback_data="show_premium")],
                     ])
                 )
@@ -491,21 +508,30 @@ async def start_handler(client, message: Message):
         s = await get_settings()
         prem = await is_premium(uid)
 
-        # STEP 1: Shortlink verify (global only — no group context in PM)
+        # STEP 1: Verify (Blogger mode ya Shortlink mode)
         if not prem and s.get("shortlink_enabled", True):
             all_done, next_sl, _ = await get_user_verify_state(uid)
             if not all_done:
                 me_obj = await client.get_me()
-                if next_sl:
-                    sl_id = str(next_sl["_id"])
-                    sl_label = next_sl.get("label", "Verify")
-                    hours = next_sl.get("hours", 24)
-                    token = await make_token(uid, f"sv_{sl_id}")
-                    verify_url = f"https://t.me/{me_obj.username}?start=sv_{uid}_{token}_{sl_id}"
-                    short = await get_cached_shortlink(uid, 0, verify_url, next_sl)
+                short = None; sl_label = "Verify"; hours = 24
+
+                if BLOGGER_VERIFY_ENABLED:
+                    # ── Blogger Mode ──
+                    sl_id_b = str(next_sl["_id"]) if next_sl else "blogger_default"
+                    hours = next_sl.get("hours", 24) if next_sl else 24
+                    token_b = await make_token(uid, f"sv_{sl_id_b}")
+                    short = await make_blogger_verify_url(uid, token_b, sl_id_b)
+                    sl_label = "Blog Visit"
                 else:
-                    if SHORTLINK_API:
-                        sl_label = "Verify"; hours = 24
+                    # ── Shortlink Mode ──
+                    if next_sl:
+                        sl_id = str(next_sl["_id"])
+                        sl_label = next_sl.get("label", "Verify")
+                        hours = next_sl.get("hours", 24)
+                        token = await make_token(uid, f"sv_{sl_id}")
+                        verify_url = f"https://t.me/{me_obj.username}?start=sv_{uid}_{token}_{sl_id}"
+                        short = await get_cached_shortlink(uid, 0, verify_url, next_sl)
+                    elif SHORTLINK_API:
                         token = await make_token(uid, "sv_env")
                         verify_url = f"https://t.me/{me_obj.username}?start=sv_{uid}_{token}"
                         try:
@@ -516,23 +542,23 @@ async def start_handler(client, message: Message):
                                     short = result if result.startswith("http") else verify_url
                         except:
                             short = verify_url
-                        all_done = False
                     else:
                         all_done = True
 
-                if not all_done:
+                if not all_done and short:
                     await users_col.update_one(
                         {"user_id": uid},
                         {"$set": {"pending_file_id": msg_id, "pending_file_chat": 0}},
                         upsert=True
                     )
+                    btn_label = "🌐 Blog Visit Karo — Get File!" if BLOGGER_VERIFY_ENABLED else f"🔗 {sl_label} — Verify Karo"
                     await message.reply(
                         f"🔐 **Ek Chhota Sa Step!**\n\n"
-                        f"👇 Shortlink complete karo → file turant milegi!\n"
+                        f"👇 {'Blog pe jao → Get File dabao' if BLOGGER_VERIFY_ENABLED else 'Shortlink complete karo'} → file milegi!\n"
                         f"⏰ Har {hours} ghante mein ek baar.\n\n"
                         f"💎 Premium lo = verify kabhi nahi!",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                            [InlineKeyboardButton(btn_label, url=short)],
                             [InlineKeyboardButton("💎 Premium lo — verify kabhi nahi", callback_data="show_premium")],
                         ])
                     )
@@ -768,7 +794,7 @@ async def link_protection_handler(client, message: Message):
         "premium","ping","shortlink","setlimit","setresults",
         "mystats","ban","unban","maintenance","request","referlink",
         "fsub","groupsettings","gsettings","gset",
-        "addshortlink","removeshortlink","shortlinks","setcommands",
+        "addshortlink","removeshortlink","shortlinks","addblog","removeblog","blogposts","setcommands",
         "gshortlink","gshortlinkremove","gshortlinks","requests",
         "admin","gstats","linkprotect","notify","warn","resetwarn"
     ])
@@ -999,7 +1025,7 @@ async def refer_link_cmd(client, message: Message):
         "premium","ping","shortlink","setlimit","setresults",
         "mystats","ban","unban","maintenance","request","referlink",
         "fsub","groupsettings","gsettings","gset",
-        "addshortlink","removeshortlink","shortlinks","setcommands",
+        "addshortlink","removeshortlink","shortlinks","addblog","removeblog","blogposts","setcommands",
         "gshortlink","gshortlinkremove","gshortlinks","requests",
         "admin","gstats","linkprotect","notify","warn","resetwarn"
     ])
@@ -2893,7 +2919,140 @@ async def list_shortlinks_cmd(client, message: Message):
         text += f"{'✅' if sl.get('active') else '❌'} {i+1}. **{sl.get('label')}** | ⏰ {sl.get('hours',24)}h\n"
     await message.reply(text)
 
-@bot.on_message(filters.command("gshortlink"))
+# ═══════════════════════════════════════
+#  BLOGGER POSTS MANAGEMENT
+#  /addblog  /removeblog  /blogposts
+#  © asbhaibsr | github.com/asbhaibsr
+# ═══════════════════════════════════════
+
+@bot.on_message(filters.command("addblog") & filters.user(ADMINS))
+async def addblog_cmd(client, message: Message):
+    """
+    /addblog <url> [label]
+    Example: /addblog https://yourblog.blogspot.com/2024/01/post.html Movie News
+    """
+    args = message.command
+    if len(args) < 2:
+        await message.reply(
+            "📝 **Usage:**\n"
+            "`/addblog <url> [label]`\n\n"
+            "**Example:**\n"
+            "`/addblog https://yourblog.blogspot.com/2024/01/post.html Movie News`\n\n"
+            "💡 Label optional hai — nahi doge to auto-number hoga.\n"
+            "📋 List dekhne ke liye: `/blogposts`"
+        )
+        return
+
+    url = args[1].strip()
+    label = " ".join(args[2:]) if len(args) > 2 else ""
+
+    result = await add_blogger_post(url, label)
+    if result["ok"]:
+        await message.reply(
+            f"✅ **Blogger Post Add Ho Gayi!**\n\n"
+            f"🏷 Label: **{result['label']}**\n"
+            f"🔢 Number: `{result['number']}`\n"
+            f"🌐 URL: `{url}`\n\n"
+            f"📋 Sab dekhne ke liye: `/blogposts`\n"
+            f"🗑 Hatane ke liye: `/removeblog {result['number']}`",
+            disable_web_page_preview=True
+        )
+        await send_log(
+            f"🌐 #BlogAdded\n"
+            f"Label: {result['label']}\n"
+            f"URL: `{url}`\n"
+            f"By: {message.from_user.mention}"
+        )
+    else:
+        await message.reply(f"❌ **Error:** {result['msg']}")
+
+
+@bot.on_message(filters.command("removeblog") & filters.user(ADMINS))
+async def removeblog_cmd(client, message: Message):
+    """
+    /removeblog        → list dikho with numbers
+    /removeblog <n>    → number wali post delete karo
+    """
+    args = message.command
+
+    if len(args) < 2:
+        # Show list with numbers for easy deletion
+        posts = await list_blogger_posts()
+        if not posts:
+            await message.reply(
+                "📭 **Koi Blogger post nahi hai.**\n\n"
+                "Add karne ke liye: `/addblog <url> [label]`"
+            )
+            return
+        text = f"🌐 **Blogger Posts ({len(posts)}) — Delete Karne Ke Liye Number Bhejo:**\n\n"
+        for i, p in enumerate(posts, 1):
+            text += f"{i}. **{p.get('label', 'Post')}**\n   `{p['url'][:60]}{'...' if len(p['url']) > 60 else ''}`\n\n"
+        text += "**Usage:** `/removeblog 2`  ← number wali hatao"
+        await message.reply(text, disable_web_page_preview=True)
+        return
+
+    try:
+        number = int(args[1])
+    except ValueError:
+        await message.reply("❌ Number dena hai! Example: `/removeblog 2`")
+        return
+
+    result = await remove_blogger_post(number)
+    if result["ok"]:
+        await message.reply(
+            f"🗑 **Blogger Post Hata Di!**\n\n"
+            f"🏷 Label: **{result['label']}**\n"
+            f"🌐 URL: `{result['url']}`\n\n"
+            f"📋 Baaki dekhne ke liye: `/blogposts`",
+            disable_web_page_preview=True
+        )
+        await send_log(
+            f"🗑 #BlogRemoved\n"
+            f"Label: {result['label']}\n"
+            f"URL: `{result['url']}`\n"
+            f"By: {message.from_user.mention}"
+        )
+    else:
+        await message.reply(f"❌ **Error:** {result['msg']}")
+
+
+@bot.on_message(filters.command("blogposts") & filters.user(ADMINS))
+async def blogposts_cmd(client, message: Message):
+    """/blogposts — Sab Blogger post URLs ki list"""
+    from config import BLOGGER_POST_URLS, BLOGGER_VERIFY_ENABLED
+
+    posts = await list_blogger_posts()
+
+    mode = "🟢 **Blogger Mode ON**" if BLOGGER_VERIFY_ENABLED else "🔴 **Shortlink Mode** (Blogger OFF)"
+    text = f"{mode}\n\n"
+
+    if posts:
+        text += f"🌐 **DB Blogger Posts ({len(posts)}):**\n\n"
+        for i, p in enumerate(posts, 1):
+            active = "✅" if p.get("active", True) else "❌"
+            text += (
+                f"{active} **{i}. {p.get('label', 'Post')}**\n"
+                f"   `{p['url'][:70]}{'...' if len(p['url']) > 70 else ''}`\n\n"
+            )
+    else:
+        text += "📭 **DB mein koi post nahi** (config fallback use ho raha hai)\n\n"
+
+    if BLOGGER_POST_URLS:
+        text += f"⚙️ **Config Posts ({len(BLOGGER_POST_URLS)}):** _(fallback)_\n"
+        for i, u in enumerate(BLOGGER_POST_URLS, 1):
+            text += f"   {i}. `{u[:60]}{'...' if len(u) > 60 else ''}`\n"
+    else:
+        text += "⚙️ Config mein koi URL nahi (BLOGGER_POST_URLS empty)\n"
+
+    text += (
+        f"\n\n**Commands:**\n"
+        f"➕ Add: `/addblog <url> [label]`\n"
+        f"🗑 Remove: `/removeblog <number>`"
+    )
+
+    await message.reply(text, disable_web_page_preview=True)
+
+
 async def group_shortlink_add(client, message: Message):
     if not message.chat or message.chat.type == enums.ChatType.PRIVATE:
         await message.reply("❌ Group mein use karo!"); return
