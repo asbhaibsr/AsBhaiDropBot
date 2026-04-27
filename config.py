@@ -40,6 +40,18 @@ PORT              = int(os.getenv("PORT", "8080"))
 # Link protection defaults
 LINK_WARN_LIMIT   = int(os.getenv("LINK_WARN_LIMIT", "3"))
 
+# ── Blogger Verification System ──────────────────────────
+# Apne Blogger blog ke post URLs yahan daalo (ek ya zyada)
+# Format: comma-separated full URLs
+# Example: "https://yourblog.blogspot.com/2024/01/post1.html,https://yourblog.blogspot.com/2024/01/post2.html"
+BLOGGER_POST_URLS = [
+    url.strip()
+    for url in os.getenv("BLOGGER_POST_URLS", "").split(",")
+    if url.strip().startswith("http")
+]
+# Blogger verify mode enable/disable (True = Blogger, False = Old shortlink)
+BLOGGER_VERIFY_ENABLED = os.getenv("BLOGGER_VERIFY_ENABLED", "false").lower() == "true"
+
 # In-memory caches
 _shortlink_cache  = {}
 _search_locks     = {}
