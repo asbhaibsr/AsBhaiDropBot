@@ -50,7 +50,7 @@ BLOGGER_POST_URLS = [
     if url.strip().startswith("http")
 ]
 # Blogger verify mode enable/disable (True = Blogger, False = Old shortlink)
-BLOGGER_VERIFY_ENABLED = os.getenv("BLOGGER_VERIFY_ENABLED", "true").lower() == "true"
+BLOGGER_VERIFY_ENABLED = os.getenv("BLOGGER_VERIFY_ENABLED", "false").lower() == "true"
 
 # In-memory caches
 _shortlink_cache  = {}
