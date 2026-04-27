@@ -41,6 +41,7 @@ free_trial_col    = db["free_trials"]
 help_msgs_col     = db["help_msgs"]
 payments_col      = db["payments"]
 shortlinks_col    = db["shortlinks"]
+blogger_posts_col = db["blogger_posts"]   # Blogger verify post URLs
 verify_log_col    = db["verify_logs"]
 group_prem_col    = db["group_premium"]
 group_sl_col      = db["group_shortlinks"]
@@ -975,3 +976,140 @@ def set_clients(b, u):
     global bot, userbot
     bot = b
     userbot = u
+
+# ═══════════════════════════════════════
+#  BLOGGER VERIFICATION SYSTEM
+#  © asbhaibsr — github.com/asbhaibsr
+# ═══════════════════════════════════════
+
+async def get_random_blogger_post():
+    """Return a random active Blogger post URL — DB first, then config fallback."""
+    from config import BLOGGER_POST_URLS, KOYEB_URL
+    # DB se active posts
+    db_posts = []
+    async for doc in blogger_posts_col.find({"active": True}):
+        db_posts.append(doc["url"])
+    if db_posts:
+        return random.choice(db_posts)
+    # Config fallback
+    if BLOGGER_POST_URLS:
+        return random.choice(BLOGGER_POST_URLS)
+    return KOYEB_URL or ""
+
+async def add_blogger_post(url: str, label: str = "") -> dict:
+    """Add a new Blogger post URL to DB."""
+    url = url.strip()
+    if not url.startswith("http"):
+        return {"ok": False, "msg": "URL https:// se start honi chahiye!"}
+    existing = await blogger_posts_col.find_one({"url": url})
+    if existing:
+        return {"ok": False, "msg": "Ye URL pehle se add hai!"}
+    count = await blogger_posts_col.count_documents({})
+    label = label.strip() or f"Blog Post {count + 1}"
+    await blogger_posts_col.insert_one({
+        "url": url,
+        "label": label,
+        "active": True,
+        "order": count + 1,
+        "added_at": now()
+    })
+    return {"ok": True, "label": label, "number": count + 1}
+
+async def remove_blogger_post(number: int) -> dict:
+    """Remove a Blogger post by its list number."""
+    posts = []
+    async for doc in blogger_posts_col.find({}).sort("order", 1):
+        posts.append(doc)
+    if not posts:
+        return {"ok": False, "msg": "Koi blog post nahi hai."}
+    if number < 1 or number > len(posts):
+        return {"ok": False, "msg": f"Number 1-{len(posts)} ke beech hona chahiye!"}
+    target = posts[number - 1]
+    await blogger_posts_col.delete_one({"_id": target["_id"]})
+    return {"ok": True, "label": target.get("label", target["url"]), "url": target["url"]}
+
+async def list_blogger_posts() -> list:
+    """Return all Blogger posts sorted by order."""
+    posts = []
+    async for doc in blogger_posts_col.find({}).sort("order", 1):
+        posts.append(doc)
+    return posts
+
+async def make_blogger_verify_url(user_id: int, token: str, sl_id: str = "blogger") -> str:
+    """Build Blogger page URL with verify params."""
+    post_url = await get_random_blogger_post()
+    if not post_url:
+        return ""
+    me = await bot.get_me()
+    bot_username = me.username
+    separator = "&" if "?" in post_url else "?"
+    return (
+        f"{post_url}{separator}"
+        f"uid={user_id}&token={token}&sl={sl_id}&bot={bot_username}"
+    )
+
+async def blogger_verify_check(client, message, prem=False):
+    """
+    Drop-in replacement for verify_check() when BLOGGER_VERIFY_ENABLED=true.
+    Sends user to a random Blogger post instead of shortlink.
+    After user clicks 'Get File' on blog, bot auto-verifies via sv_ start param.
+    """
+    uid = message.from_user.id
+    if uid in ADMINS: return True
+    if prem: return True
+
+    s = await get_settings()
+    if not s.get("shortlink_enabled", True): return True
+
+    all_done, next_sl, _ = await get_user_verify_state(uid)
+    if all_done: return True
+
+    links = await get_active_shortlinks()
+    if links and next_sl:
+        sl_id = str(next_sl["_id"])
+        hours = next_sl.get("hours", 24)
+    else:
+        sl_id = "blogger_default"
+        hours = 24
+
+    token = await make_token(uid, f"sv_{sl_id}")
+    blogger_url = await make_blogger_verify_url(uid, token, sl_id)
+
+    if not blogger_url:
+        return await verify_check(client, message, prem)
+
+    query_text = (message.text or "").strip()
+    if query_text and len(query_text) > 1:
+        await users_col.update_one(
+            {"user_id": uid},
+            {"$set": {"pending_search": query_text, "pending_chat": message.chat.id}},
+            upsert=True
+        )
+
+    time_text = f"Har {hours} ghante baad" if hours < 24 else "Har din ek baar"
+
+    msgs = [
+        f"🌐 **Ek Chhota Sa Step!**\n\n"
+        f"👇 Neeche link dabao → Blog visit karo → **'Get File' button** dabao → File milegi! 📥\n"
+        f"⏰ {time_text} karna hoga.\n\n"
+        f"💎 Premium lo = Zero steps, Unlimited files!",
+
+        f"📖 **Blog Visit Karo — File Lo!**\n\n"
+        f"Link dabao → Blog pe jao → 'Get File' dabao → Seedha file PM mein! 🚀\n"
+        f"⏰ {time_text}\n\n"
+        f"💎 Premium = No steps ever!",
+
+        f"🔗 **Verify Karo — 1 Step Only!**\n\n"
+        f"Blog link kholo → Thoda scroll karo → **'Get File'** click karo → Done! ✅\n"
+        f"⏰ {time_text}\n\n"
+        f"💎 Premium mein ye step nahi hota!",
+    ]
+
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🌐 Blog Visit Karo — Get File!", url=blogger_url)],
+        [InlineKeyboardButton("💎 Premium lo — Sab Skip!", callback_data="buy_premium")],
+    ])
+
+    msg = await message.reply(random.choice(msgs), reply_markup=kb)
+    asyncio.create_task(del_later(msg, 300))
+    return False
