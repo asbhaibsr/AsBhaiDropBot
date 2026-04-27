@@ -1204,21 +1204,12 @@ async def cb_handler(client, query: CallbackQuery):
                 ]
         except: pass
 
-        # ── GROUP: seedha PM mein le jaao — koi popup nahi ──
-        # Button click = PM open with start param gf_{msg_id}_{chat_id}
+        # ── GROUP: Seedha PM open karo — koi message nahi, koi button nahi ──
+        # query.answer() mein url dene se Telegram seedha PM kholta hai
         if is_group:
             start_param = f"gf_{msg_id}_{chat_id_for_sl}"
             pm_url = f"https://t.me/{me.username}?start={start_param}"
-            await query.answer()
-            # Group mein ek chhota "PM mein lo" button dikhao
-            try:
-                await query.message.reply(
-                    f"📥 **File lo PM mein!**",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("📥 File Lo", url=pm_url)]
-                    ])
-                )
-            except: pass
+            await query.answer(url=pm_url)
             return
 
         # ── PM mein hai — pura flow ──
