@@ -166,59 +166,60 @@ body{padding-bottom:64px}
 .player-inner{position:relative;width:100%;padding-top:56.25%;background:#000;overflow:hidden}
 .player-inner video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;transform-origin:center center;transition:transform .25s ease}
 
-/* ── FULLSCREEN LANDSCAPE ROTATE MODE ── */
-/* Jab .rotated class ho — video pura screen le le landscape mein */
-body.rotated-mode{overflow:hidden}
+/* ── LANDSCAPE ROTATE MODE ── */
+/* player-wrap bada ho jaata hai — video andar rotate hoke fill karta hai */
 .player-wrap.rotated-mode{
-  position:fixed !important;
-  top:0 !important; left:0 !important;
-  width:100vw !important;
-  height:100vh !important;
-  margin:0 !important;
-  border-radius:0 !important;
-  z-index:9999 !important;
+  margin:0;
+  border-radius:0;
+  border:none;
+  width:100vw;
+  height:100vw; /* square container — rotate ke baad fill hoga */
+  position:relative;
 }
 .player-wrap.rotated-mode .player-inner{
-  padding-top:0 !important;
-  width:100% !important;
-  height:100% !important;
-  position:absolute !important;
-  top:0 !important; left:0 !important;
+  padding-top:0;
+  width:100%;
+  height:100%;
+  position:absolute;
+  top:0; left:0;
 }
+/* 90deg: video ko rotate karke pura fill karo */
 .player-wrap.rotated-mode .player-inner video{
-  width:100% !important;
-  height:100% !important;
-  top:0 !important; left:0 !important;
-  transform:rotate(90deg) !important;
-  /* Landscape ke liye size swap */
-  max-width:100vh;
-  max-height:100vw;
+  width:100vh !important;
+  height:100vw !important;
+  top:50% !important;
+  left:50% !important;
+  transform:translate(-50%,-50%) rotate(90deg) !important;
+  max-width:none !important;
+  max-height:none !important;
 }
-/* 270 deg wali rotation */
+/* 270deg */
 .player-wrap.rotated-mode.rot270 .player-inner video{
-  transform:rotate(270deg) !important;
+  transform:translate(-50%,-50%) rotate(270deg) !important;
 }
-/* 180 deg — sirf flip, landscape nahi */
-.player-wrap.rot180 .player-inner video{
+/* 180deg — box mein hi flip */
+.player-inner.rot180 video{
   transform:rotate(180deg);
 }
-/* Rotate exit button — fullscreen mode mein */
+
+/* Exit rotate button */
 #rotate-exit-btn{
   display:none;
   position:fixed;
-  top:12px; right:12px;
-  z-index:10000;
-  background:rgba(0,0,0,.7);
+  top:10px; right:10px;
+  z-index:99999;
+  background:rgba(0,0,0,.75);
   color:#fff;
   border:none;
   border-radius:50%;
-  width:40px; height:40px;
-  font-size:18px;
+  width:38px; height:38px;
+  font-size:16px;
   cursor:pointer;
   align-items:center;
   justify-content:center;
+  box-shadow:0 2px 12px rgba(0,0,0,.5);
 }
-body.rotated-mode #rotate-exit-btn{display:flex !important;}
+.rotated-mode-active #rotate-exit-btn{display:flex !important;}
 .player-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;cursor:pointer}
 .player-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.8);z-index:10}
 .player-loading .pl-spin{width:48px;height:48px;border:3px solid rgba(108,99,255,.2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
@@ -1228,9 +1229,9 @@ function cycSpd(){
   showCtrl();
 }
 
-/* ── Fullscreen Rotate — Pura screen landscape ── */
+/* ── Fullscreen Landscape Rotate ── */
 var isRotated=false;
-var rotDir=90; // 90 ya 270
+var rotDir=90;
 
 function doRotate(){
   curRotation=(curRotation+90)%360;
@@ -1239,36 +1240,42 @@ function doRotate(){
   var v=document.getElementById('vid');
   if(!wrap||!inner||!v)return;
 
+  // Sab classes remove pehle
+  wrap.classList.remove('rotated-mode','rot270');
+  inner.classList.remove('rot180');
+  document.body.classList.remove('rotated-mode-active');
+  v.style.transform='';
+
   if(curRotation===0){
-    // Wapas normal
-    exitRotate();
+    // Normal — exit karo
+    isRotated=false;
+    // Player normal size wapas
+    wrap.style.width='';
+    wrap.style.height='';
+    wrap.style.margin='';
+    wrap.style.borderRadius='';
+    inner.style.paddingTop='';
+    toast('🔄 Normal');
     return;
   }
 
   if(curRotation===90||curRotation===270){
-    // Landscape fullscreen mode
     isRotated=true;
+    // Player ko screen width ke barabar karo — height = vw (square)
     wrap.classList.add('rotated-mode');
-    document.body.classList.add('rotated-mode');
-    if(curRotation===270){
-      wrap.classList.add('rot270');
-    } else {
-      wrap.classList.remove('rot270');
-    }
-    // Screen orientation lock try karo (agar browser support kare)
+    document.body.classList.add('rotated-mode-active');
+    if(curRotation===270) wrap.classList.add('rot270');
+    // Screen orientation lock — mobile mein kaam karta hai
     try{
       if(screen.orientation&&screen.orientation.lock){
-        screen.orientation.lock('landscape').catch(function(){});
+        screen.orientation.lock(curRotation===90?'landscape-primary':'landscape-secondary').catch(function(){});
       }
     }catch(e){}
-    toast('🔄 Landscape Mode ON — ✕ dabao exit ke liye');
+    toast('🔄 Landscape ON — ✕ se exit');
   } else if(curRotation===180){
-    // 180 = seedha box mein flip
-    exitRotate();
-    wrap.classList.remove('rot270');
-    wrap.classList.add('rot180');
-    v.style.transform='rotate(180deg)';
-    toast('🔄 Rotated 180°');
+    // 180 = seedha flip, box mein hi
+    inner.classList.add('rot180');
+    toast('🔄 180° Rotated');
   }
   closeQuality();
 }
@@ -1277,19 +1284,23 @@ function exitRotate(){
   curRotation=0;
   isRotated=false;
   var wrap=document.getElementById('player-wrap');
+  var inner=document.getElementById('player-inner');
   var v=document.getElementById('vid');
   if(wrap){
-    wrap.classList.remove('rotated-mode','rot270','rot180');
+    wrap.classList.remove('rotated-mode','rot270');
+    wrap.style.width='';
+    wrap.style.height='';
+    wrap.style.margin='';
+    wrap.style.borderRadius='';
   }
-  document.body.classList.remove('rotated-mode');
-  if(v){
-    v.style.transform='none';
+  if(inner){
+    inner.classList.remove('rot180');
+    inner.style.paddingTop='';
   }
-  // Orientation unlock
+  if(v) v.style.transform='';
+  document.body.classList.remove('rotated-mode-active');
   try{
-    if(screen.orientation&&screen.orientation.unlock){
-      screen.orientation.unlock();
-    }
+    if(screen.orientation&&screen.orientation.unlock) screen.orientation.unlock();
   }catch(e){}
   toast('🔄 Normal Mode');
 }
