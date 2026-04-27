@@ -1,281 +1,276 @@
-<!--
-  ╔══════════════════════════════════════════════════════════╗
-  ║   AsBhai Blogger Verify Page v2.0                        ║
-  ║   © asbhaibsr | github.com/asbhaibsr                    ║
-  ║                                                          ║
-  ║   INSTRUCTIONS:                                          ║
-  ║   1. Blogger mein ek naya post banao                     ║
-  ║   2. Is HTML ko post ke HTML editor mein paste karo      ║
-  ║   3. Publish karo — URL .env mein BLOGGER_POST_URLS daalo║
-  ║   4. Multiple posts = zyada ad views + earnings!         ║
-  ╚══════════════════════════════════════════════════════════╝
-
-  HOW TO ADD IN BLOGGER:
-  - New Post → 3-dot menu → HTML mode
-  - Paste this entire code
-  - Publish karo
-
-  NOTE: Page sirf tab activate hoga jab URL mein
-  ?uid=...&token=...&bot=... params hoon.
-  Normal visitors ko sirf blog content dikhega.
+<!-- 
+  ╔════════════════════════════════════════════════════════╗
+  ║  AsBhai Blogger Theme Code                            ║
+  ║  © asbhaibsr | github.com/asbhaibsr                  ║
+  ║                                                        ║
+  ║  KAHAN DALNA HAI:                                      ║
+  ║  Blogger Dashboard → Theme → Edit HTML                ║
+  ║  </body> tag se BILKUL PEHLE paste karo               ║
+  ╚════════════════════════════════════════════════════════╝
 -->
 
 <style>
-#asb-overlay *{box-sizing:border-box;margin:0;padding:0;}
-#asb-overlay{
-  display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,0.92);z-index:99999;
-  align-items:center;justify-content:center;
-  font-family:'Segoe UI',Arial,sans-serif;
-  overflow-y:auto;padding:16px;
+/* ── AsBhai Verify Strip ── */
+#asb-verify-strip {
+  position: fixed;
+  bottom: -160px;
+  left: 0;
+  right: 0;
+  z-index: 999999;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  transition: bottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-#asb-overlay.active{display:flex;}
-#asb-card{
-  background:linear-gradient(145deg,#0f0f1a,#1a1a2e);
-  border:2px solid #e94560;border-radius:20px;
-  padding:28px 22px 24px;max-width:380px;width:100%;
-  text-align:center;box-shadow:0 8px 40px rgba(233,69,96,0.35);
-  color:#eee;animation:asb-pop 0.35s ease;
+#asb-verify-strip.show {
+  bottom: 0;
 }
-@keyframes asb-pop{from{transform:scale(0.8);opacity:0;}to{transform:scale(1);opacity:1;}}
-#asb-title{font-size:1.35em;font-weight:800;color:#e94560;margin-bottom:6px;}
-#asb-subtitle{font-size:0.88em;color:#999;margin-bottom:20px;line-height:1.5;}
-#asb-prog-wrap{margin-bottom:18px;}
-#asb-prog-bg{background:#1e1e30;border-radius:20px;height:10px;overflow:hidden;margin-bottom:6px;border:1px solid #333;}
-#asb-prog-bar{height:100%;border-radius:20px;background:linear-gradient(90deg,#e94560,#f5a623);transition:width 1s linear;width:100%;}
-#asb-prog-text{font-size:0.82em;color:#888;min-height:18px;}
-#asb-steps{background:#111827;border-radius:14px;padding:14px 16px;text-align:left;margin-bottom:20px;}
-.asb-step{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:0.88em;color:#555;border-bottom:1px solid #1e2030;transition:color 0.4s;}
-.asb-step:last-child{border-bottom:none;}
-.asb-step.active{color:#f5a623;}
-.asb-step.done{color:#4ade80;}
-.asb-step-num{min-width:24px;height:24px;border-radius:50%;background:#222;display:flex;align-items:center;justify-content:center;font-size:0.78em;font-weight:700;border:1.5px solid #333;transition:all 0.4s;color:#555;}
-.asb-step.active .asb-step-num{background:#f5a62320;border-color:#f5a623;color:#f5a623;}
-.asb-step.done  .asb-step-num{background:#4ade8020;border-color:#4ade80;color:#4ade80;}
-#asb-ads-zone{display:none;background:#111827;border-radius:14px;padding:18px 14px;margin-bottom:18px;border:1.5px dashed #333;position:relative;cursor:pointer;}
-#asb-ads-zone.show{display:block;}
-#asb-ads-img-wrap{width:100%;height:110px;border-radius:10px;background:linear-gradient(135deg,#1e2040,#2a2a50);display:flex;align-items:center;justify-content:center;font-size:1em;color:#666;position:relative;overflow:hidden;}
-#asb-ads-img-wrap:active{opacity:0.7;}
-#asb-arrow-up{position:absolute;top:-2px;left:50%;transform:translateX(-50%);font-size:1.5em;animation:asb-bup 0.7s infinite alternate;pointer-events:none;}
-#asb-arrow-dn{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-size:1.5em;animation:asb-bdn 0.7s infinite alternate;pointer-events:none;}
-@keyframes asb-bup{from{transform:translateX(-50%) translateY(0);}to{transform:translateX(-50%) translateY(-5px);}}
-@keyframes asb-bdn{from{transform:translateX(-50%) translateY(0);}to{transform:translateX(-50%) translateY(5px);}}
-#asb-ads-hint{font-size:0.82em;color:#e94560;margin-top:10px;font-weight:600;animation:asb-pulse 1.2s infinite;}
-@keyframes asb-pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
-#asb-next-btn{display:none;width:100%;padding:14px;background:linear-gradient(135deg,#f5a623,#e94560);color:#fff;border:none;border-radius:14px;font-size:1.05em;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(245,166,35,0.4);transition:transform 0.15s;margin-bottom:10px;}
-#asb-next-btn.show{display:block;}
-#asb-next-btn:hover{transform:translateY(-2px);}
-#asb-wait-msg{font-size:0.8em;color:#555;margin-top:12px;min-height:18px;}
-#asb-brand{display:block;font-size:0.68em;color:#333;margin-top:14px;text-decoration:none;}
-#asb-brand:hover{color:#666;}
-
-/* PAGE 2 — Scroll */
-#asb-page2{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100000;align-items:center;justify-content:center;font-family:'Segoe UI',Arial,sans-serif;padding:16px;}
-#asb-page2.active{display:flex;}
-#asb-p2-card{background:linear-gradient(145deg,#0f0f1a,#1a1a2e);border:2px solid #f5a623;border-radius:20px;padding:28px 22px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(245,166,35,0.3);color:#eee;animation:asb-pop 0.35s ease;}
-#asb-p2-title{font-size:1.3em;font-weight:800;color:#f5a623;margin-bottom:8px;}
-#asb-p2-sub{font-size:0.88em;color:#999;margin-bottom:20px;line-height:1.5;}
-#asb-p2-anim{font-size:2.5em;animation:asb-bdn 0.7s infinite alternate;margin-bottom:14px;}
-#asb-p2-prog-bg{background:#1e1e30;border-radius:20px;height:10px;overflow:hidden;margin-bottom:8px;border:1px solid #333;}
-#asb-p2-prog-bar{height:100%;border-radius:20px;background:linear-gradient(90deg,#f5a623,#e94560);transition:width 1s linear;width:100%;}
-#asb-p2-timer{font-size:0.83em;color:#888;margin-bottom:20px;}
-#asb-p2-next{display:none;width:100%;padding:14px;background:linear-gradient(135deg,#4ade80,#22c55e);color:#000;border:none;border-radius:14px;font-size:1.05em;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(74,222,128,0.4);margin-bottom:10px;}
-#asb-p2-next.show{display:block;}
-
-/* PAGE 3 — Final */
-#asb-page3{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100001;align-items:center;justify-content:center;font-family:'Segoe UI',Arial,sans-serif;padding:16px;}
-#asb-page3.active{display:flex;}
-#asb-p3-card{background:linear-gradient(145deg,#0f1a0f,#1a2e1a);border:2px solid #4ade80;border-radius:20px;padding:28px 22px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(74,222,128,0.3);color:#eee;animation:asb-pop 0.35s ease;}
-#asb-p3-icon{font-size:3em;margin-bottom:10px;}
-#asb-p3-title{font-size:1.4em;font-weight:800;color:#4ade80;margin-bottom:8px;}
-#asb-p3-sub{font-size:0.9em;color:#aaa;margin-bottom:24px;line-height:1.6;}
-#asb-final-btn{display:block;width:100%;padding:16px;background:linear-gradient(135deg,#4ade80,#22c55e);color:#000;border:none;border-radius:14px;font-size:1.1em;font-weight:800;cursor:pointer;box-shadow:0 4px 24px rgba(74,222,128,0.5);transition:transform 0.15s;text-decoration:none;}
-#asb-final-btn:hover{transform:translateY(-2px);}
-#asb-p3-note{font-size:0.78em;color:#4ade8077;margin-top:14px;}
+#asb-strip-inner {
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+  border-top: 2px solid #e94560;
+  box-shadow: 0 -6px 30px rgba(233, 69, 96, 0.4);
+  padding: 14px 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+#asb-strip-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+#asb-strip-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  animation: asb-bounce 1.5s infinite;
+}
+@keyframes asb-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+#asb-strip-text {
+  min-width: 0;
+}
+#asb-strip-title {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#asb-strip-sub {
+  color: #aaa;
+  font-size: 11px;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+#asb-strip-timer {
+  color: #f5a623;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+#asb-get-btn {
+  background: linear-gradient(135deg, #e94560, #f5a623);
+  color: #fff !important;
+  text-decoration: none !important;
+  padding: 11px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(233, 69, 96, 0.5);
+  flex-shrink: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: block;
+  text-align: center;
+}
+#asb-get-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(233, 69, 96, 0.65);
+}
+#asb-get-btn:active {
+  transform: translateY(0);
+}
+#asb-strip-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+/* Progress bar on strip */
+#asb-strip-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #e94560, #f5a623);
+  transition: width 1s linear;
+  width: 0%;
+}
+/* Countdown overlay before strip shows */
+#asb-countdown-badge {
+  position: fixed;
+  bottom: 20px;
+  right: 16px;
+  z-index: 999998;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(233,69,96,0.3);
+  display: none;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  animation: asb-fade-in 0.5s ease;
+}
+@keyframes asb-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#asb-countdown-badge.show {
+  display: flex;
+}
+#asb-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e94560;
+  animation: asb-pulse 1s infinite;
+}
+@keyframes asb-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
 </style>
 
-<!-- PAGE 1 -->
-<div id="asb-overlay">
-  <div id="asb-card">
-    <div id="asb-title">🎬 Free File Paane Ke Liye</div>
-    <div id="asb-subtitle">3 simple steps follow karo — file turant milegi! ✨</div>
-    <div id="asb-prog-wrap">
-      <div id="asb-prog-bg"><div id="asb-prog-bar" style="width:100%"></div></div>
-      <div id="asb-prog-text">Thoda wait karo... ⏳</div>
-    </div>
-    <div id="asb-steps">
-      <div class="asb-step active" id="asb-s1">
-        <div class="asb-step-num">1</div>
-        <span>Image pe click karo (upar / niche arrow) 🖼️</span>
-      </div>
-      <div class="asb-step" id="asb-s2">
-        <div class="asb-step-num">2</div>
-        <span>Niche scroll karo thoda 📖</span>
-      </div>
-      <div class="asb-step" id="asb-s3">
-        <div class="asb-step-num">3</div>
-        <span>Get File button dabao 🎁</span>
-      </div>
-    </div>
-    <!-- Fake ad click zone -->
-    <div id="asb-ads-zone">
-      <div style="position:relative;">
-        <span id="asb-arrow-up">⬆️</span>
-        <div id="asb-ads-img-wrap" onclick="asbAdClick(event)">
-          <span>🖼️ Yahan Click Karo</span>
-        </div>
-        <span id="asb-arrow-dn">⬇️</span>
-      </div>
-      <div id="asb-ads-hint">⬆️ Image pe click karo upar ya niche ⬇️</div>
-    </div>
-    <button id="asb-next-btn" onclick="asbGoStep2()">▶ Next Step →</button>
-    <div id="asb-wait-msg">Page load ho raha hai... ⏳</div>
-    <a id="asb-brand" href="https://t.me/asbhaibsr" target="_blank">@asbhaibsr</a>
-  </div>
-</div>
-
-<!-- PAGE 2 — Scroll -->
-<div id="asb-page2">
-  <div id="asb-p2-card">
-    <div id="asb-p2-title">📖 Content Padho!</div>
-    <div id="asb-p2-sub">Niche scroll karo aur blog content dekho — 15 sec baad Next button aayega 👇</div>
-    <div id="asb-p2-anim">⬇️</div>
-    <div id="asb-p2-prog-bg"><div id="asb-p2-prog-bar" style="width:100%"></div></div>
-    <div id="asb-p2-timer">⏳ 15 sec baaki...</div>
-    <button id="asb-p2-next" onclick="asbGoStep3()">✅ Next Step →</button>
-    <a href="https://t.me/asbhaibsr" target="_blank" style="display:block;font-size:0.68em;color:#333;text-decoration:none;margin-top:14px;">@asbhaibsr</a>
-  </div>
-</div>
-
-<!-- PAGE 3 — Final -->
-<div id="asb-page3">
-  <div id="asb-p3-card">
-    <div id="asb-p3-icon">🎉</div>
-    <div id="asb-p3-title">All Done! File Ready!</div>
-    <div id="asb-p3-sub">Neeche "Get File" button dabao — Telegram mein seedha file aa jaayegi! 📥<br><br>⚡ Ek click mein auto-verify ho jaata hai!</div>
-    <a id="asb-final-btn" href="#" target="_blank">🎬 Get File — Bot Mein!</a>
-    <div id="asb-p3-note">✅ Auto-verified • No captcha • Free</div>
-  </div>
-</div>
-
+<!-- Strip HTML — body mein inject hoga via JS -->
 <script>
-// AsBhai Blogger Verify System v2.0
-// © asbhaibsr | github.com/asbhaibsr
-(function(){
-  var params=new URLSearchParams(window.location.search);
-  var uid=params.get('uid');
-  var token=params.get('token');
-  var sl=params.get('sl')||'blogger';
-  var bot=params.get('bot');
+(function () {
+  // ── URL params read karo ──
+  var p = new URLSearchParams(window.location.search);
+  var uid   = p.get('uid');
+  var token = p.get('token');
+  var bot   = p.get('bot');
+  var sl    = p.get('sl') || 'blogger';
 
-  // Sirf activate karo agar params hain
-  if(!uid||!token||!bot) return;
+  // Normal visitors = kuch nahi
+  if (!uid || !token || !bot) return;
 
-  // Final Telegram deep link
-  var tgLink='https://t.me/'+bot+'?start=sv_'+uid+'_'+token+'_'+sl;
-  document.getElementById('asb-final-btn').href=tgLink;
+  // ── Final verify link ──
+  var tgLink = 'https://t.me/' + bot + '?start=sv_' + uid + '_' + token + '_' + sl;
 
-  // Overlay show karo
-  var overlay=document.getElementById('asb-overlay');
-  overlay.classList.add('active');
+  // ── Timing settings ──
+  var WAIT_SEC = 35;    // kitne second baad strip dikhe
+  var BADGE_AT = 5;     // kitne second baad countdown badge dikhe
 
-  var progBar=document.getElementById('asb-prog-bar');
-  var progTxt=document.getElementById('asb-prog-text');
-  var adsZone=document.getElementById('asb-ads-zone');
-  var nextBtn=document.getElementById('asb-next-btn');
-  var waitMsg=document.getElementById('asb-wait-msg');
+  // ── Badge inject karo ──
+  var badge = document.createElement('div');
+  badge.id = 'asb-countdown-badge';
+  badge.innerHTML = '<div id="asb-badge-dot"></div><span id="asb-badge-txt">File ' + WAIT_SEC + ' sec mein</span>';
+  document.body.appendChild(badge);
 
-  var STEP1=30; // 30 seconds
-  var elapsed=0;
-  var adClicked=false;
-  var timerDone=false;
+  // ── Strip inject karo ──
+  var strip = document.createElement('div');
+  strip.id = 'asb-verify-strip';
+  strip.innerHTML = [
+    '<div id="asb-strip-progress"></div>',
+    '<div id="asb-strip-inner">',
+    '  <div id="asb-strip-left">',
+    '    <div id="asb-strip-icon">🎬</div>',
+    '    <div id="asb-strip-text">',
+    '      <div id="asb-strip-title">File Ready! Verify karo</div>',
+    '      <div id="asb-strip-sub">Telegram mein seedha file aayegi 📥</div>',
+    '      <div id="asb-strip-timer">⏳ Thoda wait karo...</div>',
+    '    </div>',
+    '  </div>',
+    '  <a id="asb-get-btn" href="' + tgLink + '" target="_blank">✅ Get File</a>',
+    '</div>',
+    '<button id="asb-strip-close" onclick="document.getElementById(\'asb-verify-strip\').style.display=\'none\'">✕</button>'
+  ].join('');
+  document.body.appendChild(strip);
 
-  // 5 sec baad ad zone dikhao
-  setTimeout(function(){
-    adsZone.classList.add('show');
-    waitMsg.textContent='⬆️ Image pe click karo phir wait karo...';
-  },5000);
+  var progBar  = document.getElementById('asb-strip-progress');
+  var timerTxt = document.getElementById('asb-strip-timer');
+  var badgeTxt = document.getElementById('asb-badge-txt');
+  var elapsed  = 0;
 
-  // Countdown timer
-  var t1=setInterval(function(){
+  // ── Badge 5 sec baad dikhao ──
+  setTimeout(function () {
+    badge.classList.add('show');
+  }, BADGE_AT * 1000);
+
+  // ── Main countdown ──
+  var interval = setInterval(function () {
     elapsed++;
-    var pct=Math.max(0,((STEP1-elapsed)/STEP1)*100);
-    progBar.style.width=pct+'%';
-    var rem=STEP1-elapsed;
-    if(elapsed<5){progTxt.textContent='Page load ho raha... '+rem+' sec';}
-    else if(elapsed<20){progTxt.textContent='Image pe click karo — '+rem+' sec baaki';}
-    else{progTxt.textContent='Almost done — '+rem+' sec...';}
-    if(elapsed>=STEP1){
-      clearInterval(t1);
-      timerDone=true;
-      _checkReady();
+    var rem = WAIT_SEC - elapsed;
+    var pct = (elapsed / WAIT_SEC) * 100;
+
+    // Progress bar update
+    if (progBar) progBar.style.width = Math.min(pct, 100) + '%';
+
+    // Badge text update
+    if (badgeTxt && rem > 0) {
+      badgeTxt.textContent = 'File ' + rem + ' sec mein';
     }
-  },1000);
 
-  window.asbAdClick=function(e){
-    if(!adClicked){
-      adClicked=true;
-      var wrap=document.getElementById('asb-ads-img-wrap');
-      if(wrap){wrap.style.opacity='0.5';wrap.innerHTML='<span>✅ Clicked!</span>';}
-      var hint=document.getElementById('asb-ads-hint');
-      if(hint){hint.textContent='✅ Done! Ab wait karo...';}
-    }
-    _checkReady();
-  };
+    // Strip show karo
+    if (elapsed >= WAIT_SEC) {
+      clearInterval(interval);
 
-  function _checkReady(){
-    if(adClicked&&timerDone){
-      document.getElementById('asb-s1').classList.remove('active');
-      document.getElementById('asb-s1').classList.add('done');
-      document.getElementById('asb-s2').classList.add('active');
-      adsZone.style.display='none';
-      progBar.style.width='100%';
-      progBar.style.background='#4ade80';
-      progTxt.textContent='✅ Step 1 Complete!';
-      waitMsg.textContent='';
-      nextBtn.classList.add('show');
-    }
-  }
+      // Badge hide
+      badge.classList.remove('show');
+      setTimeout(function () { badge.style.display = 'none'; }, 500);
 
-  window.asbGoStep2=function(){
-    document.getElementById('asb-page2').classList.add('active');
-    nextBtn.classList.remove('show');
+      // Timer text update
+      if (timerTxt) timerTxt.textContent = '✅ Ab Get File dabao!';
+      if (progBar)  progBar.style.background = '#4ade80';
 
-    var p2Bar=document.getElementById('asb-p2-prog-bar');
-    var p2Tmr=document.getElementById('asb-p2-timer');
-    var p2Nx=document.getElementById('asb-p2-next');
-    var STEP2=15; var s2el=0;
+      // Strip slide up
+      strip.classList.add('show');
 
-    var t2=setInterval(function(){
-      s2el++;
-      var pct=Math.max(0,((STEP2-s2el)/STEP2)*100);
-      p2Bar.style.width=pct+'%';
-      p2Tmr.textContent='⬇️ Niche scroll karo — '+(STEP2-s2el)+' sec baaki...';
-      if(s2el>=STEP2){
-        clearInterval(t2);
-        p2Bar.style.background='#4ade80';p2Bar.style.width='100%';
-        p2Tmr.textContent='✅ Step 2 Done!';
-        p2Nx.classList.add('show');
+      // Get File button pulse animation
+      var btn = document.getElementById('asb-get-btn');
+      if (btn) {
+        btn.style.animation = 'asb-bounce 0.8s infinite';
       }
-    },1000);
-  };
+    } else {
+      // Timer countdown in strip (agar already visible ho)
+      if (timerTxt) timerTxt.textContent = '⏳ ' + rem + ' sec mein file button aayega...';
+    }
+  }, 1000);
 
-  window.asbGoStep3=function(){
-    document.getElementById('asb-page2').classList.remove('active');
-    document.getElementById('asb-s2').classList.remove('active');
-    document.getElementById('asb-s2').classList.add('done');
-    document.getElementById('asb-s3').classList.add('done');
-    document.getElementById('asb-page3').classList.add('active');
-  };
-
-  var fb=document.getElementById('asb-final-btn');
-  if(fb){
-    fb.addEventListener('click',function(){
-      fb.textContent='✅ Telegram Mein File Aa Rahi Hai!';
-      fb.style.background='#4ade80';fb.style.color='#000';
-      var n=document.getElementById('asb-p3-note');
-      if(n)n.textContent='⏳ Bot mein verify ho raha hai...';
+  // ── Get File click handler ──
+  var getBtn = document.getElementById('asb-get-btn');
+  if (getBtn) {
+    getBtn.addEventListener('click', function () {
+      getBtn.textContent = '✅ Opening Bot...';
+      getBtn.style.background = '#4ade80';
+      getBtn.style.color = '#000';
+      // Strip 3 sec baad hide
+      setTimeout(function () {
+        strip.style.bottom = '-160px';
+      }, 3000);
     });
   }
+
 })();
 </script>
