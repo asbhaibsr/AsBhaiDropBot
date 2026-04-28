@@ -606,11 +606,24 @@ async def verify_check(client, message, prem=False):
     ]
 
     # Save pending search for auto-send after verify
+    # ── Pending data save karo ──
+    # File ID save karo (agar message mein hai — gf_ flow se)
+    pending_file_id = getattr(message, '_asb_pending_file_id', 0) or 0
+    pending_file_chat = getattr(message, '_asb_pending_file_chat', 0) or 0
     query_text = (message.text or "").strip()
+
+    update_data = {}
+    if pending_file_id:
+        update_data["pending_file_id"]   = pending_file_id
+        update_data["pending_file_chat"] = pending_file_chat
     if query_text and len(query_text) > 1:
+        update_data["pending_search"] = query_text
+        update_data["pending_chat"]   = message.chat.id
+
+    if update_data:
         await users_col.update_one(
             {"user_id": uid},
-            {"$set": {"pending_search": query_text, "pending_chat": message.chat.id}},
+            {"$set": update_data},
             upsert=True
         )
 
@@ -1078,11 +1091,24 @@ async def blogger_verify_check(client, message, prem=False):
     if not blogger_url:
         return await verify_check(client, message, prem)
 
+    # ── Pending data save karo ──
+    # File ID save karo (agar message mein hai — gf_ flow se)
+    pending_file_id = getattr(message, '_asb_pending_file_id', 0) or 0
+    pending_file_chat = getattr(message, '_asb_pending_file_chat', 0) or 0
     query_text = (message.text or "").strip()
+
+    update_data = {}
+    if pending_file_id:
+        update_data["pending_file_id"]   = pending_file_id
+        update_data["pending_file_chat"] = pending_file_chat
     if query_text and len(query_text) > 1:
+        update_data["pending_search"] = query_text
+        update_data["pending_chat"]   = message.chat.id
+
+    if update_data:
         await users_col.update_one(
             {"user_id": uid},
-            {"$set": {"pending_search": query_text, "pending_chat": message.chat.id}},
+            {"$set": update_data},
             upsert=True
         )
 
