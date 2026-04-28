@@ -275,8 +275,18 @@ async def start_handler(client, message: Message):
                         wait = await message.reply("📥 File aa rahi hai... ⏳")
                         success, info = await send_file_to_pm(client, message.from_user, pending_file_id, prem_user)
                         await wait.delete()
-                        if not success:
-                            await message.reply(f"✅ Verify done!\n❌ File nahi aayi: `{info}`")
+                        if success:
+                            await message.reply(
+                                f"✅ **Verify Complete! File Aa Gayi!** 🎉\n\n"
+                                f"📥 File upar dekho — PM mein bhej di gayi hai!\n"
+                                f"💎 Roz verify se bachne ke liye: /premium"
+                            )
+                        else:
+                            await message.reply(
+                                f"✅ Verify done!\n"
+                                f"❌ File nahi aayi: `{info}`\n"
+                                f"Group mein dobara search karo."
+                            )
 
                 # ── Priority 2: Pending search ──
                 elif pending_q and pending_chat:
@@ -1044,7 +1054,7 @@ async def pm_search_handler(client, message: Message):
         miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
         btns = []
         if miniapp_url:
-            btns.append([InlineKeyboardButton("💎 Premium Lo — PM Search Enable", url=miniapp_url)])
+            btns.append([InlineKeyboardButton("💎 Premium Lo — PM Search Enable", url=miniapp_url+f"?uid={uid}")])
         await message.reply(
             f"❌ PM mein search Premium users ke liye hai!\n\n"
             f"Group mein search karo ya Premium lo:",
@@ -1924,7 +1934,7 @@ async def cb_handler(client, query: CallbackQuery):
         await query.answer()
         buttons = []
         if miniapp_url:
-            buttons.append([InlineKeyboardButton("🌐 Mini App mein Plans Dekho", url=miniapp_url)])
+            buttons.append([InlineKeyboardButton("🌐 Mini App mein Plans Dekho", url=miniapp_url+f"?uid={uid}")])
         buttons.append([InlineKeyboardButton("🔙 Back", callback_data="show_premium")])
         try:
             await query.message.edit(
@@ -2542,7 +2552,7 @@ async def premium_info(client, message: Message):
     else: text += "\nMini App se kharido ya 10 refer karo!\n"
     buttons = []
     if miniapp_url:
-        buttons.append([InlineKeyboardButton("🌐 Mini App — Plans", url=miniapp_url)])
+        buttons.append([InlineKeyboardButton("🌐 Mini App — Plans", url=miniapp_url+f"?uid={uid}")])
     await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons) if buttons else None)
 
 @bot.on_message(filters.command("mystats"))
