@@ -167,23 +167,26 @@ body{padding-bottom:64px}
 .player-inner video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;transform-origin:center center;transition:transform .25s ease}
 
 /* ── LANDSCAPE ROTATE MODE ── */
-/* player-wrap bada ho jaata hai — video andar rotate hoke fill karta hai */
+/* Rotate dabne par: player pura screen pe aa jata hai — fixed overlay */
 .player-wrap.rotated-mode{
-  margin:0;
-  border-radius:0;
-  border:none;
-  width:100vw;
-  height:100vw; /* square container — rotate ke baad fill hoga */
-  position:relative;
+  position:fixed !important;
+  top:0 !important; left:0 !important;
+  margin:0 !important;
+  border-radius:0 !important;
+  border:none !important;
+  width:100vw !important;
+  height:100vh !important;
+  z-index:9999;
+  background:#000;
 }
 .player-wrap.rotated-mode .player-inner{
-  padding-top:0;
-  width:100%;
-  height:100%;
-  position:absolute;
-  top:0; left:0;
+  padding-top:0 !important;
+  width:100% !important;
+  height:100% !important;
+  position:absolute !important;
+  top:0 !important; left:0 !important;
 }
-/* 90deg: video ko rotate karke pura fill karo */
+/* 90deg: video rotate hokar puri screen fill kare */
 .player-wrap.rotated-mode .player-inner video{
   width:100vh !important;
   height:100vw !important;
@@ -192,6 +195,7 @@ body{padding-bottom:64px}
   transform:translate(-50%,-50%) rotate(90deg) !important;
   max-width:none !important;
   max-height:none !important;
+  object-fit:contain !important;
 }
 /* 270deg */
 .player-wrap.rotated-mode.rot270 .player-inner video{
@@ -201,6 +205,15 @@ body{padding-bottom:64px}
 .player-inner.rot180 video{
   transform:rotate(180deg);
 }
+/* Body scroll band karo jab rotate mode ho */
+body.rotated-mode-active{overflow:hidden !important;}
+/* Native fullscreen CSS */
+.player-wrap:-webkit-full-screen{width:100vw;height:100vh;background:#000;}
+.player-wrap:-webkit-full-screen .player-inner{padding-top:0;width:100%;height:100%;position:absolute;top:0;left:0;}
+.player-wrap:-webkit-full-screen .player-inner video{width:100%;height:100%;object-fit:contain;}
+.player-wrap:fullscreen{width:100vw;height:100vh;background:#000;}
+.player-wrap:fullscreen .player-inner{padding-top:0;width:100%;height:100%;position:absolute;top:0;left:0;}
+.player-wrap:fullscreen .player-inner video{width:100%;height:100%;object-fit:contain;}
 
 /* Exit rotate button */
 #rotate-exit-btn{
@@ -837,7 +850,9 @@ body{padding-bottom:64px}
 var tg=(window.Telegram&&window.Telegram.WebApp)||null;
 if(tg){try{tg.ready();tg.expand();}catch(e){}}
 var TGU=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||null;
-var UID=TGU&&TGU.id||null;
+// URL se uid read karo agar Telegram WebApp mein nahi hai (fallback)
+var _urlParams=new URLSearchParams(window.location.search);
+var UID=TGU&&TGU.id||((_urlParams.get('uid')&&!isNaN(_urlParams.get('uid')))?parseInt(_urlParams.get('uid')):null);
 var FNAME=(TGU&&TGU.first_name)||'User';
 var LNAME=(TGU&&TGU.last_name)||'';
 var UNAME=(TGU&&TGU.username)||null;
@@ -1307,11 +1322,25 @@ function exitRotate(){
 
 /* ── Fullscreen ── */
 function doFull(){
-  var wrap=document.getElementById('player-wrap');if(!wrap)return;
-  if(document.fullscreenElement){document.exitFullscreen();}
-  else{
-    var fn=wrap.requestFullscreen||wrap.webkitRequestFullscreen||wrap.mozRequestFullScreen;
-    if(fn) fn.call(wrap);
+  var v=document.getElementById('vid');
+  var wrap=document.getElementById('player-wrap');
+  if(!wrap)return;
+  // Video element ka fullscreen prefer karo — native landscape
+  var el=v||wrap;
+  if(document.fullscreenElement||document.webkitFullscreenElement){
+    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+  } else {
+    var fn=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;
+    if(fn){
+      fn.call(el).then(function(){
+        // Fullscreen ke baad landscape lock karo
+        try{
+          if(screen.orientation&&screen.orientation.lock){
+            screen.orientation.lock('landscape').catch(function(){});
+          }
+        }catch(e){}
+      }).catch(function(){});
+    }
   }
   closeQuality();
 }
