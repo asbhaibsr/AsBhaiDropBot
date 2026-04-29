@@ -52,6 +52,16 @@ BLOGGER_POST_URLS = [
 # Blogger verify mode enable/disable (True = Blogger, False = Old shortlink)
 BLOGGER_VERIFY_ENABLED = os.getenv("BLOGGER_VERIFY_ENABLED", "true").lower() == "true"
 
+# ── Google Sheets → Blogger Posts Auto-Sync ─────────────
+# Owner apne Google Sheet mein blog post URLs add karega
+# Bot automatically har 6 ghante mein sheet se URLs fetch karega
+# Sheet format: Column A = URL, Column B = Label (optional)
+# Sheet ko "Anyone with link can view" set karo
+GOOGLE_SHEET_CSV_URL = os.getenv(
+    "GOOGLE_SHEET_CSV_URL",
+    "https://docs.google.com/spreadsheets/d/1j0QcRjoq20yP-BgOpLW562Kshtr-BLMwVTAgviBsjDY/pub?gid=0&single=true&output=csv"
+)
+
 # In-memory caches
 _shortlink_cache  = {}
 _search_locks     = {}
