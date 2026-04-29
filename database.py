@@ -6,13 +6,14 @@
 # ║  Unauthorized use or redistribution is prohibited.              ║
 # ║  GitHub: https://github.com/asbhaibsr/AsBhaiDropBot             ║
 # ╚══════════════════════════════════════════════════════════════════╝
-import asyncio, re, string, random
+import asyncio, re, string, random, io
 from datetime import timedelta
 from pyrogram import enums
 from pyrogram.errors import UserNotParticipant, FloodWait
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
+import csv
 import aiohttp
 
 from config import (
@@ -993,20 +994,116 @@ def set_clients(b, u):
 # ═══════════════════════════════════════
 #  BLOGGER VERIFICATION SYSTEM
 #  © asbhaibsr — github.com/asbhaibsr
+#  Google Sheets se auto-sync support
 # ═══════════════════════════════════════
 
+# In-memory cache — sheet se fetch ke baad yahan save hota hai
+_sheet_posts_cache: list = []
+_sheet_last_sync: float = 0.0
+
+
+async def sync_blogger_posts_from_sheet() -> dict:
+    """
+    Google Sheets CSV se blogger post URLs fetch karo aur DB mein sync karo.
+    Sheet format (har row):
+      Column A = Blog post URL (required, https:// se start ho)
+      Column B = Label (optional)
+    Returns: {"ok": True/False, "added": N, "total": N, "error": "..."}
+    """
+    import aiohttp, time
+    global _sheet_posts_cache, _sheet_last_sync
+    from config import GOOGLE_SHEET_CSV_URL
+    if not GOOGLE_SHEET_CSV_URL:
+        return {"ok": False, "error": "GOOGLE_SHEET_CSV_URL config nahi hai"}
+
+    try:
+        timeout = aiohttp.ClientTimeout(total=15)
+        async with aiohttp.ClientSession(timeout=timeout) as sess:
+            async with sess.get(GOOGLE_SHEET_CSV_URL) as resp:
+                if resp.status != 200:
+                    return {"ok": False, "error": f"Sheet fetch failed: HTTP {resp.status}"}
+                text = await resp.text(encoding="utf-8", errors="replace")
+                # Agar HTML aa raha hai matlab sheet published nahi hai
+                if text.strip().startswith("<!"):
+                    return {
+                        "ok": False,
+                        "error": "Sheet published nahi hai! Google Sheets mein:\nFile → Share → Publish to web → CSV → Publish karo"
+                    }
+    except Exception as e:
+        return {"ok": False, "error": f"Sheet fetch error: {e}"}
+
+    # CSV parse karo
+    rows = []
+    try:
+        reader = csv.reader(io.StringIO(text))
+        for row in reader:
+            if not row: continue
+            url = row[0].strip() if len(row) > 0 else ""
+            label = row[1].strip() if len(row) > 1 else ""
+            if url.startswith("http"):
+                rows.append({"url": url, "label": label or url})
+    except Exception as e:
+        return {"ok": False, "error": f"CSV parse error: {e}"}
+
+    if not rows:
+        return {"ok": False, "error": "Sheet mein koi valid URL nahi mili (Column A mein https:// URL daalo)"}
+
+    # DB sync — sheet wali entries replace karo, manual entries rakho
+    await blogger_posts_col.delete_many({"source": "sheet"})
+    added = 0
+    for i, row in enumerate(rows):
+        existing = await blogger_posts_col.find_one({"url": row["url"]})
+        if existing:
+            await blogger_posts_col.update_one(
+                {"_id": existing["_id"]},
+                {"$set": {"label": row["label"] or existing.get("label", ""), "source": "sheet", "order": i + 1}}
+            )
+        else:
+            await blogger_posts_col.insert_one({
+                "url": row["url"],
+                "label": row["label"] or f"Blog Post {i + 1}",
+                "active": True,
+                "order": i + 1,
+                "source": "sheet",
+                "added_at": now()
+            })
+            added += 1
+
+    total = await blogger_posts_col.count_documents({"active": True})
+    _sheet_posts_cache = [{"url": r["url"], "label": r["label"]} for r in rows]
+    _sheet_last_sync = time.time()
+    return {"ok": True, "added": added, "total": total, "sheet_rows": len(rows)}
+
+
 async def get_random_blogger_post():
-    """Return a random active Blogger post URL — DB first, then config fallback."""
+    """Return a random active Blogger post URL.
+    Priority: DB (sheet-synced + manual) → sheet direct fetch → config fallback
+    """
     from config import BLOGGER_POST_URLS, KOYEB_URL
-    # DB se active posts
+
+    # 1. DB se active posts
     db_posts = []
     async for doc in blogger_posts_col.find({"active": True}):
         db_posts.append(doc["url"])
     if db_posts:
         return random.choice(db_posts)
-    # Config fallback
+
+    # 2. DB empty hai — sheet se fresh sync karo
+    try:
+        res = await sync_blogger_posts_from_sheet()
+        if res.get("ok"):
+            db_posts2 = []
+            async for doc in blogger_posts_col.find({"active": True}):
+                db_posts2.append(doc["url"])
+            if db_posts2:
+                return random.choice(db_posts2)
+    except Exception:
+        pass
+
+    # 3. Config BLOGGER_POST_URLS fallback
     if BLOGGER_POST_URLS:
         return random.choice(BLOGGER_POST_URLS)
+
     return KOYEB_URL or ""
 
 async def add_blogger_post(url: str, label: str = "") -> dict:
