@@ -64,6 +64,7 @@ from database import (
     get_user_verify_state, mark_sl_verified, get_cached_shortlink, verify_check,
     blogger_verify_check, make_blogger_verify_url,
     add_blogger_post, remove_blogger_post, list_blogger_posts,
+    sync_blogger_posts_from_sheet,
     clean_caption, get_file_name, get_file_size, del_later, send_log,
     do_search, send_file_to_pm,
     check_link_in_message, get_user_warns, add_user_warn, reset_user_warns,
@@ -387,6 +388,20 @@ async def start_handler(client, message: Message):
         prem = await is_premium(uid)
         me = await client.get_me()
 
+        # ── Group Premium Check ──
+        # Agar group ne premium liya hai: global shortlink/blogger/force_sub SKIP karo
+        # Sirf group ka apna shortlink use hoga (agar set kiya ho)
+        async def _is_grp_prem(cid):
+            doc = await group_prem_col.find_one({"chat_id": cid, "status": "approved"})
+            if not doc: return False
+            exp = make_aware(doc.get("expiry"))
+            if exp and now() > exp:
+                await group_prem_col.update_one({"chat_id": cid}, {"$set": {"status": "expired"}})
+                return False
+            return True
+
+        grp_has_prem = await _is_grp_prem(chat_id_for_sl) if chat_id_for_sl else False
+
         # STEP 1: Shortlink Verify
         if not prem:
             async def _grp_sl_gf(cid):
@@ -400,8 +415,12 @@ async def start_handler(client, message: Message):
             needs_verify = False
             short = None; sl_label = "Verify"; hours = 24
 
-            if BLOGGER_VERIFY_ENABLED:
-                # Blogger mode: send user to random blog post
+            # Group premium group mein: global blogger aur global shortlink SKIP — sirf group ka shortlink
+            if grp_has_prem and not grp_sl_list:
+                # Group premium hai aur koi group shortlink bhi nahi — seedha file do
+                needs_verify = False
+            elif BLOGGER_VERIFY_ENABLED and not grp_has_prem:
+                # Blogger mode: send user to random blog post (sirf non-premium groups mein)
                 all_done_b, next_sl_b, _ = await get_user_verify_state(uid)
                 if not all_done_b and s.get("shortlink_enabled", True):
                     needs_verify = True
@@ -465,8 +484,8 @@ async def start_handler(client, message: Message):
                 )
                 return
 
-        # STEP 2: Force Sub
-        if not prem:
+        # STEP 2: Force Sub (group premium groups mein skip)
+        if not prem and not grp_has_prem:
             joined, not_joined = await check_member_multi(uid, prem)
             if not joined:
                 kb = await build_fsub_keyboard(not_joined, uid)
@@ -605,7 +624,7 @@ async def start_handler(client, message: Message):
 
     # ── Normal /start ──
     me = await client.get_me()
-    miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+    miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
 
     buttons = [
         [
@@ -804,7 +823,7 @@ async def link_protection_handler(client, message: Message):
         "premium","ping","shortlink","setlimit","setresults",
         "mystats","ban","unban","maintenance","request","referlink",
         "fsub","groupsettings","gsettings","gset",
-        "addshortlink","removeshortlink","shortlinks","addblog","removeblog","blogposts","setcommands",
+        "addshortlink","removeshortlink","shortlinks","addblog","removeblog","blogposts","syncsheet","setcommands",
         "gshortlink","gshortlinkremove","gshortlinks","requests",
         "admin","gstats","linkprotect","notify","warn","resetwarn"
     ])
@@ -1035,7 +1054,7 @@ async def refer_link_cmd(client, message: Message):
         "premium","ping","shortlink","setlimit","setresults",
         "mystats","ban","unban","maintenance","request","referlink",
         "fsub","groupsettings","gsettings","gset",
-        "addshortlink","removeshortlink","shortlinks","addblog","removeblog","blogposts","setcommands",
+        "addshortlink","removeshortlink","shortlinks","addblog","removeblog","blogposts","syncsheet","setcommands",
         "gshortlink","gshortlinkremove","gshortlinks","requests",
         "admin","gstats","linkprotect","notify","warn","resetwarn"
     ])
@@ -1051,7 +1070,7 @@ async def pm_search_handler(client, message: Message):
 
     prem = await is_premium(uid)
     if not prem and uid not in ADMINS:
-        miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+        miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
         btns = []
         if miniapp_url:
             btns.append([InlineKeyboardButton("💎 Premium Lo — PM Search Enable", web_app=WebAppInfo(url=miniapp_url))])
@@ -1930,7 +1949,7 @@ async def cb_handler(client, query: CallbackQuery):
         return
 
     if data == "buy_premium":
-        miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+        miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
         await query.answer()
         buttons = []
         if miniapp_url:
@@ -2010,7 +2029,7 @@ async def cb_handler(client, query: CallbackQuery):
 
     if data == "back_main":
         me = await client.get_me()
-        miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+        miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
         buttons = [
             [
                 InlineKeyboardButton("📢 Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"),
@@ -2546,7 +2565,7 @@ async def premium_info(client, message: Message):
     prem = await is_premium(uid)
     exp = await get_premium_expiry(uid)
     exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else None
-    miniapp_url = f"{KOYEB_URL}/" if KOYEB_URL else None
+    miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
     text = f"💎 Premium {'Active!' if prem else 'nahi hai'}\n"
     if prem: text += f"Expiry: {exp_str}\n\nEnjoy karo! No verify, unlimited!\n"
     else: text += "\nMini App se kharido ya 10 refer karo!\n"
@@ -3057,10 +3076,46 @@ async def blogposts_cmd(client, message: Message):
     text += (
         f"\n\n**Commands:**\n"
         f"➕ Add: `/addblog <url> [label]`\n"
-        f"🗑 Remove: `/removeblog <number>`"
+        f"🗑 Remove: `/removeblog <number>`\n"
+        f"🔄 Sheet se sync: `/syncsheet`"
     )
 
     await message.reply(text, disable_web_page_preview=True)
+
+
+@bot.on_message(filters.command("syncsheet") & filters.user(ADMINS))
+async def syncsheet_cmd(client, message: Message):
+    """/syncsheet — Google Sheet se blogger posts manually sync karo"""
+    from config import GOOGLE_SHEET_CSV_URL, BLOGGER_VERIFY_ENABLED
+    if not BLOGGER_VERIFY_ENABLED:
+        await message.reply("⚠️ Blogger mode OFF hai. `BLOGGER_VERIFY_ENABLED=true` set karo pehle.")
+        return
+    if not GOOGLE_SHEET_CSV_URL:
+        await message.reply("❌ `GOOGLE_SHEET_CSV_URL` env var set nahi hai!")
+        return
+    wait = await message.reply("⏳ Google Sheet se sync ho raha hai...")
+    result = await sync_blogger_posts_from_sheet()
+    await wait.delete()
+    if result.get("ok"):
+        await message.reply(
+            f"✅ **Sheet Sync Successful!**\n\n"
+            f"📊 Sheet rows: **{result.get('sheet_rows', 0)}**\n"
+            f"➕ Naye add: **{result.get('added', 0)}**\n"
+            f"📋 Total active: **{result.get('total', 0)}**\n\n"
+            f"🔗 Sheet: `{GOOGLE_SHEET_CSV_URL[:80]}...`"
+        )
+        await send_log(
+            f"🔄 #SheetSync by {message.from_user.mention}\n"
+            f"Sheet rows: {result.get('sheet_rows',0)} | Added: {result.get('added',0)} | Total: {result.get('total',0)}"
+        )
+    else:
+        await message.reply(
+            f"❌ **Sync Failed!**\n\n`{result.get('error','Unknown error')}`\n\n"
+            f"**Check karo:**\n"
+            f"• Sheet ko 'Anyone with link can view' set kiya hai?\n"
+            f"• Column A mein https:// URLs hain?\n"
+            f"• Sheet URL sahi hai?"
+        )
 
 
 async def group_shortlink_add(client, message: Message):
@@ -3349,8 +3404,31 @@ def start_bot():
                 def _run_cleanup():
                     if bot.loop and bot.loop.is_running():
                         asyncio.run_coroutine_threadsafe(cleanup(), bot.loop)
+
+                # Google Sheet se blogger posts sync — startup + har 6 ghante
+                async def _sheet_sync_task():
+                    from database import sync_blogger_posts_from_sheet
+                    from config import BLOGGER_VERIFY_ENABLED
+                    if not BLOGGER_VERIFY_ENABLED:
+                        return
+                    try:
+                        res = await sync_blogger_posts_from_sheet()
+                        if res.get("ok"):
+                            logger.info(f"✅ Sheet sync: {res.get('sheet_rows',0)} URLs, {res.get('added',0)} new added")
+                        else:
+                            logger.warning(f"⚠️ Sheet sync failed: {res.get('error','?')}")
+                    except Exception as e:
+                        logger.error(f"Sheet sync error: {e}")
+
+                def _run_sheet_sync():
+                    if bot.loop and bot.loop.is_running():
+                        asyncio.run_coroutine_threadsafe(_sheet_sync_task(), bot.loop)
+
                 scheduler.add_job(_run_cleanup, 'interval', hours=1)
+                scheduler.add_job(_run_sheet_sync, 'interval', hours=6)
                 scheduler.start()
+                # Startup mein ek baar sheet sync karo
+                asyncio.run_coroutine_threadsafe(_sheet_sync_task(), loop)
                 logger.info("✅ Scheduler + aiohttp + watchdog started")
             asyncio.run_coroutine_threadsafe(_start(), loop)
         except Exception as e:
