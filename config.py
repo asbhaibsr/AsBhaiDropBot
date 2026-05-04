@@ -1,3 +1,4 @@
+
 # ╔══════════════════════════════════════╗
 # ║  config.py — AsBhai Drop Bot         ║
 # ║  Configuration & Environment Variables║
@@ -41,22 +42,11 @@ PORT              = int(os.getenv("PORT", "8080"))
 LINK_WARN_LIMIT   = int(os.getenv("LINK_WARN_LIMIT", "3"))
 
 # ── Blogger Verification System ──────────────────────────
-# Apne Blogger blog ke post URLs yahan daalo (ek ya zyada)
-# Format: comma-separated full URLs
-# Example: "https://yourblog.blogspot.com/2024/01/post1.html,https://yourblog.blogspot.com/2024/01/post2.html"
-BLOGGER_POST_URLS = [
-    url.strip()
-    for url in os.getenv("BLOGGER_POST_URLS", "").split(",")
-    if url.strip().startswith("http")
-]
-# Blogger verify mode enable/disable (True = Blogger, False = Old shortlink)
-BLOGGER_VERIFY_ENABLED = os.getenv("BLOGGER_VERIFY_ENABLED", "true").lower() == "true"
+# ── TMDb API (Movie Info + Poster) ───────────────────────
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")  # .env mein set karo
+TMDB_BASE    = "https://api.themoviedb.org/3"
+TMDB_IMG     = "https://image.tmdb.org/t/p/w300"  # Poster base URL
 
-# ── Google Sheets → Blogger Posts Auto-Sync ─────────────
-# Owner apne Google Sheet mein blog post URLs add karega
-# Bot automatically har 6 ghante mein sheet se URLs fetch karega
-# Sheet format: Column A = URL, Column B = Label (optional)
-# Sheet ko "Anyone with link can view" set karo
 GOOGLE_SHEET_CSV_URL = os.getenv(
     "GOOGLE_SHEET_CSV_URL",
     "https://docs.google.com/spreadsheets/d/1j0QcRjoq20yP-BgOpLW562Kshtr-BLMwVTAgviBsjDY/pub?gid=0&single=true&output=csv"
@@ -86,7 +76,7 @@ DEFAULT_SETTINGS = {
     "auto_delete": True,
     "auto_delete_time": 300,
     "force_sub": True,
-    "shortlink_enabled": True,
+    "shortlink_enabled": True,  # Global shortlink ON/OFF
     "daily_limit": 10,
     "premium_results": 10,
     "free_results": 5,
@@ -98,6 +88,7 @@ DEFAULT_SETTINGS = {
     "link_protection": True,
     "link_warn_limit": 3,
     "link_action": "warn",  # warn / mute / ban
+    "tmdb_enabled": True,   # IMDB/TMDb movie info ON/OFF
 }
 
 GROUP_DEFAULTS = {
