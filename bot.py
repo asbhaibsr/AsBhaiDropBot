@@ -42,11 +42,104 @@ from config import (
     OWNER_ID, FILE_CHANNEL, LOG_CHANNEL, MAIN_CHANNEL,
     FORCE_SUB_ID, FORCE_SUB_CHANNEL, SHORTLINK_API, SHORTLINK_URL,
     KOYEB_URL, ADMINS, IST, UPI_ID, PORT,
-    BLOGGER_VERIFY_ENABLED,
+    TMDB_API_KEY, TMDB_BASE, TMDB_IMG,
     _shortlink_cache, _search_locks, _search_cooldown, _user_warnings,
     DEFAULT_SETTINGS, GROUP_DEFAULTS,
     now, now_ist, make_aware, logger
 )
+
+# ═══════════════════════════════════════
+#  TMDb HELPER FUNCTIONS
+#  Movie info, poster, IMDB rating + fuzzy spelling fix
+# ═══════════════════════════════════════
+
+def _fix_query_spelling(query: str) -> str:
+    """Common Hinglish/English corrections for popular movie names"""
+    fixes = {
+        "interstellar": "Interstellar", "avenger": "Avengers",
+        "spiderman": "Spider-Man", "spider man": "Spider-Man",
+        "batmen": "Batman", "batmaan": "Batman",
+        "supermen": "Superman", "supermaan": "Superman",
+        "bahubali": "Baahubali", "bahuballi": "Baahubali", "bahubally": "Baahubali",
+        "dangal": "Dangal", "pathan": "Pathaan", "pataan": "Pathaan",
+        "jawan": "Jawan", "animal": "Animal", "dunki": "Dunki",
+        "leo": "Leo", "salaar": "Salaar", "gadar": "Gadar",
+        "kgf": "KGF", "rrr": "RRR", "pushpa": "Pushpa",
+        "kantara": "Kantara", "vikram": "Vikram",
+        "inception": "Inception", "titanic": "Titanic",
+        "avengers endgame": "Avengers: Endgame",
+        "avengers infinity": "Avengers: Infinity War",
+        "iron man": "Iron Man", "black panther": "Black Panther",
+        "doctor strange": "Doctor Strange", "thor": "Thor",
+        "captain america": "Captain America",
+    }
+    lower = query.lower().strip()
+    if lower in fixes:
+        return fixes[lower]
+    return query
+
+def _fuzzy_match_score(query: str, title: str) -> int:
+    """Fuzzy match — higher score = better match (0-100)"""
+    q = query.lower().strip()
+    t = title.lower().strip()
+    if q == t: return 100
+    if q in t: return 85
+    if t.startswith(q): return 80
+    q_words = set(q.split())
+    t_words = set(t.split())
+    if not q_words: return 0
+    overlap = len(q_words & t_words)
+    return int((overlap / max(len(q_words), 1)) * 70)
+
+async def tmdb_search(query: str, session: aiohttp.ClientSession) -> dict | None:
+    """TMDb se movie/series info fetch karo — best match return"""
+    cleaned = _fix_query_spelling(query)
+    for search_type in ["movie", "tv"]:
+        try:
+            url = f"{TMDB_BASE}/search/{search_type}"
+            params = {"api_key": TMDB_API_KEY, "query": cleaned, "language": "en-US", "page": 1}
+            async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=7)) as r:
+                if r.status != 200:
+                    continue
+                data = await r.json()
+                results = data.get("results", [])
+                if not results:
+                    continue
+                # Best fuzzy match
+                best = None
+                best_score = 0
+                for item in results[:5]:
+                    title = item.get("title") or item.get("name") or ""
+                    score = _fuzzy_match_score(cleaned, title)
+                    if score > best_score:
+                        best_score = score
+                        best = item
+                if best and best_score >= 25:
+                    mid = best.get("id")
+                    detail_url = f"{TMDB_BASE}/{search_type}/{mid}"
+                    detail_params = {"api_key": TMDB_API_KEY, "append_to_response": "external_ids"}
+                    async with session.get(detail_url, params=detail_params, timeout=aiohttp.ClientTimeout(total=6)) as dr:
+                        detail = await dr.json() if dr.status == 200 else {}
+                    poster_path = best.get("poster_path") or detail.get("poster_path")
+                    imdb_id = (detail.get("external_ids") or {}).get("imdb_id") or detail.get("imdb_id")
+                    rating = round(best.get("vote_average", 0), 1)
+                    stars = "⭐" * min(int(rating / 2), 5) if rating else ""
+                    overview = (best.get("overview") or "")
+                    overview_short = overview[:100] + "..." if len(overview) > 100 else overview
+                    return {
+                        "title": best.get("title") or best.get("name") or cleaned,
+                        "year": (best.get("release_date") or best.get("first_air_date") or "")[:4],
+                        "rating": rating,
+                        "stars": stars,
+                        "overview": overview_short,
+                        "poster_url": f"{TMDB_IMG}{poster_path}" if poster_path else None,
+                        "type": "🎬 Movie" if search_type == "movie" else "📺 Series",
+                        "imdb_id": imdb_id,
+                        "imdb_url": f"https://www.imdb.com/title/{imdb_id}" if imdb_id else None,
+                    }
+        except Exception as e:
+            logger.warning(f"TMDb ({search_type}) error: {e}")
+    return None
 from database import (
     mongo_client, db,
     users_col, groups_col, premium_col, settings_col, tokens_col,
@@ -62,7 +155,6 @@ from database import (
     get_fsub_list, check_member_multi, build_fsub_keyboard, force_sub_check,
     get_active_shortlinks, make_shortlink_with, make_shortlink,
     get_user_verify_state, mark_sl_verified, get_cached_shortlink, verify_check,
-    blogger_verify_check, make_blogger_verify_url,
     add_blogger_post, remove_blogger_post, list_blogger_posts,
     sync_blogger_posts_from_sheet,
     clean_caption, get_file_name, get_file_size, del_later, send_log,
@@ -410,60 +502,50 @@ async def start_handler(client, message: Message):
                     sls.append(doc)
                 return sls
 
-            # ── BLOGGER VERIFY SYSTEM (replaces shortlink) ──
+            # ── SHORTLINK VERIFY (blogger system removed) ──
             grp_sl_list = await _grp_sl_gf(chat_id_for_sl) if chat_id_for_sl else []
             needs_verify = False
             short = None; sl_label = "Verify"; hours = 24
 
-            # Group premium group mein: global blogger aur global shortlink SKIP — sirf group ka shortlink
+            # Group premium + apni shortlink hai: sirf group ki shortlink
+            # Group premium + koi shortlink nahi: seedha file do (global shortlink skip)
             if grp_has_prem and not grp_sl_list:
-                # Group premium hai aur koi group shortlink bhi nahi — seedha file do
                 needs_verify = False
-            elif BLOGGER_VERIFY_ENABLED and not grp_has_prem:
-                # Blogger mode: send user to random blog post (sirf non-premium groups mein)
-                all_done_b, next_sl_b, _ = await get_user_verify_state(uid)
-                if not all_done_b and s.get("shortlink_enabled", True):
+            elif grp_sl_list:
+                sl = grp_sl_list[0]
+                sl_id = str(sl["_id"]); hours = sl.get("hours", 24)
+                log_doc = await verify_log_col.find_one(
+                    {"user_id": uid, "shortlink_id": sl_id}, sort=[("verified_at", -1)]
+                )
+                if not log_doc or now() - make_aware(log_doc.get("verified_at")) >= timedelta(hours=hours):
                     needs_verify = True
-                    sl_id_b = str(next_sl_b["_id"]) if next_sl_b else "blogger_default"
-                    hours = next_sl_b.get("hours", 24) if next_sl_b else 24
-                    token_b = await make_token(uid, f"sv_{sl_id_b}")
-                    short = await make_blogger_verify_url(uid, token_b, sl_id_b)
-                    sl_label = "Blog Visit"
-            else:
-                if grp_sl_list:
-                    sl = grp_sl_list[0]
-                    sl_id = str(sl["_id"]); hours = sl.get("hours", 24)
-                    log_doc = await verify_log_col.find_one(
-                        {"user_id": uid, "shortlink_id": sl_id}, sort=[("verified_at", -1)]
-                    )
-                    if not log_doc or now() - make_aware(log_doc.get("verified_at")) >= timedelta(hours=hours):
-                        needs_verify = True
-                    if needs_verify:
+                if needs_verify:
+                    token = await make_token(uid, f"sv_{sl_id}")
+                    verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
+                    short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, sl)
+                    sl_label = sl.get("label", "Verify")
+            elif not grp_has_prem:
+                # Global shortlink (sirf non-group-premium groups mein)
+                all_done, next_sl, _ = await get_user_verify_state(uid)
+                if not all_done and s.get("shortlink_enabled", True):
+                    needs_verify = True
+                    if next_sl:
+                        sl_id = str(next_sl["_id"]); sl_label = next_sl.get("label", "Verify"); hours = next_sl.get("hours", 24)
                         token = await make_token(uid, f"sv_{sl_id}")
                         verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
-                        short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, sl)
-                        sl_label = sl.get("label", "Verify")
-                else:
-                    all_done, next_sl, _ = await get_user_verify_state(uid)
-                    if not all_done and s.get("shortlink_enabled", True):
-                        needs_verify = True
-                        if next_sl:
-                            sl_id = str(next_sl["_id"]); sl_label = next_sl.get("label", "Verify"); hours = next_sl.get("hours", 24)
-                            token = await make_token(uid, f"sv_{sl_id}")
-                            verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
-                            short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, next_sl)
-                        elif SHORTLINK_API:
-                            token = await make_token(uid, "sv_env")
-                            verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
-                            try:
-                                api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
-                                async with aiohttp.ClientSession() as sess:
-                                    async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
-                                        res_text = (await r.text()).strip()
-                                        short = res_text if res_text.startswith("http") else verify_url
-                            except: short = verify_url
-                        else:
-                            needs_verify = False
+                        short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, next_sl)
+                    elif SHORTLINK_API:
+                        token = await make_token(uid, "sv_env")
+                        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
+                        try:
+                            api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
+                            async with aiohttp.ClientSession() as sess:
+                                async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                                    res_text = (await r.text()).strip()
+                                    short = res_text if res_text.startswith("http") else verify_url
+                        except: short = verify_url
+                    else:
+                        needs_verify = False
 
             if needs_verify and short:
                 await users_col.update_one(
@@ -471,15 +553,18 @@ async def start_handler(client, message: Message):
                     {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
                     upsert=True
                 )
-                btn_label = "🌐 Blog Visit Karo — Get File!" if BLOGGER_VERIFY_ENABLED else f"🔗 {sl_label} — Verify Karo"
                 await message.reply(
-                    f"🔐 **Ek Chhota Sa Step!**\n\n"
-                    f"👇 Link dabao → {'Blog pe jao → Get File dabao' if BLOGGER_VERIFY_ENABLED else 'Shortlink complete karo'} → file milegi!\n"
-                    f"⏰ Har {hours} ghante mein ek baar.\n\n"
-                    f"💎 Premium = verify kabhi nahi!",
+                    f"🔐 **File ke liye ek step baaki hai!**\n\n"
+                    f"**Kaise kare:**\n"
+                    f"1️⃣ Neeche **LINK** button dabao\n"
+                    f"2️⃣ Page pe steps complete karo\n"
+                    f"3️⃣ Wapas aao — file milegi! ✅\n\n"
+                    f"💡 _Link kaam na kare to copy karo aur Chrome mein paste karo_\n"
+                    f"⏰ Har **{hours} ghante** mein ek baar\n"
+                    f"💎 Premium lo — **kabhi verify na karo!**",
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton(btn_label, url=short)],
-                        [InlineKeyboardButton("💎 Premium lo", callback_data="show_premium")],
+                        [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                        [InlineKeyboardButton("💎 Premium lo — No Verify!", callback_data="show_premium")],
                     ])
                 )
                 return
@@ -537,42 +622,32 @@ async def start_handler(client, message: Message):
         s = await get_settings()
         prem = await is_premium(uid)
 
-        # STEP 1: Verify (Blogger mode ya Shortlink mode)
+        # STEP 1: Shortlink Verify
         if not prem and s.get("shortlink_enabled", True):
             all_done, next_sl, _ = await get_user_verify_state(uid)
             if not all_done:
                 me_obj = await client.get_me()
                 short = None; sl_label = "Verify"; hours = 24
-
-                if BLOGGER_VERIFY_ENABLED:
-                    # ── Blogger Mode ──
-                    sl_id_b = str(next_sl["_id"]) if next_sl else "blogger_default"
-                    hours = next_sl.get("hours", 24) if next_sl else 24
-                    token_b = await make_token(uid, f"sv_{sl_id_b}")
-                    short = await make_blogger_verify_url(uid, token_b, sl_id_b)
-                    sl_label = "Blog Visit"
+                if next_sl:
+                    sl_id = str(next_sl["_id"])
+                    sl_label = next_sl.get("label", "Verify")
+                    hours = next_sl.get("hours", 24)
+                    token = await make_token(uid, f"sv_{sl_id}")
+                    verify_url = f"https://t.me/{me_obj.username}?start=sv_{uid}_{token}_{sl_id}"
+                    short = await get_cached_shortlink(uid, 0, verify_url, next_sl)
+                elif SHORTLINK_API:
+                    token = await make_token(uid, "sv_env")
+                    verify_url = f"https://t.me/{me_obj.username}?start=sv_{uid}_{token}"
+                    try:
+                        api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
+                        async with aiohttp.ClientSession() as sess:
+                            async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                                result = (await r.text()).strip()
+                                short = result if result.startswith("http") else verify_url
+                    except:
+                        short = verify_url
                 else:
-                    # ── Shortlink Mode ──
-                    if next_sl:
-                        sl_id = str(next_sl["_id"])
-                        sl_label = next_sl.get("label", "Verify")
-                        hours = next_sl.get("hours", 24)
-                        token = await make_token(uid, f"sv_{sl_id}")
-                        verify_url = f"https://t.me/{me_obj.username}?start=sv_{uid}_{token}_{sl_id}"
-                        short = await get_cached_shortlink(uid, 0, verify_url, next_sl)
-                    elif SHORTLINK_API:
-                        token = await make_token(uid, "sv_env")
-                        verify_url = f"https://t.me/{me_obj.username}?start=sv_{uid}_{token}"
-                        try:
-                            api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
-                            async with aiohttp.ClientSession() as sess:
-                                async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
-                                    result = (await r.text()).strip()
-                                    short = result if result.startswith("http") else verify_url
-                        except:
-                            short = verify_url
-                    else:
-                        all_done = True
+                    all_done = True
 
                 if not all_done and short:
                     await users_col.update_one(
@@ -580,15 +655,19 @@ async def start_handler(client, message: Message):
                         {"$set": {"pending_file_id": msg_id, "pending_file_chat": 0}},
                         upsert=True
                     )
-                    btn_label = "🌐 Blog Visit Karo — Get File!" if BLOGGER_VERIFY_ENABLED else f"🔗 {sl_label} — Verify Karo"
                     await message.reply(
-                        f"🔐 **Ek Chhota Sa Step!**\n\n"
-                        f"👇 {'Blog pe jao → Get File dabao' if BLOGGER_VERIFY_ENABLED else 'Shortlink complete karo'} → file milegi!\n"
-                        f"⏰ Har {hours} ghante mein ek baar.\n\n"
-                        f"💎 Premium lo = verify kabhi nahi!",
+                        f"🔐 **File Lene Se Pehle Ek Step!**\n\n"
+                        f"**Steps follow karo:**\n"
+                        f"1️⃣ Neeche **LINK** button dabao\n"
+                        f"2️⃣ Page pe steps complete karo\n"
+                        f"3️⃣ Bot pe wapas aao — file seedha milegi! 🎉\n\n"
+                        f"💡 **Tip:** Link kaam na kare to — link ko **copy** karo\n"
+                        f"   aur **Chrome browser** mein paste karke kholo!\n\n"
+                        f"⏰ Har **{hours} ghante** mein ek baar\n"
+                        f"💎 Premium = kabhi verify nahi!",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton(btn_label, url=short)],
-                            [InlineKeyboardButton("💎 Premium lo — verify kabhi nahi", callback_data="show_premium")],
+                            [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                            [InlineKeyboardButton("💎 Premium lo — No Verify!", callback_data="show_premium")],
                         ])
                     )
                     return
@@ -948,10 +1027,18 @@ async def search_handler(client, message: Message):
             google_q = query.replace(" ", "+")
             filter_url = "https://t.me/asfilter_bot?start=" + query.replace(" ", "_")
             google_url = f"https://www.google.com/search?q={google_q}+full+movie"
+            # Spelling fix suggestion
+            fixed_query = _fix_query_spelling(query)
+            spelling_note = ""
+            if fixed_query.lower() != query.lower():
+                spelling_note = f"\n💡 **Spelling fix:** `{query}` → **{fixed_query}** — ye try karo!"
             edited = await wait_msg.edit(
-                f"😕 '{query}' nahi mila\n\n"
-                f"1. Spelling check karo\n"
-                f"2. Niche buttons try karo",
+                f"😕 **'{query}' nahi mila!**\n\n"
+                f"**Kya karna hai:**\n"
+                f"1️⃣ Spelling check karo (ek galti bhi ho to nahi milta)\n"
+                f"2️⃣ Sirf movie ka naam likho — year/quality mat likho\n"
+                f"3️⃣ Neeche buttons try karo"
+                f"{spelling_note}",
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url),
                 ],[
@@ -979,32 +1066,72 @@ async def search_handler(client, message: Message):
         count_text = len(found)
         page_info = f" (1/{total_pages})" if total_pages > 1 else ""
 
-        p_emoji = random.choice(["🌍","🌎","🌏","🪐","🌕","⭐","🌟","💫","✨","🔥","💥","⚡"])
-        
-        # Funny result messages
-        result_msgs = [
-            f"{p_emoji} **{message.from_user.mention}**, ye lo tumhare results! 😎\n\n"
-            f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** mili!\n\n"
-            f"👇 Button daba — PM mein file aayegi! 📥\n"
-            f"⏳ {mins} min baad gayab! Jaldi kar! 🏃‍♂️",
+        # ── TMDb Movie Info fetch (settings se ON/OFF) ──
+        tmdb_info = None
+        if s.get("tmdb_enabled", True):
+            try:
+                async with aiohttp.ClientSession() as tmdb_sess:
+                    tmdb_info = await tmdb_search(query, tmdb_sess)
+            except Exception as _te:
+                logger.warning(f"TMDb fetch error: {_te}")
 
-            f"{p_emoji} Arre **{message.from_user.mention}**! Mil gaya tera maal! 🎬\n\n"
-            f"🎯 **{count_text} result{'s' if count_text > 1 else ''}{page_info}** ready!\n\n"  
-            f"👇 Jis file chahiye uska button daba!\n"
-            f"⏳ {mins} min hai tere paas — save kar le! ⏰",
+        # ── Build result message with TMDb info ──
+        if tmdb_info:
+            title_line = f"🎬 **{tmdb_info['title']}**"
+            if tmdb_info.get('year'):
+                title_line += f" ({tmdb_info['year']})"
+            type_line = tmdb_info.get('type', '')
+            rating_line = ""
+            if tmdb_info.get('rating'):
+                stars = tmdb_info.get('stars', '')
+                rating_line = f"⭐ IMDB: **{tmdb_info['rating']}/10** {stars}"
+                if tmdb_info.get('imdb_url'):
+                    rating_line += f"  [→ IMDB]({tmdb_info['imdb_url']})"
+            overview_line = f"📝 _{tmdb_info['overview']}_" if tmdb_info.get('overview') else ""
 
-            f"💥 **{message.from_user.mention}**, dhundh liya! 🔍\n\n"
-            f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** hai tere liye!\n\n"
-            f"👇 Button daba = PM mein delivery! 📦\n"
-            f"⏳ {mins} min mein delete — jaldi kar bhai! 🚀",
-        ]
-        result_text = random.choice(result_msgs)
-        
-        # Premium upsell for normal users
-        if not prem:
-            result_text += f"\n\n💎 _Premium lo = 10 results + Stream + No verify!_"
+            result_text = (
+                f"{title_line}  {type_line}\n"
+                f"{rating_line}\n"
+                f"{overview_line}\n\n"
+                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** mili!\n"
+                f"👇 File ka button dabao — PM mein aayegi! 📥\n"
+                f"⏳ {mins} min baad gayab!"
+            )
+            # Send poster + results
+            if tmdb_info.get('poster_url'):
+                try:
+                    result_msg = await message.reply_photo(
+                        photo=tmdb_info['poster_url'],
+                        caption=result_text,
+                        reply_markup=kb
+                    )
+                except Exception:
+                    result_msg = await message.reply(result_text, reply_markup=kb, disable_web_page_preview=True)
+            else:
+                result_msg = await message.reply(result_text, reply_markup=kb, disable_web_page_preview=True)
+        else:
+            # Fallback — original funny messages (TMDb nahi mila)
+            p_emoji = random.choice(["🌍","🌎","🌏","🪐","🌕","⭐","🌟","💫","✨","🔥","💥","⚡"])
+            result_msgs = [
+                f"{p_emoji} **{message.from_user.mention}**, ye lo tumhare results! 😎\n\n"
+                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** mili!\n\n"
+                f"👇 Button daba — PM mein file aayegi! 📥\n"
+                f"⏳ {mins} min baad gayab! Jaldi kar! 🏃‍♂️",
 
-        result_msg = await message.reply(result_text, reply_markup=kb)
+                f"{p_emoji} Arre **{message.from_user.mention}**! Mil gaya tera maal! 🎬\n\n"
+                f"🎯 **{count_text} result{'s' if count_text > 1 else ''}{page_info}** ready!\n\n"
+                f"👇 Jis file chahiye uska button daba!\n"
+                f"⏳ {mins} min hai tere paas — save kar le! ⏰",
+
+                f"💥 **{message.from_user.mention}**, dhundh liya! 🔍\n\n"
+                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** hai tere liye!\n\n"
+                f"👇 Button daba = PM mein delivery! 📦\n"
+                f"⏳ {mins} min mein delete — jaldi kar bhai! 🚀",
+            ]
+            result_text = random.choice(result_msgs)
+            if not prem:
+                result_text += f"\n\n💎 _Premium lo = 10 results + Stream + No verify!_"
+            result_msg = await message.reply(result_text, reply_markup=kb)
 
         # Search log removed
 
@@ -1269,7 +1396,7 @@ async def cb_handler(client, query: CallbackQuery):
 
         # ── PM mein hai — pura flow ──
 
-        # STEP 1: Shortlink Verify
+        # STEP 1: Shortlink Verify (group premium wale groups mein global shortlink skip)
         if not prem:
             async def _grp_sl(cid):
                 sls = []
@@ -1277,11 +1404,25 @@ async def cb_handler(client, query: CallbackQuery):
                     sls.append(doc)
                 return sls
 
+            async def _is_grp_prem_cb(cid):
+                doc = await group_prem_col.find_one({"chat_id": cid, "status": "approved"})
+                if not doc: return False
+                exp = make_aware(doc.get("expiry"))
+                if exp and now() > exp:
+                    await group_prem_col.update_one({"chat_id": cid}, {"$set": {"status": "expired"}})
+                    return False
+                return True
+
             grp_sl_list = await _grp_sl(chat_id_for_sl) if chat_id_for_sl else []
+            grp_prem_cb = await _is_grp_prem_cb(chat_id_for_sl) if chat_id_for_sl else False
             needs_verify = False
             short = None; sl_label = "Verify"; hours = 24
 
-            if grp_sl_list:
+            if grp_prem_cb and not grp_sl_list:
+                # Group premium hai, apni shortlink nahi — global shortlink skip, seedha file
+                needs_verify = False
+            elif grp_sl_list:
+                # Group ki apni shortlink use karo
                 sl = grp_sl_list[0]
                 sl_id = str(sl["_id"]); hours = sl.get("hours", 24)
                 log_doc = await verify_log_col.find_one(
@@ -1294,7 +1435,8 @@ async def cb_handler(client, query: CallbackQuery):
                     verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
                     short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, sl)
                     sl_label = sl.get("label", "Verify")
-            else:
+            elif not grp_prem_cb:
+                # Normal group — global shortlink
                 all_done, next_sl, _ = await get_user_verify_state(uid)
                 if not all_done and s.get("shortlink_enabled", True):
                     needs_verify = True
@@ -1324,13 +1466,17 @@ async def cb_handler(client, query: CallbackQuery):
                 )
                 await query.answer()
                 await query.message.reply(
-                    f"🔐 **Ek Chhota Sa Step!**\n\n"
-                    f"👇 Link complete karo → file turant milegi!\n"
-                    f"⏰ Har {hours} ghante mein ek baar.\n\n"
-                    f"💎 Premium = verify kabhi nahi!",
+                    f"🔐 **File Lene Ke Liye Ek Step!**\n\n"
+                    f"**Kaise kare:**\n"
+                    f"1️⃣ Neeche **LINK** button dabao\n"
+                    f"2️⃣ Page pe steps complete karo\n"
+                    f"3️⃣ Wapas bot pe aao — file milegi! ✅\n\n"
+                    f"⏰ Har **{hours} ghante** mein sirf ek baar\n"
+                    f"💡 _Link copy karke Chrome mein bhi paste kar sakte ho_\n\n"
+                    f"💎 Premium = verify bilkul nahi!",
                     reply_markup=InlineKeyboardMarkup([
                         [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
-                        [InlineKeyboardButton("💎 Premium lo", callback_data="show_premium")],
+                        [InlineKeyboardButton("💎 Premium lo — No Verify!", callback_data="show_premium")],
                     ])
                 )
                 return
@@ -2280,6 +2426,7 @@ async def cb_handler(client, query: CallbackQuery):
             "forcesub": "force_sub",
             "linkprotect": "link_protection",
             "autodelete": "auto_delete",
+            "tmdb": "tmdb_enabled",
         }
 
         if key in toggle_map:
@@ -2520,14 +2667,17 @@ def _build_global_settings_kb(s):
         ],
         [
             InlineKeyboardButton(f"📢 Force Sub: {tog(s.get('force_sub',True))}", callback_data="gs_global_forcesub"),
+            InlineKeyboardButton(f"🎬 IMDB Info: {tog(s.get('tmdb_enabled',True))}", callback_data="gs_global_tmdb"),
+        ],
+        [
             InlineKeyboardButton(f"🛡 Link Protect: {tog(s.get('link_protection',True))}", callback_data="gs_global_linkprotect"),
-        ],
-        [
             InlineKeyboardButton(f"🗑 Auto Delete: {tog(s.get('auto_delete',True))}", callback_data="gs_global_autodelete"),
-            InlineKeyboardButton(f"⏱ {s.get('auto_delete_time',300)//60} min", callback_data="gs_global_deletetime"),
         ],
         [
+            InlineKeyboardButton(f"⏱ {s.get('auto_delete_time',300)//60} min", callback_data="gs_global_deletetime"),
             InlineKeyboardButton(f"📊 Daily Limit: {s.get('daily_limit',10)}", callback_data="gs_global_dailylimit"),
+        ],
+        [
             InlineKeyboardButton(f"🆓 Free: {s.get('free_results',5)} res", callback_data="gs_global_freeresults"),
             InlineKeyboardButton(f"💎 Prem: {s.get('premium_results',10)} res", callback_data="gs_global_premresults"),
         ],
@@ -2541,7 +2691,12 @@ async def show_settings(client, message: Message):
     await message.reply(
         f"⚙️ **Global Bot Settings**\n"
         f"{'─'*28}\n"
-        f"Button dabao — settings toggle ho jaayegi!",
+        f"🔗 Shortlink: {'✅ ON' if s.get('shortlink_enabled', True) else '❌ OFF'}\n"
+        f"🎬 IMDB Info: {'✅ ON' if s.get('tmdb_enabled', True) else '❌ OFF'}\n"
+        f"📢 Force Sub: {'✅ ON' if s.get('force_sub', True) else '❌ OFF'}\n"
+        f"🔧 Maintenance: {'✅ ON' if s.get('maintenance') else '❌ OFF'}\n"
+        f"{'─'*28}\n"
+        f"Button dabao — toggle ho jaayegi!",
         reply_markup=kb
     )
 
@@ -2956,166 +3111,49 @@ async def list_shortlinks_cmd(client, message: Message):
 
 @bot.on_message(filters.command("addblog") & filters.user(ADMINS))
 async def addblog_cmd(client, message: Message):
-    """
-    /addblog <url> [label]
-    Example: /addblog https://yourblog.blogspot.com/2024/01/post.html Movie News
-    """
-    args = message.command
-    if len(args) < 2:
-        await message.reply(
-            "📝 **Usage:**\n"
-            "`/addblog <url> [label]`\n\n"
-            "**Example:**\n"
-            "`/addblog https://yourblog.blogspot.com/2024/01/post.html Movie News`\n\n"
-            "💡 Label optional hai — nahi doge to auto-number hoga.\n"
-            "📋 List dekhne ke liye: `/blogposts`"
-        )
-        return
-
-    url = args[1].strip()
-    label = " ".join(args[2:]) if len(args) > 2 else ""
-
-    result = await add_blogger_post(url, label)
-    if result["ok"]:
-        await message.reply(
-            f"✅ **Blogger Post Add Ho Gayi!**\n\n"
-            f"🏷 Label: **{result['label']}**\n"
-            f"🔢 Number: `{result['number']}`\n"
-            f"🌐 URL: `{url}`\n\n"
-            f"📋 Sab dekhne ke liye: `/blogposts`\n"
-            f"🗑 Hatane ke liye: `/removeblog {result['number']}`",
-            disable_web_page_preview=True
-        )
-        await send_log(
-            f"🌐 #BlogAdded\n"
-            f"Label: {result['label']}\n"
-            f"URL: `{url}`\n"
-            f"By: {message.from_user.mention}"
-        )
-    else:
-        await message.reply(f"❌ **Error:** {result['msg']}")
+    """Blogger system hata diya gaya hai"""
+    await message.reply(
+        "ℹ️ **Blogger system is bot se hata diya gaya hai.**\n\n"
+        "Shortlink use karo: `/addshortlink <api_key> <url> <hours> [label]`"
+    )
 
 
 @bot.on_message(filters.command("removeblog") & filters.user(ADMINS))
 async def removeblog_cmd(client, message: Message):
-    """
-    /removeblog        → list dikho with numbers
-    /removeblog <n>    → number wali post delete karo
-    """
-    args = message.command
-
-    if len(args) < 2:
-        # Show list with numbers for easy deletion
-        posts = await list_blogger_posts()
-        if not posts:
-            await message.reply(
-                "📭 **Koi Blogger post nahi hai.**\n\n"
-                "Add karne ke liye: `/addblog <url> [label]`"
-            )
-            return
-        text = f"🌐 **Blogger Posts ({len(posts)}) — Delete Karne Ke Liye Number Bhejo:**\n\n"
-        for i, p in enumerate(posts, 1):
-            text += f"{i}. **{p.get('label', 'Post')}**\n   `{p['url'][:60]}{'...' if len(p['url']) > 60 else ''}`\n\n"
-        text += "**Usage:** `/removeblog 2`  ← number wali hatao"
-        await message.reply(text, disable_web_page_preview=True)
-        return
-
-    try:
-        number = int(args[1])
-    except ValueError:
-        await message.reply("❌ Number dena hai! Example: `/removeblog 2`")
-        return
-
-    result = await remove_blogger_post(number)
-    if result["ok"]:
-        await message.reply(
-            f"🗑 **Blogger Post Hata Di!**\n\n"
-            f"🏷 Label: **{result['label']}**\n"
-            f"🌐 URL: `{result['url']}`\n\n"
-            f"📋 Baaki dekhne ke liye: `/blogposts`",
-            disable_web_page_preview=True
-        )
-        await send_log(
-            f"🗑 #BlogRemoved\n"
-            f"Label: {result['label']}\n"
-            f"URL: `{result['url']}`\n"
-            f"By: {message.from_user.mention}"
-        )
-    else:
-        await message.reply(f"❌ **Error:** {result['msg']}")
+    """Blogger system hata diya gaya hai"""
+    await message.reply(
+        "ℹ️ **Blogger system is bot se hata diya gaya hai.**\n\n"
+        "Shortlink manage karo: `/shortlinks` | `/removeshortlink <number>`"
+    )
 
 
 @bot.on_message(filters.command("blogposts") & filters.user(ADMINS))
 async def blogposts_cmd(client, message: Message):
-    """/blogposts — Sab Blogger post URLs ki list"""
-    from config import BLOGGER_POST_URLS, BLOGGER_VERIFY_ENABLED
-
-    posts = await list_blogger_posts()
-
-    mode = "🟢 **Blogger Mode ON**" if BLOGGER_VERIFY_ENABLED else "🔴 **Shortlink Mode** (Blogger OFF)"
-    text = f"{mode}\n\n"
-
-    if posts:
-        text += f"🌐 **DB Blogger Posts ({len(posts)}):**\n\n"
-        for i, p in enumerate(posts, 1):
-            active = "✅" if p.get("active", True) else "❌"
-            text += (
-                f"{active} **{i}. {p.get('label', 'Post')}**\n"
-                f"   `{p['url'][:70]}{'...' if len(p['url']) > 70 else ''}`\n\n"
-            )
-    else:
-        text += "📭 **DB mein koi post nahi** (config fallback use ho raha hai)\n\n"
-
-    if BLOGGER_POST_URLS:
-        text += f"⚙️ **Config Posts ({len(BLOGGER_POST_URLS)}):** _(fallback)_\n"
-        for i, u in enumerate(BLOGGER_POST_URLS, 1):
-            text += f"   {i}. `{u[:60]}{'...' if len(u) > 60 else ''}`\n"
-    else:
-        text += "⚙️ Config mein koi URL nahi (BLOGGER_POST_URLS empty)\n"
-
-    text += (
-        f"\n\n**Commands:**\n"
-        f"➕ Add: `/addblog <url> [label]`\n"
-        f"🗑 Remove: `/removeblog <number>`\n"
-        f"🔄 Sheet se sync: `/syncsheet`"
-    )
-
-    await message.reply(text, disable_web_page_preview=True)
+    """Blogger system hata diya gaya hai — shortlinks dikhao"""
+    links = []
+    async for doc in shortlinks_col.find({}).sort("order", 1):
+        links.append(doc)
+    if not links:
+        await message.reply(
+            "📭 Koi shortlink nahi hai.\n\n"
+            "Add karo: `/addshortlink <api_key> <url> <hours> [label]`"
+        )
+        return
+    text = f"🔗 **Active Shortlinks ({len(links)}):**\n\n"
+    for i, sl in enumerate(links, 1):
+        text += f"{'✅' if sl.get('active') else '❌'} **{i}. {sl.get('label','?')}** | ⏰ {sl.get('hours',24)}h\n"
+    text += "\n`/shortlinks` | `/removeshortlink <n>` | `/addshortlink ...`"
+    await message.reply(text)
 
 
 @bot.on_message(filters.command("syncsheet") & filters.user(ADMINS))
 async def syncsheet_cmd(client, message: Message):
-    """/syncsheet — Google Sheet se blogger posts manually sync karo"""
-    from config import GOOGLE_SHEET_CSV_URL, BLOGGER_VERIFY_ENABLED
-    if not BLOGGER_VERIFY_ENABLED:
-        await message.reply("⚠️ Blogger mode OFF hai. `BLOGGER_VERIFY_ENABLED=true` set karo pehle.")
-        return
-    if not GOOGLE_SHEET_CSV_URL:
-        await message.reply("❌ `GOOGLE_SHEET_CSV_URL` env var set nahi hai!")
-        return
-    wait = await message.reply("⏳ Google Sheet se sync ho raha hai...")
-    result = await sync_blogger_posts_from_sheet()
-    await wait.delete()
-    if result.get("ok"):
-        await message.reply(
-            f"✅ **Sheet Sync Successful!**\n\n"
-            f"📊 Sheet rows: **{result.get('sheet_rows', 0)}**\n"
-            f"➕ Naye add: **{result.get('added', 0)}**\n"
-            f"📋 Total active: **{result.get('total', 0)}**\n\n"
-            f"🔗 Sheet: `{GOOGLE_SHEET_CSV_URL[:80]}...`"
-        )
-        await send_log(
-            f"🔄 #SheetSync by {message.from_user.mention}\n"
-            f"Sheet rows: {result.get('sheet_rows',0)} | Added: {result.get('added',0)} | Total: {result.get('total',0)}"
-        )
-    else:
-        await message.reply(
-            f"❌ **Sync Failed!**\n\n`{result.get('error','Unknown error')}`\n\n"
-            f"**Check karo:**\n"
-            f"• Sheet ko 'Anyone with link can view' set kiya hai?\n"
-            f"• Column A mein https:// URLs hain?\n"
-            f"• Sheet URL sahi hai?"
-        )
+    """/syncsheet — Blogger system hataya gaya hai"""
+    await message.reply(
+        "ℹ️ **Blogger system is bot se hata diya gaya hai.**\n\n"
+        "Sirf Shortlink system use hota hai.\n"
+        "Shortlink manage karo: `/shortlinks` | `/addshortlink` | `/removeshortlink`"
+    )
 
 
 async def group_shortlink_add(client, message: Message):
@@ -3405,30 +3443,8 @@ def start_bot():
                     if bot.loop and bot.loop.is_running():
                         asyncio.run_coroutine_threadsafe(cleanup(), bot.loop)
 
-                # Google Sheet se blogger posts sync — startup + har 6 ghante
-                async def _sheet_sync_task():
-                    from database import sync_blogger_posts_from_sheet
-                    from config import BLOGGER_VERIFY_ENABLED
-                    if not BLOGGER_VERIFY_ENABLED:
-                        return
-                    try:
-                        res = await sync_blogger_posts_from_sheet()
-                        if res.get("ok"):
-                            logger.info(f"✅ Sheet sync: {res.get('sheet_rows',0)} URLs, {res.get('added',0)} new added")
-                        else:
-                            logger.warning(f"⚠️ Sheet sync failed: {res.get('error','?')}")
-                    except Exception as e:
-                        logger.error(f"Sheet sync error: {e}")
-
-                def _run_sheet_sync():
-                    if bot.loop and bot.loop.is_running():
-                        asyncio.run_coroutine_threadsafe(_sheet_sync_task(), bot.loop)
-
                 scheduler.add_job(_run_cleanup, 'interval', hours=1)
-                scheduler.add_job(_run_sheet_sync, 'interval', hours=6)
                 scheduler.start()
-                # Startup mein ek baar sheet sync karo
-                asyncio.run_coroutine_threadsafe(_sheet_sync_task(), loop)
                 logger.info("✅ Scheduler + aiohttp + watchdog started")
             asyncio.run_coroutine_threadsafe(_start(), loop)
         except Exception as e:
