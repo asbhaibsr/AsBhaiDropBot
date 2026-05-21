@@ -894,22 +894,23 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
         fsize = get_file_size(file_msg)
         size_text = f"📦 Size: {fsize}\n" if fsize else ""
 
-        # Funny/roast captions
+        # Roast captions — desi style 😂
         planet = random.choice(["🌍","🌎","🌏","🪐","🌕","⭐","💫","✨","🔥","💥"])
         if prem:
             caps = [
-                f"{planet} **{fname}**\n\n{size_text}💎 Premium power! Jaldi save kar le boss! {mins} min hai! 🏃‍♂️",
-                f"🎬 **{fname}**\n\n{size_text}{planet} VIP delivery! Forward ya save — {mins} min mein gayab! 👻",
-                f"📥 **{fname}**\n\n{size_text}💎 Premium special! Save karo jaldi — {mins} min ka countdown! ⏰",
-                f"🔥 **{fname}**\n\n{size_text}{planet} Premium member ko premium service! {mins} min mein delete! 💨",
-                f"💎 **{fname}**\n\n{size_text}Ye lo tumhari file, raja! 👑 {mins} min baad chali jaayegi! Save karo! 📌",
+                f"👑 **{fname}**\n\n{size_text}Aa gaya tujhe serve karne! 💎 VIP haina tu — {mins} min mein delete hogi, raja jaldi save kar! 🏃‍♂️",
+                f"🎬 **{fname}**\n\n{size_text}Premium wale bhaiya ji — ye lo tumhari file! {planet} {mins} min baad gayab, throne pe baith ke save karo! 👑",
+                f"🔥 **{fname}**\n\n{size_text}Tere liye bot ne jhand maar di! 💎 {mins} min mein delete — save kar varna paisa barbad! 📌",
+                f"💎 **{fname}**\n\n{size_text}Paisa vasool delivery! {planet} {mins} min ka countdown shuru — screenshot le ya save, kuch toh kar! ⏰",
+                f"🎁 **{fname}**\n\n{size_text}Dekh premium wale, sirf tere liye special service! 😏 {mins} min baad ye file bhi tujhe bhool jaayegi! 💨",
             ]
         else:
             caps = [
-                f"{planet} **{fname}**\n\n{size_text}Save kar le bhai — {mins} min baad delete! 📌\n💎 Premium lo = Stream + No verify!",
-                f"📥 **{fname}**\n\n{size_text}Jaldi save kar — {mins} min ka time hai! ⏰\n💎 Premium = Unlimited files!",
-                f"🎬 **{fname}**\n\n{size_text}{planet} Ye lo tumhari file! {mins} min mein gayab! 👻\n💎 /premium = No limits!",
-                f"🗂 **{fname}**\n\n{size_text}File aa gayi bhai! {mins} min baad bye-bye! 👋\n💎 Premium kab le rahe ho? 😏",
+                f"{planet} **{fname}**\n\n{size_text}Le bhai, jhand maar di bot ne tere liye! 😂 {mins} min baad gayab — jaldi save kar!\n\n💎 /premium lo = Stream + No verify!",
+                f"📥 **{fname}**\n\n{size_text}Aa gaya? File bhi aa gayi! {planet} Par {mins} min ka time hai — save nahi kiya toh mat rona!\n\n💎 Premium = Unlimited + No ads!",
+                f"🎬 **{fname}**\n\n{size_text}Bot ki jaan nikal gayi ye dhoondne mein! 😤 {mins} min mein delete — ab save karna teri zimmedari hai!\n\n💎 /premium = Sab kuch free!",
+                f"🗂 **{fname}**\n\n{size_text}Le lo hazoor! {mins} min baad ye file bhi theek waise gayab hogi jaise college attendance! 👻\n\n💎 Premium kab le rahe? 😏",
+                f"🔥 **{fname}**\n\n{size_text}Delivered with love... aur thodi jhand! 😂 {mins} min countdown shuru — save kar varna dhoondta phirega!\n\n💎 Premium = Zero jhanjhat!",
             ]
         clean_cap = random.choice(caps)
 
