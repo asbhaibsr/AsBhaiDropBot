@@ -3480,6 +3480,25 @@ def start_bot():
             logger.error(f"Startup thread error: {e}")
 
     Thread(target=_start_scheduler_thread, daemon=True).start()
+
+    # ── Auto-approve join requests for private_open channels ──
+    @bot.on_chat_join_request()
+    async def auto_approve_join_request(client, request):
+        """
+        Private channel join request handler:
+        - join_by_request=False wale channels pe AUTO approve karo
+        - join_by_request=True wale channels pe admin khud approve karega
+        """
+        try:
+            ch_id = request.chat.id
+            chat = await client.get_chat(ch_id)
+            # Agar channel mein join_by_request OFF hai to bot auto-approve karega
+            if not getattr(chat, "join_by_request", True):
+                await client.approve_chat_join_request(ch_id, request.from_user.id)
+                logger.info(f"✅ Auto-approved join: {request.from_user.id} → {ch_id}")
+        except Exception as e:
+            logger.warning(f"auto_approve_join_request error: {e}")
+
     bot.run()
 
 if __name__ == "__main__":
