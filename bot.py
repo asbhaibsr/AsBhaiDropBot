@@ -2935,6 +2935,46 @@ async def maintenance_cmd(client, message: Message):
         await message.reply("❌ `/maintenance on` ya `/maintenance off`")
 
 
+@bot.on_message(filters.command("resetsettings") & filters.user(ADMINS) & filters.private)
+async def reset_settings_cmd(client, message: Message):
+    """
+    /resetsettings — Saari settings DEFAULT pe reset karo
+    Sirf OWNER use kar sakta hai — confirm karna padega
+    """
+    args = message.command
+    # Confirmation required — /resetsettings confirm
+    if len(args) < 2 or args[1].lower() != "confirm":
+        await message.reply(
+            "⚠️ **Settings Reset**\n\n"
+            "Yeh sari bot settings **DEFAULT** pe reset kar dega!\n\n"
+            "**Kya reset hoga:**\n"
+            "• Force sub channels\n"
+            "• Shortlink settings\n"
+            "• Auto delete settings\n"
+            "• Daily limit\n"
+            "• Aur sab kuch\n\n"
+            "**Confirm karne ke liye:**\n"
+            "`/resetsettings confirm`"
+        )
+        return
+
+    try:
+        # MongoDB se purani settings delete karo
+        await settings_col.delete_one({"_id": "global"})
+        # Naya DEFAULT_SETTINGS insert karo
+        await settings_col.insert_one({"_id": "global", **DEFAULT_SETTINGS})
+        await message.reply(
+            "✅ **Settings Reset Ho Gayi!**\n\n"
+            "Saari settings default pe aa gayi hain.\n\n"
+            "**Ab force sub channels:**\n"
+            "• AsBhai Channel (`-1002283182645`)\n"
+            "• Latest Movies (`-1002892671107`)\n\n"
+            "Bot restart karne ki zaroorat nahi! ✅"
+        )
+    except Exception as e:
+        await message.reply(f"❌ Reset fail hua!\nError: `{e}`")
+
+
 @bot.on_message(filters.command(["forcesub", "fsub"]) & filters.user(ADMINS))
 async def forcesub_cmd(client, message: Message):
     """
@@ -2988,24 +3028,38 @@ async def add_force_channel_cmd(client, message: Message):
         await message.reply(text); return
 
     ch_input = args[1].strip()
+    # Title optional — /addforcechannel -100xxx My Channel Name
+    custom_title = " ".join(args[2:]) if len(args) > 2 else None
+
     try:
+        # Pehle get_chat try karo
         chat = await client.get_chat(ch_input)
-        ch_data = {"id": chat.id, "title": chat.title or ch_input, "username": chat.username or ""}
-        s = await get_settings()
-        channels = s.get("fsub_channels", [])
-        # Check not already added
-        existing_ids = [c.get("id") for c in channels]
-        if chat.id in existing_ids:
-            await message.reply(f"⚠️ **{chat.title}** already added hai!"); return
-        channels.append(ch_data)
-        await update_setting("fsub_channels", channels)
-        await message.reply(
-            f"✅ **{chat.title}** force sub mein add ho gaya!\n"
-            f"ID: `{chat.id}`\n\n"
-            f"Total channels: **{len(channels)}**"
-        )
-    except Exception as e:
-        await message.reply(f"❌ Channel nahi mila: `{ch_input}`\n\nError: {e}\n\nBot us channel ka admin hona chahiye!")
+        ch_id = chat.id
+        ch_title = custom_title or chat.title or ch_input
+        ch_username = chat.username or ""
+    except Exception:
+        # get_chat fail hua — seedha ID se add karo
+        try:
+            ch_id = int(ch_input)
+        except ValueError:
+            await message.reply(f"❌ Invalid ID/username: `{ch_input}`"); return
+        ch_title = custom_title or f"Channel {ch_id}"
+        ch_username = ""
+
+    ch_data = {"id": ch_id, "title": ch_title, "username": ch_username}
+    s = await get_settings()
+    channels = s.get("fsub_channels", [])
+    existing_ids = [c.get("id") for c in channels]
+    if ch_id in existing_ids:
+        await message.reply(f"⚠️ **{ch_title}** already added hai!"); return
+    channels.append(ch_data)
+    await update_setting("fsub_channels", channels)
+    await message.reply(
+        f"✅ **{ch_title}** force sub mein add ho gaya!\n"
+        f"ID: `{ch_id}`\n\n"
+        f"Total channels: **{len(channels)}**\n\n"
+        f"⚠️ _Bot ko us channel ka admin banana mat bhoolo!_"
+    )
 
 
 @bot.on_message(filters.command("removeforcechannel") & filters.user(ADMINS))
