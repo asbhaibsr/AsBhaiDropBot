@@ -41,7 +41,7 @@ from config import (
     API_ID, API_HASH, BOT_TOKEN, STRING_SESSION,
     OWNER_ID, FILE_CHANNEL, LOG_CHANNEL, MAIN_CHANNEL,
     FORCE_SUB_ID, FORCE_SUB_CHANNEL, SHORTLINK_API, SHORTLINK_URL,
-    KOYEB_URL, ADMINS, IST, UPI_ID, PORT,
+    KOYEB_URL, ADMINS, IST, UPI_ID, PORT, SUPPORT_LINK, HOW_TO_VERIFY,
     TMDB_API_KEY, TMDB_BASE, TMDB_IMG,
     _shortlink_cache, _search_locks, _search_cooldown, _user_warnings,
     DEFAULT_SETTINGS, GROUP_DEFAULTS,
@@ -450,6 +450,7 @@ async def start_handler(client, message: Message):
                     f"👇 Neeche link dabao:",
                     reply_markup=InlineKeyboardMarkup([
                         [InlineKeyboardButton(f"🔗 {next_label} Verify Karo", url=short2)],
+                        [InlineKeyboardButton("❓ Verify Kaise Kare?", url=HOW_TO_VERIFY)],
                         [InlineKeyboardButton("💎 Premium lo — Sab Skip", callback_data="buy_premium")]
                     ])
                 )
@@ -564,6 +565,7 @@ async def start_handler(client, message: Message):
                     f"💎 Premium lo — **kabhi verify na karo!**",
                     reply_markup=InlineKeyboardMarkup([
                         [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                        [InlineKeyboardButton("❓ Verify Kaise Kare?", url=HOW_TO_VERIFY)],
                         [InlineKeyboardButton("💎 Premium lo — No Verify!", callback_data="show_premium")],
                     ])
                 )
@@ -667,6 +669,7 @@ async def start_handler(client, message: Message):
                         f"💎 Premium = kabhi verify nahi!",
                         reply_markup=InlineKeyboardMarkup([
                             [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                            [InlineKeyboardButton("❓ Verify Kaise Kare?", url=HOW_TO_VERIFY)],
                             [InlineKeyboardButton("💎 Premium lo — No Verify!", callback_data="show_premium")],
                         ])
                     )
@@ -717,6 +720,9 @@ async def start_handler(client, message: Message):
         [
             InlineKeyboardButton("📊 My Stats", callback_data="my_stats"),
             InlineKeyboardButton("🔗 Refer & Earn", callback_data="refer_info")
+        ],
+        [
+            InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK)
         ]
     ]
     if miniapp_url:
@@ -1113,20 +1119,25 @@ async def search_handler(client, message: Message):
             # Fallback — original funny messages (TMDb nahi mila)
             p_emoji = random.choice(["🌍","🌎","🌏","🪐","🌕","⭐","🌟","💫","✨","🔥","💥","⚡"])
             result_msgs = [
-                f"{p_emoji} **{message.from_user.mention}**, ye lo tumhare results! 😎\n\n"
+                f"{p_emoji} **{message.from_user.mention}**, le bhai! Bot ki jaan nikal gayi dhoondne mein! 😤\n\n"
                 f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** mili!\n\n"
-                f"👇 Button daba — PM mein file aayegi! 📥\n"
-                f"⏳ {mins} min baad gayab! Jaldi kar! 🏃‍♂️",
+                f"👇 Button daba — PM mein file seedha aayegi! 📥\n"
+                f"⏳ {mins} min baad gayab — jaldi kar! 🏃‍♂️",
 
-                f"{p_emoji} Arre **{message.from_user.mention}**! Mil gaya tera maal! 🎬\n\n"
+                f"{p_emoji} Arre **{message.from_user.mention}**! Mil gaya tera maal bhai! 🎬\n\n"
                 f"🎯 **{count_text} result{'s' if count_text > 1 else ''}{page_info}** ready!\n\n"
-                f"👇 Jis file chahiye uska button daba!\n"
-                f"⏳ {mins} min hai tere paas — save kar le! ⏰",
+                f"👇 Jis file chahiye — button daba, file PM mein!\n"
+                f"⏳ {mins} min hai tere paas — BC save kar le! ⏰",
 
-                f"💥 **{message.from_user.mention}**, dhundh liya! 🔍\n\n"
-                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** hai tere liye!\n\n"
+                f"💥 **{message.from_user.mention}**, dhundh liya! 🔍 Bot ne jhand maar di tere liye!\n\n"
+                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** tere liye!\n\n"
                 f"👇 Button daba = PM mein delivery! 📦\n"
-                f"⏳ {mins} min mein delete — jaldi kar bhai! 🚀",
+                f"⏳ {mins} min mein delete — jaldi kar varna rona mat! 😂",
+
+                f"🤖 **{message.from_user.mention}**, maang tha — de diya! 😎\n\n"
+                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** hazir hai!\n\n"
+                f"👇 Neeche wala button daba — seedha PM mein pakad!\n"
+                f"⏳ {mins} min baad ye bhi bhool jaayega tujhe! 👻",
             ]
             result_text = random.choice(result_msgs)
             if not prem:
@@ -1230,8 +1241,14 @@ async def pm_search_handler(client, message: Message):
     _result_cache[f"{uid}_{qkey}"] = found
     btns = _build_result_buttons(found[:5], uid, me.username, qkey)
 
+    roast_results = [
+        f"🔍 **{len(found)} file mili!** Bot ne dhoondh liya! 😎\n\n👇 Button daba — PM mein file aayegi!",
+        f"💥 **{len(found)} result{'s' if len(found) > 1 else ''}!** Le bhai, jhand maar di! 😂\n\n👇 Neeche se apni file pakad!",
+        f"🎯 **{len(found)} file hazir!** Maang tha — de diya! 🤖\n\n👇 Button daba = PM delivery!",
+        f"🗂 **{len(found)} result{'s' if len(found) > 1 else ''}** mila bhai!\n\n👇 File chahiye toh button daba!",
+    ]
     result_msg = await message.reply(
-        f"🔍 **{len(found)} Results**\n\n👇 File ka button dabao:",
+        random.choice(roast_results),
         reply_markup=InlineKeyboardMarkup(btns)
     )
     s = await get_settings()
@@ -1476,6 +1493,7 @@ async def cb_handler(client, query: CallbackQuery):
                     f"💎 Premium = verify bilkul nahi!",
                     reply_markup=InlineKeyboardMarkup([
                         [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                        [InlineKeyboardButton("❓ Verify Kaise Kare?", url=HOW_TO_VERIFY)],
                         [InlineKeyboardButton("💎 Premium lo — No Verify!", callback_data="show_premium")],
                     ])
                 )
@@ -1590,9 +1608,9 @@ async def cb_handler(client, query: CallbackQuery):
         search_q_display = qkey.replace("_", " ").strip()
         try:
             await query.message.edit_text(
-                f"🔍 **{len(found)} Results** — {search_q_display}\n"
+                f"🔍 **{len(found)} file mili** — `{search_q_display}`\n"
                 f"📄 Page {page+1}/{total_pages}\n\n"
-                f"👇 File ka button dabao — PM mein aayegi! 📥",
+                f"👇 Button daba — PM mein seedha delivery! 📦",
                 reply_markup=InlineKeyboardMarkup(btns)
             )
         except Exception as e:
@@ -1922,6 +1940,7 @@ async def cb_handler(client, query: CallbackQuery):
                         f"💎 Premium lo = verify kabhi nahi!",
                         reply_markup=InlineKeyboardMarkup([
                             [InlineKeyboardButton(f"🔗 {sl_label_sa} — Verify Karo", url=short_sa)],
+                            [InlineKeyboardButton("❓ Verify Kaise Kare?", url=HOW_TO_VERIFY)],
                             [InlineKeyboardButton("💎 Premium lo", callback_data="show_premium")],
                         ])
                     )
@@ -2042,7 +2061,7 @@ async def cb_handler(client, query: CallbackQuery):
         btns = _build_result_buttons(found[:page_size], r_uid, me.username, qkey, 0, total_pages)
         try:
             await query.message.edit_text(
-                f"🔍 **{len(found)} Results** — {search_q}\n\n👇 File ka button dabao:",
+                f"🔍 **{len(found)} file mili** — `{search_q}`\n\n👇 Button daba, PM mein pakad! 😎",
                 reply_markup=InlineKeyboardMarkup(btns)
             )
         except: pass
@@ -2075,6 +2094,7 @@ async def cb_handler(client, query: CallbackQuery):
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("💰 Premium Kharidein", callback_data="buy_premium")],
             [InlineKeyboardButton("🔗 Refer Karo — Free Premium", callback_data="refer_info")],
+            [InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK)],
             [InlineKeyboardButton("🔙 Back", callback_data="back_main")]
         ])
         await query.message.edit(
@@ -2139,8 +2159,11 @@ async def cb_handler(client, query: CallbackQuery):
             "  → Bot ka paisa alag, aapka paisa alag\n"
             "  → Group ke sab users ko benefit\n\n"
             "Summary: Bot Premium = USER ke liye skip\n"
-            "Group Premium = OWNER ke liye earning! 💸",
+            "Group Premium = OWNER ke liye earning! 💸\n\n"
+            "━━━━━━━━━━━━━━━━\n"
+            "🆘 **Koi problem?** Neeche Support button dabao!",
             reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK)],
                 [InlineKeyboardButton("🔙 Back", callback_data="back_main")]
             ])
         )
@@ -2185,7 +2208,8 @@ async def cb_handler(client, query: CallbackQuery):
                 InlineKeyboardButton("ℹ️ Help", callback_data="help"),
                 InlineKeyboardButton("📊 My Stats", callback_data="my_stats")
             ],
-            [InlineKeyboardButton("🔗 Refer & Earn", callback_data="refer_info")]
+            [InlineKeyboardButton("🔗 Refer & Earn", callback_data="refer_info")],
+            [InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK)]
         ]
         if miniapp_url:
             buttons.append([InlineKeyboardButton("🌐 Mini App", web_app=WebAppInfo(url=miniapp_url))])
@@ -2308,7 +2332,10 @@ async def cb_handler(client, query: CallbackQuery):
                 user_id,
                 f"❌ **Payment Rejected**\n\n"
                 f"Sahi details ke saath dobara submit karo\n"
-                f"ya @asbhaibsr se contact karo."
+                f"ya support pe contact karo 👇",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK)]
+                ])
             )
         except: pass
         await query.message.edit_reply_markup(None)
@@ -2760,7 +2787,11 @@ async def help_cmd(client, message: Message):
         "4️⃣ Button dabao → PM mein file!\n\n"
         "💎 Premium = Skip all verification!\n"
         "🔗 10 Refer = 15 din FREE Premium!\n\n"
-        "/premium | /mystats | /referlink | /request"
+        "/premium | /mystats | /referlink | /request\n\n"
+        "🆘 Koi problem hai? Support pe aao!",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK)]
+        ])
     )
 
 @bot.on_message(filters.command("request"))
@@ -3222,55 +3253,53 @@ async def broadcast(client, message: Message):
     total = done = failed = blocked = flood_wait_total = 0
     start_time = time.time()
     
-    if target in ["users","all"]:
-        async for doc in users_col.find({}, {"user_id": 1}):
-            uid = doc.get("user_id")
-            if not uid: continue
-            total += 1
+    async def _send_one(dest_id):
+        nonlocal done, failed, blocked, flood_wait_total
+        try:
+            if reply_msg:
+                await reply_msg.copy(chat_id=dest_id)
+            else:
+                await client.send_message(dest_id, text)
+            done += 1
+            await asyncio.sleep(0.1)
+        except (UserIsBlocked, InputUserDeactivated, PeerIdInvalid):
+            blocked += 1
+        except FloodWait as e:
+            flood_wait_total += e.value
+            await asyncio.sleep(min(e.value + 2, 90))
             try:
                 if reply_msg:
-                    await reply_msg.copy(chat_id=uid)
+                    await reply_msg.copy(chat_id=dest_id)
                 else:
-                    await client.send_message(uid, text)
+                    await client.send_message(dest_id, text)
                 done += 1
-                # FIX: Proper rate limiting — 0.1s between messages
                 await asyncio.sleep(0.1)
-            except (UserIsBlocked, InputUserDeactivated): 
-                blocked += 1
-            except PeerIdInvalid: 
-                blocked += 1
-            except FloodWait as e:
-                flood_wait_total += e.value
-                await asyncio.sleep(min(e.value + 1, 60))
-                # Retry after flood wait
-                try:
-                    if reply_msg:
-                        await reply_msg.copy(chat_id=uid)
-                    else:
-                        await client.send_message(uid, text)
-                    done += 1
-                except: failed += 1
-            except: failed += 1
+            except:
+                failed += 1
+        except:
+            failed += 1
+
+    if target in ["users", "all"]:
+        async for doc in users_col.find({}, {"user_id": 1}):
+            uid_bc = doc.get("user_id")
+            if not uid_bc: continue
+            total += 1
+            await _send_one(uid_bc)
             if total % 100 == 0:
                 elapsed = int(time.time() - start_time)
                 try: await sm.edit(f"📡 **Broadcasting...**\n\n✅ {done} | ❌ {failed} | 🚫 {blocked}\nTotal: {total} | Time: {elapsed}s")
                 except: pass
-    
-    if target in ["groups","all"]:
+
+    if target in ["groups", "all"]:
         async for doc in groups_col.find({}, {"chat_id": 1}):
-            cid = doc.get("chat_id")
-            if not cid: continue
+            cid_bc = doc.get("chat_id")
+            if not cid_bc: continue
             total += 1
-            try:
-                if reply_msg:
-                    await reply_msg.copy(chat_id=cid)
-                else:
-                    await client.send_message(cid, text)
-                done += 1
-                await asyncio.sleep(0.15)
-            except FloodWait as e:
-                await asyncio.sleep(min(e.value + 1, 60))
-            except: failed += 1
+            await _send_one(cid_bc)
+            if total % 50 == 0:
+                elapsed = int(time.time() - start_time)
+                try: await sm.edit(f"📡 **Broadcasting...**\n\n✅ {done} | ❌ {failed} | 🚫 {blocked}\nTotal: {total} | Time: {elapsed}s")
+                except: pass
     
     elapsed = int(time.time() - start_time)
     await sm.edit(
