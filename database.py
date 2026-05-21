@@ -332,6 +332,36 @@ async def get_fsub_list():
     groups = s.get("fsub_groups", [])
     return channels + groups
 
+async def _detect_channel_type(ch_id):
+    """
+    Channel type detect karo:
+    - public     : username hai, koi bhi join kar sakta
+    - private_req: private + join_by_request ON (admin approve karta)
+    - private_open: private + join_by_request OFF (bot approve kar sakta)
+    """
+    try:
+        chat = await bot.get_chat(ch_id)
+        if chat.username:
+            return "public", chat.username
+        # Private channel
+        if getattr(chat, "join_by_request", False):
+            return "private_req", None   # Request mode ON
+        else:
+            return "private_open", None  # Bot approve kar sakta
+    except Exception as e:
+        logger.warning(f"_detect_channel_type error {ch_id}: {e}")
+        return "unknown", None
+
+async def _is_pending_request(ch_id, user_id):
+    """Check karo user ki join request pending hai ya nahi"""
+    try:
+        async for req in bot.get_chat_join_requests(ch_id):
+            if req.user.id == user_id:
+                return True
+        return False
+    except:
+        return False
+
 async def check_member_multi(user_id, prem=False):
     if user_id in ADMINS: return True, []
     if prem: return True, []
@@ -341,12 +371,16 @@ async def check_member_multi(user_id, prem=False):
     
     fsub_list = await get_fsub_list()
     if not fsub_list:
+        # Default single channel check
         try:
             m = await bot.get_chat_member(FORCE_SUB_ID, user_id)
             if m.status in [enums.ChatMemberStatus.BANNED, enums.ChatMemberStatus.LEFT]:
                 return False, [{"id": FORCE_SUB_ID, "username": FORCE_SUB_CHANNEL, "title": "Channel"}]
             return True, []
         except UserNotParticipant:
+            # Private channel — pending check
+            if await _is_pending_request(FORCE_SUB_ID, user_id):
+                return True, []  # Request pending = OK
             return False, [{"id": FORCE_SUB_ID, "username": FORCE_SUB_CHANNEL, "title": "Channel"}]
         except:
             return True, []
@@ -359,73 +393,65 @@ async def check_member_multi(user_id, prem=False):
             m = await bot.get_chat_member(ch_id, user_id)
             if m.status in [enums.ChatMemberStatus.BANNED, enums.ChatMemberStatus.LEFT]:
                 not_joined.append(ch)
-            # MEMBER, ADMINISTRATOR, OWNER, RESTRICTED — sab OK
+            # MEMBER / ADMIN / OWNER / RESTRICTED — sab OK
         except UserNotParticipant:
-            # Private channel — check karo kya request pending hai
-            is_pending = False
-            try:
-                # Pyrogram mein pending join request check
-                async for req in bot.get_chat_join_requests(ch_id):
-                    if req.user.id == user_id:
-                        is_pending = True
-                        break
-            except:
-                pass
-            if not is_pending:
+            # Private channel — request pending hai?
+            if await _is_pending_request(ch_id, user_id):
+                pass  # Pending = OK, file de do
+            else:
                 not_joined.append(ch)
         except Exception as e:
             logger.warning(f"fsub check error {ch_id}: {e}")
     
     return len(not_joined) == 0, not_joined
 
-async def _make_invite_link(ch_id):
-    """Private channel ke liye one-time invite link banao — 5 min expiry, 1 use"""
-    try:
-        from datetime import datetime, timedelta
-        import pytz
-        expiry = datetime.now(pytz.utc) + timedelta(minutes=5)
-        link = await bot.create_chat_invite_link(
-            ch_id,
-            expire_date=expiry,
-            member_limit=1,
-            creates_join_request=False  # Direct join — request nahi
-        )
-        return link.invite_link
-    except Exception:
-        # Fallback: normal invite link
-        try:
-            return await bot.export_chat_invite_link(ch_id)
-        except:
-            return None
-
 async def build_fsub_keyboard(not_joined, uid):
     buttons = []
     for ch in not_joined:
+        ch_id = ch.get("id")
         uname = ch.get("username", "")
         title = ch.get("title", "Channel")
-        ch_id = ch.get("id")
-        
-        if uname:
-            # Public channel — seedha link
-            url = f"https://t.me/{uname.replace('@','')}"
-        elif ch_id:
-            # Private channel — invite link (creates_join_request=True taaki request bheje)
+
+        ctype, cusername = await _detect_channel_type(ch_id) if ch_id else ("unknown", None)
+
+        if ctype == "public" or uname:
+            # Public — seedha join link
+            u = cusername or uname
+            url = f"https://t.me/{u.replace('@','')}"
+            btn_text = f"📢 {title} — Join Karo"
+
+        elif ctype == "private_req":
+            # Private + request mode — invite link banao jo request bhejwaye
             try:
-                from datetime import datetime, timedelta
-                import pytz
                 link = await bot.create_chat_invite_link(
                     ch_id,
-                    creates_join_request=True  # Request channel — request bhijwao
+                    creates_join_request=True
                 )
                 url = link.invite_link
             except:
                 url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
+            btn_text = f"📢 {title} — Request Bhejo"
+
+        elif ctype == "private_open":
+            # Private + no request mode — bot khud approve karega
+            # Pehle user ko invite link do, phir bot approve karega via chat_join_request handler
+            try:
+                link = await bot.create_chat_invite_link(
+                    ch_id,
+                    creates_join_request=True  # Bot auto-approve karega
+                )
+                url = link.invite_link
+            except:
+                url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
+            btn_text = f"📢 {title} — Join Karo"
+
         else:
             url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
-        
-        buttons.append([InlineKeyboardButton(f"📢 {title} — Request Bhejo", url=url)])
-    
-    buttons.append([InlineKeyboardButton("✅ Request Kar Li — Verify", callback_data=f"checkjoin_{uid}")])
+            btn_text = f"📢 {title} — Join Karo"
+
+        buttons.append([InlineKeyboardButton(btn_text, url=url)])
+
+    buttons.append([InlineKeyboardButton("✅ Join/Request Kar Li — Verify", callback_data=f"checkjoin_{uid}")])
     return InlineKeyboardMarkup(buttons)
 
 async def force_sub_check(client, message, prem=False):
