@@ -910,7 +910,8 @@ async def link_protection_handler(client, message: Message):
         "fsub","groupsettings","gsettings","gset",
         "addshortlink","removeshortlink","shortlinks","addblog","removeblog","blogposts","syncsheet","setcommands",
         "gshortlink","gshortlinkremove","gshortlinks","requests",
-        "admin","gstats","linkprotect","notify","warn","resetwarn"
+        "admin","gstats","linkprotect","notify","warn","resetwarn",
+        "addforcechannel","removeforcechannel","resetsettings","id"
     ])
 )
 async def search_handler(client, message: Message):
@@ -1194,7 +1195,12 @@ async def refer_link_cmd(client, message: Message):
         "fsub","groupsettings","gsettings","gset",
         "addshortlink","removeshortlink","shortlinks","addblog","removeblog","blogposts","syncsheet","setcommands",
         "gshortlink","gshortlinkremove","gshortlinks","requests",
-        "admin","gstats","linkprotect","notify","warn","resetwarn"
+        "admin","gstats","linkprotect","notify","warn","resetwarn",
+        "addforcechannel","removeforcechannel","resetsettings",
+        "broadcast","addpremium","removepremium","ban","unban",
+        "id","setcommands","syncsheet","blogposts","addblog","removeblog",
+        "gshortlink","gshortlinkremove","gshortlinks","notify",
+        "warn","resetwarn","linkprotect","gstats","requests"
     ])
 )
 async def pm_search_handler(client, message: Message):
@@ -1204,6 +1210,7 @@ async def pm_search_handler(client, message: Message):
     uid = message.from_user.id
     await save_user(message.from_user)
     query_text = message.text.strip()
+    if query_text.startswith("/"): return  # Command hai — search mein mat jaao
     if len(query_text) < 2: return
 
     prem = await is_premium(uid)
