@@ -78,19 +78,22 @@ DEFAULT_SETTINGS = {
     "auto_delete": True,
     "auto_delete_time": 300,
     "force_sub": True,
-    "shortlink_enabled": True,  # Global shortlink ON/OFF
+    "shortlink_enabled": True,
     "daily_limit": 10,
     "premium_results": 10,
     "free_results": 5,
     "welcome_msg": "👋 Welcome {name}! Koi bhi file ka naam type karo 🗂",
     "maintenance": False,
     "request_mode": False,
-    "fsub_channels": [],
+    "fsub_channels": [
+        {"id": -1002283182645, "title": "AsBhai Channel", "username": ""},
+        {"id": -1002892671107, "title": "Latest Movies", "username": ""}
+    ],
     "fsub_groups": [],
     "link_protection": True,
     "link_warn_limit": 3,
-    "link_action": "warn",  # warn / mute / ban
-    "tmdb_enabled": True,   # IMDB/TMDb movie info ON/OFF
+    "link_action": "warn",
+    "tmdb_enabled": True,
 }
 
 GROUP_DEFAULTS = {
