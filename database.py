@@ -50,6 +50,7 @@ group_settings_col = db["group_settings"]
 warn_col          = db["warnings"]       # link warnings
 action_log_col    = db["action_logs"]    # all action logs
 search_cache_col  = db["search_cache"]   # temp search cache (MongoDB TTL auto-deletes)
+ads_col           = db["ads"]            # Ad manager — admin creates ads here
 
 
 # ── db module signature ──
@@ -355,11 +356,29 @@ async def _detect_channel_type(ch_id):
 async def _is_pending_request(ch_id, user_id):
     """Check karo user ki join request pending hai ya nahi"""
     try:
-        async for req in bot.get_chat_join_requests(ch_id):
-            if req.user.id == user_id:
-                return True
+        # Method 1: get_chat_member se check karo (fastest)
+        member = await bot.get_chat_member(ch_id, user_id)
+        # Agar member hai kisi bhi status mein (member/admin/restricted) = joined
+        if member.status not in [enums.ChatMemberStatus.BANNED, enums.ChatMemberStatus.LEFT]:
+            return True
         return False
-    except:
+    except UserNotParticipant:
+        # User participant nahi — request pending check karo
+        try:
+            # Method 2: join_requests iterate karo (last 100 tak)
+            count = 0
+            async for req in bot.get_chat_join_requests(ch_id):
+                if req.from_user.id == user_id:
+                    return True
+                count += 1
+                if count >= 200:  # Limit to avoid timeout
+                    break
+            return False
+        except Exception as e2:
+            logger.warning(f"_is_pending_request join_requests error {ch_id}: {e2}")
+            return False
+    except Exception as e:
+        logger.warning(f"_is_pending_request get_member error {ch_id}/{user_id}: {e}")
         return False
 
 async def check_member_multi(user_id, prem=False):
@@ -1309,3 +1328,81 @@ async def blogger_verify_check(client, message, prem=False):
     msg = await message.reply(random.choice(msgs), reply_markup=kb)
     asyncio.create_task(del_later(msg, 300))
     return False
+
+
+# ═══════════════════════════════════════
+#  AD MANAGER — CRUD
+# ═══════════════════════════════════════
+
+async def ad_create(title, description, button_name, ad_url=None, image_url=None,
+                    script=None, timer1=60, timer2=30, expiry_date=None):
+    """Naya ad create karo."""
+    import datetime as _dt
+    doc = {
+        "title": title,
+        "description": description,
+        "button_name": button_name,
+        "ad_url": ad_url or "",
+        "image_url": image_url or "",
+        "script": script or "",
+        "timer1": int(timer1),
+        "timer2": int(timer2),
+        "expiry_date": expiry_date,   # datetime object ya None
+        "active": True,
+        "created_at": now(),
+        "impressions": 0,  # kitni baar show hua
+    }
+    result = await ads_col.insert_one(doc)
+    doc["_id"] = result.inserted_id
+    return doc
+
+async def ad_list():
+    """Saare active + inactive ads return karo sorted by created_at desc."""
+    docs = []
+    async for doc in ads_col.find({}).sort("created_at", -1):
+        docs.append(doc)
+    return docs
+
+async def ad_active_list():
+    """Sirf active aur unexpired ads return karo."""
+    now_dt = now()
+    docs = []
+    async for doc in ads_col.find({"active": True}):
+        exp = doc.get("expiry_date")
+        if exp and make_aware(exp) < now_dt:
+            await ads_col.update_one({"_id": doc["_id"]}, {"$set": {"active": False}})
+            continue
+        docs.append(doc)
+    return docs
+
+async def ad_get_next(user_id):
+    """User ke liye agle active ad return karo (round-robin / random)."""
+    active = await ad_active_list()
+    if not active:
+        return None
+    # Simple round-robin using impression count (least shown first)
+    active.sort(key=lambda d: d.get("impressions", 0))
+    ad = active[0]
+    # Impression increment
+    await ads_col.update_one({"_id": ad["_id"]}, {"$inc": {"impressions": 1}})
+    return ad
+
+async def ad_delete(ad_id):
+    """Ad delete karo by ObjectId string."""
+    result = await ads_col.delete_one({"_id": ObjectId(ad_id)})
+    return result.deleted_count > 0
+
+async def ad_toggle(ad_id):
+    """Ad active/inactive toggle karo."""
+    doc = await ads_col.find_one({"_id": ObjectId(ad_id)})
+    if not doc:
+        return None
+    new_val = not doc.get("active", True)
+    await ads_col.update_one({"_id": ObjectId(ad_id)}, {"$set": {"active": new_val}})
+    return new_val
+
+async def ad_count():
+    """Total ads + active ads count."""
+    total = await ads_col.count_documents({})
+    active_docs = await ad_active_list()
+    return total, len(active_docs)
