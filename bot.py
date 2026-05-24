@@ -529,6 +529,11 @@ async def start_handler(client, message: Message):
                 all_done, _, _ = await get_user_verify_state(uid)
                 if not all_done:
                     ad = await ad_get_next(uid)
+                    if not ad:
+                        # Koi active ad nahi — admin ko remind karo, user ko seedha file do
+                        logger.warning(f"AD_SYSTEM ON but no active ad for uid={uid}. File diya bina verify ke.")
+                        # Seedha file flow continue karega (fall through)
+                        pass
                     if ad:
                         from urllib.parse import quote as _qp
                         token = await make_token(uid, "av")
@@ -691,6 +696,11 @@ async def start_handler(client, message: Message):
                 all_done, _, _ = await get_user_verify_state(uid)
                 if not all_done:
                     ad = await ad_get_next(uid)
+                    if not ad:
+                        # Koi active ad nahi — admin ko remind karo, user ko seedha file do
+                        logger.warning(f"AD_SYSTEM ON but no active ad for uid={uid}. File diya bina verify ke.")
+                        # Seedha file flow continue karega (fall through)
+                        pass
                     if ad:
                         from urllib.parse import quote as _qp
                         token = await make_token(uid, "av")
@@ -1460,8 +1470,27 @@ async def cb_handler(client, query: CallbackQuery):
         prem = await is_premium(uid)
         joined, not_joined = await check_member_multi(uid, prem)
         if joined:
-            await query.message.delete()
-            await query.answer("✅ Verified! Ab search karo!", show_alert=False)
+            await query.answer("✅ Join ho gaya! File aa rahi hai...", show_alert=False)
+            try:
+                await query.message.delete()
+            except: pass
+            # Pending file check karo
+            user_doc = await users_col.find_one({"user_id": uid})
+            pending_file_id = (user_doc or {}).get("pending_file_id", 0)
+            if pending_file_id:
+                await users_col.update_one(
+                    {"user_id": uid},
+                    {"$unset": {"pending_file_id": "", "pending_file_chat": ""}}
+                )
+                wait = await client.send_message(uid, "📥 File aa rahi hai... ⏳")
+                success, info = await send_file_to_pm(client, query.from_user, int(pending_file_id), prem)
+                try:
+                    await wait.delete()
+                except: pass
+                if not success:
+                    await client.send_message(uid, f"❌ File nahi aayi: `{info}`\nGroup mein dobara search karo.")
+            else:
+                await client.send_message(uid, "✅ **Join Ho Gaya!** 🎉\n\nAb group mein search karo — file milegi!")
         else:
             names = ", ".join(ch.get("title", "Channel") for ch in not_joined)
             await query.answer(f"❌ Abhi join nahi kiya!\n{names}", show_alert=True)
@@ -1520,8 +1549,10 @@ async def cb_handler(client, query: CallbackQuery):
             if AD_SYSTEM_ENABLED and KOYEB_URL:
                 all_done, _, _ = await get_user_verify_state(uid)
                 if not all_done:
-                    # Next active ad fetch karo
                     ad = await ad_get_next(uid)
+                    if not ad:
+                        logger.warning(f"AD_SYSTEM ON but no active ad uid={uid}")
+                        pass
                     if ad:
                         token = await make_token(uid, "av")
                         from urllib.parse import quote as _qp
@@ -2104,6 +2135,9 @@ async def cb_handler(client, query: CallbackQuery):
                 all_done_sa, _, _ = await get_user_verify_state(uid)
                 if not all_done_sa:
                     ad = await ad_get_next(uid)
+                    if not ad:
+                        logger.warning(f"AD_SYSTEM ON but no active ad uid={uid}")
+                        pass
                     if ad:
                         from urllib.parse import quote as _qp
                         token_sa = await make_token(uid, "av")
@@ -3226,124 +3260,167 @@ async def reset_settings_cmd(client, message: Message):
 
 @bot.on_message(filters.command(["forcesub", "fsub"]) & filters.user(ADMINS))
 async def forcesub_cmd(client, message: Message):
-    """
-    Usage: /forcesub on/off
-    Force subscribe toggle.
-    """
     args = message.command
+    s = await get_settings()
+    cur = s.get("force_sub", True)
+    channels = s.get("fsub_channels", [])
+
     if len(args) < 2:
-        s = await get_settings()
-        cur = s.get("force_sub", True)
-        await message.reply(
-            f"📢 **Force Subscribe**\n\n"
-            f"Current: **{'ON ✅' if cur else 'OFF ❌'}**\n\n"
-            f"Usage: `/forcesub on` ya `/forcesub off`\n\n"
-            f"Force sub channels `/addforcechannel` se add karo."
-        ); return
-    val = args[1].lower()
-    if val in ["on", "1"]:
+        # Show full status
+        text = (
+            f"📢 **Force Subscribe Manager**\n\n"
+            f"**Status:** {'🟢 ON ✅' if cur else '🔴 OFF ❌'}\n\n"
+        )
+        if channels:
+            text += f"**Channels ({len(channels)}):**\n"
+            for i, ch in enumerate(channels, 1):
+                cid = ch.get('id', '?')
+                ctitle = ch.get('title', 'Channel')
+                cuname = ch.get('username', '')
+                text += f"`{i}.` **{ctitle}**\n"
+                text += f"    ID: `{cid}`"
+                if cuname:
+                    text += f" | @{cuname}"
+                text += "\n"
+        else:
+            text += "⚠️ **Koi channel nahi!** Pehle channel add karo.\n"
+
+        text += (
+            f"\n**Commands:**\n"
+            f"`/fsub on` — Force sub ON karo\n"
+            f"`/fsub off` — Force sub OFF karo\n"
+            f"`/fsub add @username` — Channel add karo\n"
+            f"`/fsub add -100xxxxxxx Title` — ID se add karo\n"
+            f"`/fsub remove 1` — Number se remove karo\n"
+            f"`/fsub remove @username` — Username se remove karo\n"
+        )
+        await message.reply(text)
+        return
+
+    action = args[1].lower()
+
+    # ON/OFF
+    if action in ["on", "1", "enable"]:
         await update_setting("force_sub", True)
         await message.reply("📢 Force Subscribe: **ON** ✅")
-    elif val in ["off", "0"]:
+        return
+    elif action in ["off", "0", "disable"]:
         await update_setting("force_sub", False)
-        await message.reply("✅ Force Subscribe: **OFF**")
+        await message.reply("✅ Force Subscribe: **OFF** ❌")
+        return
+
+    # ADD
+    elif action in ["add", "+"]:
+        if len(args) < 3:
+            await message.reply("❌ Usage: `/fsub add @username` ya `/fsub add -100xxx Title`")
+            return
+        ch_input = args[2].strip()
+        custom_title = " ".join(args[3:]) if len(args) > 3 else None
+        try:
+            chat = await client.get_chat(ch_input)
+            ch_id = chat.id
+            ch_title = custom_title or chat.title or ch_input
+            ch_username = chat.username or ""
+        except Exception:
+            try:
+                ch_id = int(ch_input)
+                ch_title = custom_title or f"Channel {ch_id}"
+                ch_username = ""
+            except ValueError:
+                await message.reply(f"❌ Invalid: `{ch_input}`\n\nBot us channel ka admin hona chahiye!")
+                return
+
+        existing_ids = [c.get("id") for c in channels]
+        if ch_id in existing_ids:
+            await message.reply(f"⚠️ **{ch_title}** already list mein hai!")
+            return
+
+        channels.append({"id": ch_id, "title": ch_title, "username": ch_username})
+        await update_setting("fsub_channels", channels)
+        await message.reply(
+            f"✅ **{ch_title}** add ho gaya!\n"
+            f"ID: `{ch_id}`\n"
+            f"Total: **{len(channels)} channels**\n\n"
+            f"⚠️ _Bot ko us channel ka admin banana zaruri hai!_"
+        )
+        return
+
+    # REMOVE
+    elif action in ["remove", "del", "-"]:
+        if len(args) < 3:
+            if not channels:
+                await message.reply("📢 Koi channel nahi hai.")
+                return
+            text = "📢 **Force Sub Channels:**\n\n"
+            for i, ch in enumerate(channels, 1):
+                text += f"`{i}.` {ch.get('title','?')} — `{ch.get('id','?')}`\n"
+            text += "\nRemove: `/fsub remove 1` ya `/fsub remove @username`"
+            await message.reply(text)
+            return
+
+        ch_input = args[2].strip()
+        new_channels = []
+        removed = None
+
+        # Number se remove
+        try:
+            idx = int(ch_input) - 1
+            if 0 <= idx < len(channels):
+                removed = channels[idx]
+                new_channels = [c for j, c in enumerate(channels) if j != idx]
+            else:
+                await message.reply(f"❌ Invalid number. 1 to {len(channels)} use karo.")
+                return
+        except ValueError:
+            # Username/ID se remove
+            for ch in channels:
+                if (str(ch.get("id")) == str(ch_input) or
+                    ch.get("username", "").lstrip("@") == ch_input.lstrip("@")):
+                    removed = ch
+                else:
+                    new_channels.append(ch)
+
+        if removed:
+            await update_setting("fsub_channels", new_channels)
+            await message.reply(
+                f"✅ **{removed.get('title', 'Channel')}** remove ho gaya!\n"
+                f"Remaining: **{len(new_channels)} channels**"
+            )
+        else:
+            await message.reply(f"❌ `{ch_input}` list mein nahi mila.")
+        return
+
     else:
-        await message.reply("❌ `/forcesub on` ya `/forcesub off`")
+        await message.reply(
+            "❌ Invalid action!\n\n"
+            "`/fsub` — Status dekho\n"
+            "`/fsub on/off` — Toggle\n"
+            "`/fsub add @username` — Add\n"
+            "`/fsub remove 1` — Remove"
+        )
 
 
 @bot.on_message(filters.command("addforcechannel") & filters.user(ADMINS))
 async def add_force_channel_cmd(client, message: Message):
-    """
-    Usage: /addforcechannel @username ya -100xxxxxxx
-    Force subscribe mein channel add karo.
-    """
+    """Redirect to /fsub add"""
     args = message.command
     if len(args) < 2:
-        # Show current channels
-        s = await get_settings()
-        channels = s.get("fsub_channels", [])
-        text = f"📢 **Force Subscribe Channels**\n\n"
-        if channels:
-            for i, ch in enumerate(channels, 1):
-                text += f"{i}. {ch.get('title','?')} (`{ch.get('id','?')}`)"
-        else:
-            text += "Koi channel nahi.\n"
-        text += (
-            f"\n**Commands:**\n"
-            f"`/addforcechannel @username` — Channel add\n"
-            f"`/removeforcechannel @username` — Channel remove\n"
-            f"`/forcesub on/off` — Toggle"
-        )
-        await message.reply(text); return
-
-    ch_input = args[1].strip()
-    # Title optional — /addforcechannel -100xxx My Channel Name
-    custom_title = " ".join(args[2:]) if len(args) > 2 else None
-
-    try:
-        # Pehle get_chat try karo
-        chat = await client.get_chat(ch_input)
-        ch_id = chat.id
-        ch_title = custom_title or chat.title or ch_input
-        ch_username = chat.username or ""
-    except Exception:
-        # get_chat fail hua — seedha ID se add karo
-        try:
-            ch_id = int(ch_input)
-        except ValueError:
-            await message.reply(f"❌ Invalid ID/username: `{ch_input}`"); return
-        ch_title = custom_title or f"Channel {ch_id}"
-        ch_username = ""
-
-    ch_data = {"id": ch_id, "title": ch_title, "username": ch_username}
-    s = await get_settings()
-    channels = s.get("fsub_channels", [])
-    existing_ids = [c.get("id") for c in channels]
-    if ch_id in existing_ids:
-        await message.reply(f"⚠️ **{ch_title}** already added hai!"); return
-    channels.append(ch_data)
-    await update_setting("fsub_channels", channels)
-    await message.reply(
-        f"✅ **{ch_title}** force sub mein add ho gaya!\n"
-        f"ID: `{ch_id}`\n\n"
-        f"Total channels: **{len(channels)}**\n\n"
-        f"⚠️ _Bot ko us channel ka admin banana mat bhoolo!_"
-    )
+        await message.reply("💡 Ab `/fsub add @username` use karo!\n\nExample: `/fsub add @mychannel`")
+        return
+    # Forward to fsub add
+    message.command = ["fsub", "add"] + args[1:]
+    await forcesub_cmd(client, message)
 
 
 @bot.on_message(filters.command("removeforcechannel") & filters.user(ADMINS))
 async def remove_force_channel_cmd(client, message: Message):
-    """
-    Usage: /removeforcechannel @username ya -100xxxxxxx
-    Force subscribe se channel hatao.
-    """
+    """Redirect to /fsub remove"""
     args = message.command
     if len(args) < 2:
-        s = await get_settings()
-        channels = s.get("fsub_channels", [])
-        if not channels:
-            await message.reply("📢 Koi force sub channel nahi hai."); return
-        text = "📢 **Current Force Sub Channels:**\n\n"
-        for i, ch in enumerate(channels, 1):
-            text += f"`{i}.` {ch.get('title','?')} — `{ch.get('id','?')}`\n"
-        text += "\nUsage: `/removeforcechannel @username`"
-        await message.reply(text); return
-
-    ch_input = args[1].strip()
-    s = await get_settings()
-    channels = s.get("fsub_channels", [])
-    new_channels = []
-    removed = None
-    for ch in channels:
-        if str(ch.get("id")) == str(ch_input) or ch.get("username") == ch_input.lstrip("@"):
-            removed = ch
-        else:
-            new_channels.append(ch)
-    if removed:
-        await update_setting("fsub_channels", new_channels)
-        await message.reply(f"✅ **{removed.get('title')}** force sub se hata diya!\nRemaining: {len(new_channels)}")
-    else:
-        await message.reply(f"❌ `{ch_input}` list mein nahi mila.")
+        await message.reply("💡 Ab `/fsub remove <number>` use karo!\n\n`/fsub` type karo channels dekhne ke liye.")
+        return
+    message.command = ["fsub", "remove"] + args[1:]
+    await forcesub_cmd(client, message)
 
 
 @bot.on_message(filters.command("removeshortlink") & filters.user(ADMINS))
@@ -3530,7 +3607,6 @@ async def broadcast(client, message: Message):
     args = message.command
     reply_msg = message.reply_to_message
 
-    # FIX: Reply-to se broadcast — /broadcast users (bina text ke bhi chalega)
     if len(args) < 2:
         await message.reply(
             "📡 **Broadcast Usage:**\n\n"
@@ -3547,45 +3623,51 @@ async def broadcast(client, message: Message):
     if target not in ["users", "groups", "all"]:
         await message.reply("❌ Target: `users` / `groups` / `all`"); return
 
-    # Text ya reply — dono accept karo
     text = " ".join(args[2:]) if len(args) > 2 else ""
     if not text and not reply_msg:
-        await message.reply("❌ Ya text likho ya kisi message ko reply karke broadcast karo!\n\nExample: `/broadcast all Kal bot band rahega`"); return
-    
+        await message.reply("❌ Ya text likho ya kisi message ko reply karke broadcast karo!"); return
+
     sm = await message.reply(f"📡 **Broadcast shuru!** Target: `{target}`\n⏳ Please wait...")
-    total = done = failed = blocked = flood_wait_total = 0
+    total = done = failed = blocked = 0
     start_time = time.time()
-    
+
+    # ✅ FIX: Deduplicate — ek user ko sirf ek baar message jaye
+    sent_ids = set()
+
     async def _send_one(dest_id):
-        nonlocal done, failed, blocked, flood_wait_total
+        nonlocal done, failed, blocked
+        if dest_id in sent_ids:
+            return  # Already sent — skip!
+        sent_ids.add(dest_id)
         try:
             if reply_msg:
                 await reply_msg.copy(chat_id=dest_id)
             else:
                 await client.send_message(dest_id, text)
             done += 1
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)  # 20 msg/sec max (safe)
         except (UserIsBlocked, InputUserDeactivated, PeerIdInvalid):
             blocked += 1
         except FloodWait as e:
-            flood_wait_total += e.value
-            await asyncio.sleep(min(e.value + 2, 90))
+            await asyncio.sleep(min(e.value + 2, 60))
             try:
                 if reply_msg:
                     await reply_msg.copy(chat_id=dest_id)
                 else:
                     await client.send_message(dest_id, text)
                 done += 1
-                await asyncio.sleep(0.1)
             except:
                 failed += 1
         except:
             failed += 1
 
     if target in ["users", "all"]:
+        # DISTINCT user_ids only
+        seen = set()
         async for doc in users_col.find({}, {"user_id": 1}):
             uid_bc = doc.get("user_id")
-            if not uid_bc: continue
+            if not uid_bc or uid_bc in seen: continue
+            seen.add(uid_bc)
             total += 1
             await _send_one(uid_bc)
             if total % 100 == 0:
@@ -3594,26 +3676,27 @@ async def broadcast(client, message: Message):
                 except: pass
 
     if target in ["groups", "all"]:
+        seen_g = set()
         async for doc in groups_col.find({}, {"chat_id": 1}):
             cid_bc = doc.get("chat_id")
-            if not cid_bc: continue
+            if not cid_bc or cid_bc in seen_g: continue
+            seen_g.add(cid_bc)
             total += 1
             await _send_one(cid_bc)
             if total % 50 == 0:
                 elapsed = int(time.time() - start_time)
                 try: await sm.edit(f"📡 **Broadcasting...**\n\n✅ {done} | ❌ {failed} | 🚫 {blocked}\nTotal: {total} | Time: {elapsed}s")
                 except: pass
-    
+
     elapsed = int(time.time() - start_time)
     await sm.edit(
         f"📡 **Broadcast Complete!** ✅\n\n"
         f"📊 **Stats:**\n"
-        f"├ Total: **{total}**\n"
-        f"├ ✅ Success: **{done}**\n"  
+        f"├ Total unique: **{total}**\n"
+        f"├ ✅ Success: **{done}**\n"
         f"├ ❌ Failed: **{failed}**\n"
         f"├ 🚫 Blocked: **{blocked}**\n"
-        f"└ ⏱ Time: **{elapsed}s**\n\n"
-        f"{'⚠️ FloodWait: ' + str(flood_wait_total) + 's total' if flood_wait_total else '✅ No rate limits!'}"
+        f"└ ⏱ Time: **{elapsed}s**"
     )
 
 @bot.on_message(filters.command("setcommands") & filters.user(ADMINS))
@@ -3652,7 +3735,6 @@ async def my_id_cmd(client, message: Message):
 async def ad_manager_cmd(client, message: Message):
     """Admin ke liye Ad Manager — miniapp open karo."""
     uid = message.from_user.id
-    # ADMINS check manually karo
     if uid not in ADMINS:
         await message.reply("❌ Sirf admin use kar sakta hai.")
         return
@@ -3668,15 +3750,53 @@ async def ad_manager_cmd(client, message: Message):
         await message.reply(
             f"📢 **Ad Manager**\n\n"
             f"📊 Total Ads: `{total}` | ✅ Active: `{active_count}`\n\n"
-            f"Neeche button dabo — Ad Manager page khulega!\n"
-            f"Wahan naye ads create, purane delete/toggle kar sakte ho.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("📢 Ad Manager Kholo", web_app=WebAppInfo(url=admin_url))
-            ]])
+            f"**Ad System Status:** {'🟢 ON' if AD_SYSTEM_ENABLED else '🔴 OFF'}\n\n"
+            f"⚠️ _Ad system on hai lekin active ad nahi hai toh user ko seedha file milegi!_\n\n"
+            f"Neeche button se Ad Manager kholo:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📢 Ad Manager (Mini App)", web_app=WebAppInfo(url=admin_url))],
+                [InlineKeyboardButton("🌐 Browser Mein Kholo", url=admin_url)],
+            ])
         )
     except Exception as e:
         logger.error(f"admanager cmd error: {e}")
         await message.reply(f"❌ Error: `{e}`\n\nBot logs check karo.")
+
+
+@bot.on_message(filters.command("adstatus") & filters.user(ADMINS) & filters.private)
+async def ad_status_cmd(client, message: Message):
+    """Ad system ka status aur active ads dikhao."""
+    try:
+        total, active_count = await ad_count()
+        from database import ad_active_list
+        active_ads = await ad_active_list()
+
+        text = (
+            f"📢 **Ad System Status**\n\n"
+            f"**Mode:** {'🟢 ON (Ad Verify)' if AD_SYSTEM_ENABLED else '🔴 OFF (Shortlink)'}\n"
+            f"**KOYEB_URL:** {'✅ Set' if KOYEB_URL else '❌ NOT SET'}\n\n"
+            f"📊 **Ads:**\n"
+            f"├ Total: `{total}`\n"
+            f"└ Active: `{active_count}`\n\n"
+        )
+        if active_ads:
+            text += "**Active Ads:**\n"
+            for i, ad in enumerate(active_ads, 1):
+                exp = ad.get('expiry_date')
+                text += (
+                    f"`{i}.` **{ad.get('title','')}**\n"
+                    f"    👁 Views: {ad.get('impressions',0)} | "
+                    f"⏱ {ad.get('timer1',60)}s+{ad.get('timer2',30)}s"
+                )
+                if exp:
+                    text += f" | 📅 Expires: {str(exp)[:10]}"
+                text += "\n"
+        else:
+            text += "⚠️ **Koi active ad nahi!**\n`/admanager` se ad create karo — tab tak file free milegi!\n"
+
+        await message.reply(text)
+    except Exception as e:
+        await message.reply(f"❌ Error: `{e}`")
 
 
 # ═══════════════════════════════════════
@@ -3833,21 +3953,55 @@ def start_bot():
 
     Thread(target=_start_scheduler_thread, daemon=True).start()
 
-    # ── Auto-approve join requests for private_open channels ──
+    # ── VJ Style: Chat Join Request Handler ──
     @bot.on_chat_join_request()
     async def auto_approve_join_request(client, request):
         """
-        Private channel join request handler:
-        - join_by_request=False wale channels pe AUTO approve karo
-        - join_by_request=True wale channels pe admin khud approve karega
+        VJ Style join request handler:
+        1. Har request ko MongoDB mein save karo (3-layer check ke liye)
+        2. join_by_request=False channels pe auto-approve karo
+        3. join_by_request=True (request channel) pe admin manually approve karega
+           lekin bot MongoDB mein record rakhega taaki user ko file mil sake
         """
         try:
-            ch_id = request.chat.id
+            from database import jr_add_user
+            uid    = request.from_user.id
+            ch_id  = request.chat.id
+
+            # Step 1: MongoDB mein save karo (VJ style tracking)
+            await jr_add_user(uid, ch_id)
+            logger.info(f"📝 Join request tracked: {uid} → {ch_id}")
+
+            # Step 2: Channel type check
             chat = await client.get_chat(ch_id)
-            # Agar channel mein join_by_request OFF hai to bot auto-approve karega
-            if not getattr(chat, "join_by_request", True):
-                await client.approve_chat_join_request(ch_id, request.from_user.id)
-                logger.info(f"✅ Auto-approved join: {request.from_user.id} → {ch_id}")
+            join_by_req = getattr(chat, "join_by_request", False)
+
+            if not join_by_req:
+                # Auto-approve mode (private_open)
+                await client.approve_chat_join_request(ch_id, uid)
+                logger.info(f"✅ Auto-approved: {uid} → {ch_id}")
+
+                # User ko confirm message bhejo
+                try:
+                    await client.send_message(
+                        uid,
+                        f"✅ **{chat.title}** mein join ho gaye!\n\n"
+                        f"Ab wapas bot mein aao aur apni file lo! 🎬"
+                    )
+                except: pass
+
+            else:
+                # Request channel — admin approve karega
+                # Lekin user ko message bhejo
+                try:
+                    await client.send_message(
+                        uid,
+                        f"📨 **{chat.title}** mein aapki join request bhej di gayi!\n\n"
+                        f"Admin approve karenge. Tab tak wapas bot mein aao aur "
+                        f"**Verify** button dabao — file mil jaayegi! ✅"
+                    )
+                except: pass
+
         except Exception as e:
             logger.warning(f"auto_approve_join_request error: {e}")
 
