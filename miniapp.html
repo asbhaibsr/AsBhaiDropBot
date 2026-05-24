@@ -825,6 +825,269 @@ body.rotated-mode-active{overflow:hidden !important;}
   </div>
 </div>
 
+<!-- ════ AD VERIFY PAGE (User) ════ -->
+<div class="pg" id="pg-adverify">
+  <div style="max-width:480px;margin:0 auto;padding:16px 16px 24px">
+
+    <!-- Header -->
+    <div style="text-align:center;padding:22px 0 14px">
+      <div style="font-size:40px;margin-bottom:8px">🎬</div>
+      <h2 style="font-size:20px;font-weight:900;background:linear-gradient(90deg,var(--acc2),var(--acc3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">File Unlock Karo</h2>
+      <p style="font-size:11px;color:var(--t2);margin-top:5px;line-height:1.6">Sponsor ka page explore karo — movie bilkul free milegi!</p>
+    </div>
+
+    <!-- Ad Image (optional) -->
+    <div id="adv-image-wrap" style="display:none;margin-bottom:12px;border-radius:12px;overflow:hidden;max-height:160px">
+      <img id="adv-image" src="" alt="Ad" style="width:100%;height:160px;object-fit:cover;border-radius:12px" onerror="document.getElementById('adv-image-wrap').style.display='none'">
+    </div>
+
+    <!-- Ad Box -->
+    <div id="adv-box" style="background:linear-gradient(135deg,#0d0d1a,#131320);border:1px solid var(--bd2);border-radius:14px;padding:16px;margin:0 0 12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--acc);animation:pulse 1.5s infinite;flex-shrink:0"></div>
+        <span style="font-size:10px;font-weight:700;color:var(--acc3);text-transform:uppercase;letter-spacing:1px">Sponsored</span>
+      </div>
+      <div id="adv-title" style="font-size:15px;font-weight:800;color:var(--t);margin-bottom:6px">Loading...</div>
+      <div id="adv-desc" style="font-size:12px;color:var(--t2);line-height:1.7;min-height:40px"></div>
+      <!-- Script Ad Container -->
+      <div id="adv-script-box" style="display:none;margin-top:12px;min-height:60px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.03);padding:8px"></div>
+      <!-- Visit Button -->
+      <a id="adv-link" href="#" target="_blank" rel="noopener" onclick="advLinkClicked(event)"
+        style="display:block;margin-top:14px;padding:13px;background:linear-gradient(135deg,var(--acc),#7c3aed);border-radius:10px;color:#fff;text-align:center;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer;transition:.2s">
+        🔗 Visit Karo
+      </a>
+    </div>
+
+    <!-- Red blinking notice -->
+    <div id="adv-notice" style="margin:8px 0;padding:10px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:10px;text-align:center">
+      <span id="adv-notice-txt" style="font-size:12px;color:#f87171;font-weight:600;animation:blink 1.2s infinite;display:inline-block">⚠️ Please Explore The Ad To Unlock Your File</span>
+    </div>
+
+    <!-- Hidden progress (not shown to user, just internal) -->
+    <div id="adv-timer-wrap" style="display:none;height:0;overflow:hidden">
+      <div id="adv-progress" style="height:3px;background:var(--acc);width:0%;transition:width .5s"></div>
+    </div>
+
+    <!-- Verify Button -->
+    <button id="adv-verify-btn" onclick="advVerifyClick()"
+      style="display:none;width:100%;padding:14px;background:linear-gradient(135deg,var(--grn),#059669);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-top:10px;letter-spacing:.3px">
+      ✅ Verify Karo
+    </button>
+
+    <!-- Checking overlay -->
+    <div id="adv-checking" style="display:none;text-align:center;padding:14px;background:var(--s1);border:1px solid var(--bd);border-radius:12px;margin-top:10px">
+      <span class="spi"></span>
+      <span id="adv-check-txt" style="font-size:13px;color:var(--acc2);font-weight:600">Checking Ad...</span>
+    </div>
+
+    <!-- Get File Button -->
+    <button id="adv-getlink-btn" onclick="advGetLink()"
+      style="display:none;width:100%;padding:15px;background:linear-gradient(135deg,var(--gold),#d97706);border:none;border-radius:12px;color:#000;font-size:15px;font-weight:900;cursor:pointer;margin-top:10px;letter-spacing:.5px">
+      🎬 Get My File — Free!
+    </button>
+
+    <!-- Info card -->
+    <div style="margin-top:14px;padding:12px 14px;background:var(--s1);border-radius:10px;border:1px solid var(--bd)">
+      <div style="font-size:10px;color:var(--t3);line-height:1.8;text-align:center">
+        🔓 Ad visit karo → Explore karo → Verify button aayega → File free!<br>
+        💎 <span style="color:var(--acc3)">Premium</span> users ko yeh step nahi karna
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ADMIN AD MANAGER PAGE ════ -->
+<div class="pg" id="pg-admanager">
+  <div style="max-width:520px;margin:0 auto;padding:16px 16px 80px">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0d0820,#1a0a3a);border:1px solid rgba(108,99,255,.3);border-radius:16px;padding:18px 16px;margin-bottom:14px;text-align:center">
+      <div style="font-size:32px;margin-bottom:6px">📢</div>
+      <h2 style="font-size:18px;font-weight:900;color:var(--acc2)">Ad Manager</h2>
+      <p style="font-size:10px;color:var(--t3);margin-top:3px">Ads create, manage aur delete karo</p>
+      <div id="adm-stats" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+        <div style="background:rgba(255,255,255,.05);border-radius:8px;padding:8px 16px;text-align:center">
+          <div id="adm-total" style="font-size:20px;font-weight:900;color:var(--t)">—</div>
+          <div style="font-size:9px;color:var(--t3)">Total Ads</div>
+        </div>
+        <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:8px 16px;text-align:center">
+          <div id="adm-active" style="font-size:20px;font-weight:900;color:var(--grn2)">—</div>
+          <div style="font-size:9px;color:var(--grn)">Active Ads</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons Row -->
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button onclick="admOpenCreate()"
+        style="flex:1;padding:11px 6px;background:linear-gradient(135deg,var(--acc),#7c3aed);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">
+        ➕ Create Ad
+      </button>
+      <button onclick="admLoadAds()"
+        style="flex:1;padding:11px 6px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">
+        🔄 Refresh
+      </button>
+      <button onclick="admShowAdInfo()"
+        style="flex:1;padding:11px 6px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">
+        💰 Ad Info
+      </button>
+    </div>
+
+    <!-- Ad List -->
+    <div id="adm-list" style="display:flex;flex-direction:column;gap:10px">
+      <div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">
+        <span class="spi"></span> Loading ads...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CREATE AD MODAL ════ -->
+<div id="adm-create-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.85);overflow-y:auto">
+  <div style="max-width:480px;margin:20px auto;padding:0 12px 80px">
+    <div style="background:var(--s1);border:1px solid var(--bd2);border-radius:18px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <h3 style="font-size:16px;font-weight:800;color:var(--acc2)">➕ New Ad Create</h3>
+        <button onclick="admCloseCreate()" style="background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;padding:4px">✕</button>
+      </div>
+
+      <!-- Title -->
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">📝 Title (Bold mein dikhega) *</label>
+      <input id="adm-title" placeholder="e.g. Earn Money Online" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:13px;margin-bottom:12px;outline:none;box-sizing:border-box">
+
+      <!-- Description -->
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">📋 Description *</label>
+      <textarea id="adm-desc" placeholder="User ko batao kya hai — kya milega visit karne se..." rows="3"
+        style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;resize:none;margin-bottom:12px;outline:none;box-sizing:border-box;font-family:var(--ff)"></textarea>
+
+      <!-- Button Name -->
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">🔘 Button Ka Naam *</label>
+      <input id="adm-btnname" placeholder="e.g. Visit Now, Explore, Claim Free" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:13px;margin-bottom:12px;outline:none;box-sizing:border-box">
+
+      <!-- Image URL (optional) -->
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">🖼 Image URL <span style="color:var(--t3)">(Optional)</span></label>
+      <input id="adm-imgurl" placeholder="https://example.com/image.jpg" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;margin-bottom:12px;outline:none;box-sizing:border-box">
+
+      <!-- Ad URL -->
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">🔗 Ad URL <span style="color:var(--t3)">(Link ya Script dono optional)</span></label>
+      <input id="adm-adurl" placeholder="https://advertiser.com" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;margin-bottom:12px;outline:none;box-sizing:border-box">
+
+      <!-- Script Box -->
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">📜 Script <span style="color:var(--t3)">(Optional — shortlink/any platform script paste karo)</span></label>
+      <textarea id="adm-script" placeholder="&lt;script type='text/javascript'&gt;...&lt;/script&gt;&#10;Ya shortlink script yahan paste karo" rows="3"
+        style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:11px;resize:none;margin-bottom:12px;outline:none;box-sizing:border-box;font-family:var(--mono)"></textarea>
+
+      <!-- Timers -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">⏱ 1st Timer (seconds)</label>
+          <select id="adm-timer1" style="width:100%;padding:10px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;outline:none">
+            <option value="30">30 sec</option>
+            <option value="60" selected>60 sec (1 min)</option>
+            <option value="90">90 sec</option>
+            <option value="120">2 min</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">⏱ 2nd Timer (seconds)</label>
+          <select id="adm-timer2" style="width:100%;padding:10px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;outline:none">
+            <option value="15">15 sec</option>
+            <option value="30" selected>30 sec</option>
+            <option value="45">45 sec</option>
+            <option value="60">60 sec</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Expiry Date -->
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">📅 Expiry Date <span style="color:var(--t3)">(Optional — khali chhodo = no expiry)</span></label>
+      <input id="adm-expiry" type="date" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;margin-bottom:18px;outline:none;box-sizing:border-box;color-scheme:dark">
+
+      <!-- Create Button -->
+      <button onclick="admCreateAd()"
+        style="width:100%;padding:14px;background:linear-gradient(135deg,var(--grn),#059669);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer">
+        ✅ Ad Create Karo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ AD INFO MODAL (Pricing) ════ -->
+<div id="adm-info-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.85);overflow-y:auto">
+  <div style="max-width:440px;margin:40px auto;padding:0 12px 80px">
+    <div style="background:var(--s1);border:1px solid var(--bd2);border-radius:18px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h3 style="font-size:15px;font-weight:800;color:var(--gold)">💰 Ad Plans & Info</h3>
+        <button onclick="document.getElementById('adm-info-modal').style.display='none'" style="background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer">✕</button>
+      </div>
+
+      <!-- Why Advertise -->
+      <div style="background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--acc2);margin-bottom:6px">📣 Apna Brand/Service Promote Karo!</div>
+        <div style="font-size:11px;color:var(--t2);line-height:1.7">
+          ✅ Har movie request par user aapka ad dekhega<br>
+          ✅ Real users — movie lovers audience<br>
+          ✅ Guaranteed impressions<br>
+          ✅ Koi bhi legal website, app, product promote karo<br>
+          ✅ Copyright/illegal content allowed nahi
+        </div>
+      </div>
+
+      <!-- Pricing Plans -->
+      <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">💎 Ad Plans</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--t)">Starter</div>
+            <div style="font-size:10px;color:var(--t3)">5 Days Active</div>
+            <div style="font-size:9px;color:var(--acc3);margin-top:2px">⭐ Popular</div>
+          </div>
+          <div style="font-size:18px;font-weight:900;color:var(--gold)">₹100</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#0d0820,#130a2e);border:1px solid rgba(108,99,255,.3);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--acc2)">Standard</div>
+            <div style="font-size:10px;color:var(--t3)">20 Days Active</div>
+            <div style="font-size:9px;color:var(--acc3);margin-top:2px">🔥 Most Popular</div>
+          </div>
+          <div style="font-size:18px;font-weight:900;color:var(--acc2)">₹300</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#081a0f,#0a2518);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--grn2)">Premium</div>
+            <div style="font-size:10px;color:var(--t3)">35 Days Active</div>
+            <div style="font-size:9px;color:var(--grn);margin-top:2px">💪 Best Value</div>
+          </div>
+          <div style="font-size:18px;font-weight:900;color:var(--grn2)">₹500</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#1a0d00,#2a1500);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold)">Ultra</div>
+            <div style="font-size:10px;color:var(--t3)">60 Days Active</div>
+            <div style="font-size:9px;color:var(--gold2);margin-top:2px">👑 Maximum Exposure</div>
+          </div>
+          <div style="font-size:18px;font-weight:900;color:var(--gold)">₹800</div>
+        </div>
+      </div>
+
+      <!-- Payment Info -->
+      <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--grn);margin-bottom:6px">💳 Payment Methods</div>
+        <div style="font-size:11px;color:var(--t2);line-height:1.8">
+          📱 UPI: <span style="color:var(--t);font-family:var(--mono)">arsadsaifi8272@ibl</span><br>
+          🏦 Bank Transfer: Message karke details lo<br>
+          ✅ Payment ke baad screenshot bhejo
+        </div>
+      </div>
+
+      <!-- Contact Button -->
+      <button onclick="admContactOwner()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0088cc,#006699);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
+        📩 Ad Lagwane Ke Liye Message Karo
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ════ TAB BAR ════ -->
@@ -954,9 +1217,351 @@ function go(id){
   var el=document.getElementById(id);if(el)el.classList.add('on');
   window.scrollTo({top:0,behavior:'smooth'});
   // Sync tab
-  var tabMap={'pg-home':'tab-home','pg-premium':'tab-home','pg-stream':'tab-stream','pg-panel':'tab-panel','pg-refer':'tab-refer','pg-group':'tab-home','pg-help':'tab-help'};
+  var tabMap={'pg-home':'tab-home','pg-premium':'tab-home','pg-stream':'tab-stream','pg-panel':'tab-panel','pg-refer':'tab-refer','pg-group':'tab-home','pg-help':'tab-help','pg-adverify':'tab-home','pg-admanager':'tab-home'};
   document.querySelectorAll('.tabs .tb').forEach(function(t){t.classList.remove('on');});
   var tabId=tabMap[id];if(tabId){var te=document.getElementById(tabId);if(te)te.classList.add('on');}
+}
+
+/* ══ AD VERIFY SYSTEM ══ */
+var _advState = {
+  token:null, adUrl:null, adTitle:null, adDesc:null, adBtn:null,
+  adImg:null, adScript:null, timer1:60, timer2:30,
+  step:0, timerInterval:null
+};
+
+function advInit() {
+  var p = new URLSearchParams(window.location.search);
+  var token   = p.get('avt');
+  var adUrl   = p.get('adu');
+  var adTitle = p.get('adl');
+  var adDesc  = p.get('add');
+  var adBtn   = p.get('adbn');
+  var adImg   = p.get('adimg');
+  var adScr   = p.get('adscript');
+  var t1      = parseInt(p.get('t1')||'60');
+  var t2      = parseInt(p.get('t2')||'30');
+  // Admin page check
+  var page    = p.get('page');
+  var adminId = p.get('admin_id');
+  if (page === 'admanager' && adminId) {
+    go('pg-admanager');
+    admLoadAds();
+    return;
+  }
+  if (!token || !adUrl) return;
+  _advState.token  = token;
+  try { _advState.adUrl = decodeURIComponent(adUrl); } catch(e){ _advState.adUrl=adUrl; }
+  _advState.adTitle  = adTitle  ? decodeURIComponent(adTitle)  : 'Sponsored';
+  _advState.adDesc   = adDesc   ? decodeURIComponent(adDesc)   : 'Is sponsor ki service explore karo!';
+  _advState.adBtn    = adBtn    ? decodeURIComponent(adBtn)    : 'Visit Karo';
+  _advState.adImg    = adImg    ? decodeURIComponent(adImg)    : '';
+  _advState.adScript = adScr    ? decodeURIComponent(adScr)   : '';
+  _advState.timer1   = Math.max(10, t1);
+  _advState.timer2   = Math.max(10, t2);
+
+  // Populate UI
+  var titleEl = document.getElementById('adv-title');
+  var descEl  = document.getElementById('adv-desc');
+  var linkEl  = document.getElementById('adv-link');
+  var imgWrap = document.getElementById('adv-image-wrap');
+  var imgEl   = document.getElementById('adv-image');
+  var scrBox  = document.getElementById('adv-script-box');
+
+  if (titleEl) titleEl.textContent = _advState.adTitle;
+  if (descEl)  descEl.textContent  = _advState.adDesc;
+  if (linkEl)  {
+    linkEl.href = _advState.adUrl;
+    linkEl.textContent = '🔗 ' + _advState.adBtn;
+  }
+  if (_advState.adImg && imgWrap && imgEl) {
+    imgEl.src = _advState.adImg;
+    imgWrap.style.display = 'block';
+  }
+  if (_advState.adScript && scrBox) {
+    scrBox.style.display = 'block';
+    scrBox.innerHTML = _advState.adScript;
+    // Execute scripts inside
+    scrBox.querySelectorAll('script').forEach(function(s){
+      var ns = document.createElement('script');
+      ns.textContent = s.textContent;
+      document.body.appendChild(ns);
+    });
+  }
+  go('pg-adverify');
+}
+
+function advLinkClicked(e) {
+  if (!_advState.adUrl) return;
+  // Step 0 → 1 after 2s (give time to actually navigate)
+  setTimeout(function(){
+    if (_advState.step === 0) {
+      _advState.step = 1;
+      var nt = document.getElementById('adv-notice-txt');
+      if (nt) nt.textContent = '⚠️ Please Explore The Ad — Come Back After Some Time';
+      _advStartTimer(_advState.timer1, function(){
+        _advState.step = 2;
+        var vb = document.getElementById('adv-verify-btn');
+        if (vb) vb.style.display='block';
+        var nw = document.getElementById('adv-notice');
+        if (nw) nw.style.display='none';
+      });
+    }
+  }, 2000);
+}
+
+function _advStartTimer(secs, cb) {
+  clearInterval(_advState.timerInterval);
+  var elapsed = 0;
+  var prog = document.getElementById('adv-progress');
+  _advState.timerInterval = setInterval(function(){
+    elapsed++;
+    if (prog) prog.style.width = Math.min((elapsed/secs)*100,100)+'%';
+    if (elapsed >= secs) {
+      clearInterval(_advState.timerInterval);
+      if (cb) cb();
+    }
+  }, 1000);
+}
+
+function advVerifyClick() {
+  if (_advState.step === 2) {
+    // Round 1 verify
+    _advState.step = 3;
+    var vb  = document.getElementById('adv-verify-btn');
+    var chk = document.getElementById('adv-checking');
+    var ct  = document.getElementById('adv-check-txt');
+    if (vb)  vb.style.display  = 'none';
+    if (chk) chk.style.display = 'block';
+    if (ct)  ct.textContent    = 'Checking Ad...';
+    // Fake check 15s (hidden)
+    setTimeout(function(){
+      if (chk) chk.style.display = 'none';
+      _advState.step = 4;
+      // Show notice + verify btn again (round 2)
+      var nw = document.getElementById('adv-notice');
+      var nt = document.getElementById('adv-notice-txt');
+      if (nw) nw.style.display = 'block';
+      if (nt) nt.textContent   = '⚠️ Please Explore The Ad Once More';
+      if (vb) { vb.style.display='block'; vb.textContent='✅ Verify Karo'; }
+      // Auto-open ad again silently
+      setTimeout(function(){ if(_advState.adUrl) window.open(_advState.adUrl,'_blank'); }, 500);
+      // Start hidden timer2
+      _advStartTimer(_advState.timer2, function(){
+        _advState.step = 5;
+      });
+    }, 15000);
+
+  } else if (_advState.step === 5) {
+    // Round 2 verify
+    _advState.step = 6;
+    var vb  = document.getElementById('adv-verify-btn');
+    var chk = document.getElementById('adv-checking');
+    var ct  = document.getElementById('adv-check-txt');
+    if (vb)  vb.style.display  = 'none';
+    if (chk) chk.style.display = 'block';
+    if (ct)  ct.textContent    = 'Checking Ad...';
+    setTimeout(function(){
+      if (chk) chk.style.display = 'none';
+      _advState.step = 7;
+      var gl = document.getElementById('adv-getlink-btn');
+      var nw = document.getElementById('adv-notice');
+      if (gl) gl.style.display = 'block';
+      if (nw) nw.style.display = 'none';
+    }, 5000);
+
+  } else if (_advState.step === 4) {
+    // User ne timer ke pehle click kiya round 2 mein
+    toast('⚠️ Please explore the ad once more first!');
+  } else {
+    toast('⚠️ Please visit the ad first!');
+  }
+}
+
+function advGetLink() {
+  if (_advState.step !== 7 || !_advState.token) {
+    toast('❌ Please complete all steps!'); return;
+  }
+  var btn = document.getElementById('adv-getlink-btn');
+  if (btn) { btn.disabled=true; btn.textContent='⏳ Verifying...'; }
+  fetch(BASE+'/api/ad_verify', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({token:_advState.token, user_id: UID ? parseInt(UID) : 0})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) {
+      toast('✅ Verified! Bot pe file aa rahi hai...');
+      setTimeout(function(){
+        if (tg) { try { tg.close(); } catch(e){ go('pg-home'); } } else { go('pg-home'); }
+      }, 2000);
+    } else {
+      toast('❌ '+(d.error||'Error! Bot pe /start karo'));
+      if (btn){ btn.disabled=false; btn.textContent='🎬 Get My File — Free!'; }
+    }
+  })
+  .catch(function(){
+    toast('❌ Network error! Bot pe /start karo');
+    if (btn){ btn.disabled=false; btn.textContent='🎬 Get My File — Free!'; }
+  });
+}
+
+/* ══ AD MANAGER (Admin) ══ */
+var _admAds   = [];
+var _admAdminId = 0;
+
+function admGetAdminId() {
+  if (_admAdminId) return _admAdminId;
+  var p = new URLSearchParams(window.location.search);
+  _admAdminId = parseInt(p.get('admin_id')||'0');
+  return _admAdminId;
+}
+
+function admLoadAds() {
+  var aid = admGetAdminId();
+  if (!aid) { toast('❌ Admin access denied'); return; }
+  var list = document.getElementById('adm-list');
+  if (list) list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px"><span class="spi"></span> Loading...</div>';
+  fetch(BASE+'/api/ads?admin_id='+aid)
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d.ok) { toast('❌ '+(d.error||'Error')); return; }
+    _admAds = d.ads || [];
+    var total  = document.getElementById('adm-total');
+    var active = document.getElementById('adm-active');
+    if (total)  total.textContent  = d.total  || 0;
+    if (active) active.textContent = d.active || 0;
+    admRenderAds();
+  })
+  .catch(function(){ toast('❌ Network error'); });
+}
+
+function admRenderAds() {
+  var list = document.getElementById('adm-list');
+  if (!list) return;
+  if (!_admAds.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--t3)"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:13px">Koi ad nahi — Create karo!</div></div>';
+    return;
+  }
+  list.innerHTML = '';
+  _admAds.forEach(function(ad){
+    var isActive = ad.active;
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--s1);border:1px solid var(--bd'+(isActive?'2':'')+');border-radius:14px;padding:14px;position:relative;'+(isActive?'border-left:3px solid var(--grn)':'border-left:3px solid var(--t3)');
+    card.innerHTML =
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13px;font-weight:800;color:var(--t);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(ad.title)+'</div>' +
+          '<div style="font-size:10px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(ad.description)+'</div>' +
+        '</div>' +
+        '<span style="flex-shrink:0;padding:3px 8px;border-radius:20px;font-size:9px;font-weight:700;'+(isActive?'background:rgba(34,197,94,.15);color:var(--grn)':'background:rgba(255,255,255,.06);color:var(--t3)')+'">'+(isActive?'✅ Active':'⏸ Paused')+'</span>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">' +
+        '<span style="font-size:10px;color:var(--acc3);background:rgba(108,99,255,.1);padding:3px 8px;border-radius:6px">🔘 '+escHtml(ad.button_name)+'</span>' +
+        '<span style="font-size:10px;color:var(--t3);background:var(--s2);padding:3px 8px;border-radius:6px">⏱ '+ad.timer1+'s / '+ad.timer2+'s</span>' +
+        (ad.expiry_date?'<span style="font-size:10px;color:var(--gold2);background:rgba(245,158,11,.1);padding:3px 8px;border-radius:6px">📅 '+ad.expiry_date.substring(0,10)+'</span>':'') +
+        '<span style="font-size:10px;color:var(--t3);background:var(--s2);padding:3px 8px;border-radius:6px">👁 '+ad.impressions+' views</span>' +
+        (ad.script?'<span style="font-size:10px;color:#22d3ee;background:rgba(34,211,238,.1);padding:3px 8px;border-radius:6px">📜 Script</span>':'') +
+      '</div>' +
+      '<div style="font-size:9px;color:var(--t3);margin-bottom:10px">Created: '+ad.created_at+'</div>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button onclick="admToggleAd(\''+ad.id+'\')" style="flex:1;padding:9px 6px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+(isActive?'⏸ Pause':'▶️ Activate')+'</button>' +
+        '<button onclick="admDeleteAd(\''+ad.id+'\',this)" style="flex:1;padding:9px 6px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer">🗑 Delete</button>' +
+      '</div>';
+    list.appendChild(card);
+  });
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function admToggleAd(adId) {
+  var aid = admGetAdminId();
+  fetch(BASE+'/api/ads/'+adId+'/toggle?admin_id='+aid, {method:'POST'})
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) { toast(d.message||'✅ Done!'); admLoadAds(); }
+    else toast('❌ '+(d.error||'Error'));
+  })
+  .catch(function(){ toast('❌ Network error'); });
+}
+
+function admDeleteAd(adId, btn) {
+  var doDelete = function(){
+    var aid = admGetAdminId();
+    if (btn) { btn.disabled=true; btn.textContent='Deleting...'; }
+    fetch(BASE+'/api/ads/'+adId+'?admin_id='+aid, {method:'DELETE'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok) { toast(d.message||'✅ Deleted!'); admLoadAds(); }
+      else { toast('❌ '+(d.error||'Error')); if(btn){btn.disabled=false;btn.textContent='🗑 Delete';} }
+    })
+    .catch(function(){ toast('❌ Network error'); if(btn){btn.disabled=false;btn.textContent='🗑 Delete';} });
+  };
+  if (tg && tg.showConfirm) {
+    tg.showConfirm('Is ad ko delete karna hai?', function(ok){ if(ok) doDelete(); else { if(btn){btn.disabled=false;btn.textContent='🗑 Delete';} } });
+  } else {
+    doDelete(); // Direct delete on mobile (no native confirm in TWA)
+  }
+}
+
+function admOpenCreate() { document.getElementById('adm-create-modal').style.display='block'; }
+function admCloseCreate() { document.getElementById('adm-create-modal').style.display='none'; }
+
+function admCreateAd() {
+  var aid    = admGetAdminId();
+  var title  = (document.getElementById('adm-title')||{}).value||'';
+  var desc   = (document.getElementById('adm-desc')||{}).value||'';
+  var btnNm  = (document.getElementById('adm-btnname')||{}).value||'';
+  var imgUrl = (document.getElementById('adm-imgurl')||{}).value||'';
+  var adUrl  = (document.getElementById('adm-adurl')||{}).value||'';
+  var script = (document.getElementById('adm-script')||{}).value||'';
+  var t1     = parseInt((document.getElementById('adm-timer1')||{}).value||'60');
+  var t2     = parseInt((document.getElementById('adm-timer2')||{}).value||'30');
+  var expiry = (document.getElementById('adm-expiry')||{}).value||'';
+
+  if (!title.trim())  { toast('⚠️ Title required!'); return; }
+  if (!desc.trim())   { toast('⚠️ Description required!'); return; }
+  if (!btnNm.trim())  { toast('⚠️ Button name required!'); return; }
+  if (!adUrl.trim() && !script.trim()) { toast('⚠️ Ad URL ya Script dono mein se ek dalna zaroori hai!'); return; }
+
+  var createBtn = document.querySelector('#adm-create-modal button[onclick="admCreateAd()"]');
+  if (createBtn) { createBtn.disabled=true; createBtn.textContent='Creating...'; }
+
+  fetch(BASE+'/api/ads/create?admin_id='+aid, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({title:title,description:desc,button_name:btnNm,image_url:imgUrl,ad_url:adUrl,script:script,timer1:t1,timer2:t2,expiry_date:expiry||null})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (createBtn) { createBtn.disabled=false; createBtn.textContent='✅ Ad Create Karo'; }
+    if (d.ok) {
+      toast('✅ Ad create ho gaya!');
+      admCloseCreate();
+      // Reset form
+      ['adm-title','adm-desc','adm-btnname','adm-imgurl','adm-adurl','adm-script','adm-expiry'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.value='';
+      });
+      admLoadAds();
+    } else {
+      toast('❌ '+(d.error||'Error'));
+    }
+  })
+  .catch(function(){
+    if (createBtn) { createBtn.disabled=false; createBtn.textContent='✅ Ad Create Karo'; }
+    toast('❌ Network error');
+  });
+}
+
+function admShowAdInfo() {
+  document.getElementById('adm-info-modal').style.display='block';
+}
+
+function admContactOwner() {
+  window.open('https://t.me/asbhaibsr','_blank');
 }
 
 /* ══ TRIAL ══ */
@@ -1418,6 +2023,7 @@ function cp(txt,msg){if(navigator.clipboard){navigator.clipboard.writeText(txt).
 function fbCp(txt,msg){var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast(msg||'✅ Copied!');}
 
 init();
+advInit();
 </script>
 </body>
   </html>
