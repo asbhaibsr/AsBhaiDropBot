@@ -22,11 +22,13 @@ from pyrogram.session import Auth, Session
 
 from config import (
     FILE_CHANNEL, KOYEB_URL, UPI_ID, PORT,
-    ADMINS, OWNER_ID, LOG_CHANNEL, IST, now, now_ist, make_aware, logger
+    ADMINS, OWNER_ID, LOG_CHANNEL, IST, now, now_ist, make_aware, logger,
+    AD_SYSTEM_ENABLED
 )
 from database import (
     premium_col, free_trial_col, users_col, payments_col, help_msgs_col,
-    is_premium, send_log, add_premium
+    is_premium, send_log, add_premium,
+    ads_col, ad_create, ad_list, ad_active_list, ad_get_next, ad_delete, ad_toggle, ad_count
 )
 
 bot     = None
@@ -645,6 +647,205 @@ async def api_help(request):
             await bot.send_message(int(OWNER_ID), log_text, disable_web_page_preview=True)
     except Exception as e: logger.debug(f"help PM: {e}")
     return aio_web.json_response({"ok": True, "message": "✅ Message bhej diya!"})
+
+
+
+# ═══════════════════════════════════════
+#  AD VERIFY API
+# ═══════════════════════════════════════
+@routes.post("/api/ad_verify")
+async def api_ad_verify(request):
+    try:
+        data = await request.json()
+    except Exception:
+        return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    token   = data.get("token", "").strip()
+    user_id = data.get("user_id")
+
+    if not token or not user_id:
+        return aio_web.json_response({"ok": False, "error": "Token ya user_id missing"}, status=400)
+
+    try:
+        from database import (
+            check_token, tokens_col, mark_verified, now_ist, send_log,
+            users_col as _ucol, make_aware, now as _now
+        )
+        from bson import ObjectId
+
+        uid = int(user_id)
+        valid, stored_uid = await check_token(token, expected_uid=uid)
+        if not valid:
+            return aio_web.json_response({"ok": False, "error": "Token invalid ya expire ho gaya! Bot pe /start karo."})
+
+        await tokens_col.delete_one({"token": token})
+        await mark_verified(uid)
+
+        # Log
+        try:
+            user_doc = await _ucol.find_one({"user_id": uid})
+            fname = (user_doc or {}).get("name", "User")
+            _sc = lambda t: t  # simple fallback
+            await send_log(
+                f"✅ #VerifyComplete\n\n"
+                f"ɪᴅ - `{uid}`\n"
+                f"Nᴀᴍᴇ - {str(fname)[:20]}\n"
+                f"ᴍᴏᴅᴇ - Bot Ad Page\n"
+                f"ᴛɪᴍᴇ - {now_ist().strftime('%d %b %H:%M')} IST"
+            )
+        except Exception as le:
+            logger.warning(f"ad_verify log: {le}")
+
+        # Pending file
+        try:
+            if bot:
+                user_doc = await _ucol.find_one({"user_id": uid})
+                pfid = (user_doc or {}).get("pending_file_id", 0)
+                pchat = (user_doc or {}).get("pending_file_chat", 0)
+                if pfid:
+                    await _ucol.update_one(
+                        {"user_id": uid},
+                        {"$unset": {"pending_file_id": "", "pending_file_chat": ""}}
+                    )
+                    from database import check_member_multi, build_fsub_keyboard, is_premium as _isp, send_file_to_pm
+                    prem_user = await _isp(uid)
+                    joined, not_joined = await check_member_multi(uid, prem_user)
+                    if not joined:
+                        kb = await build_fsub_keyboard(not_joined, uid)
+                        await bot.send_message(uid, "📢 Pehle channel join karo — phir file milegi! ✅", reply_markup=kb)
+                    else:
+                        class _U:
+                            id = uid
+                            first_name = (user_doc or {}).get("name", "User")
+                        await send_file_to_pm(bot, _U(), int(pfid), prem_user)
+        except Exception as fe:
+            logger.warning(f"ad_verify file: {fe}")
+
+        return aio_web.json_response({"ok": True, "message": "✅ Verified! File aa rahi hai!"})
+    except Exception as e:
+        logger.error(f"api_ad_verify: {e}")
+        return aio_web.json_response({"ok": False, "error": str(e)}, status=500)
+
+
+# ═══════════════════════════════════════
+#  AD MANAGER API  (Admin only)
+# ═══════════════════════════════════════
+
+def _is_admin(request):
+    """Query param ?admin_id= check karo."""
+    try:
+        aid = int(request.rel_url.query.get("admin_id", "0"))
+        return aid in ADMINS
+    except:
+        return False
+
+@routes.get("/api/ads")
+async def api_ads_list(request):
+    """Saare ads list (admin only)."""
+    if not _is_admin(request):
+        return aio_web.json_response({"ok": False, "error": "Unauthorized"}, status=403)
+    docs = await ad_list()
+    result = []
+    for d in docs:
+        exp = d.get("expiry_date")
+        result.append({
+            "id": str(d["_id"]),
+            "title": d.get("title", ""),
+            "description": d.get("description", ""),
+            "button_name": d.get("button_name", "Visit"),
+            "ad_url": d.get("ad_url", ""),
+            "image_url": d.get("image_url", ""),
+            "script": d.get("script", ""),
+            "timer1": d.get("timer1", 60),
+            "timer2": d.get("timer2", 30),
+            "expiry_date": exp.isoformat() if hasattr(exp, "isoformat") else str(exp) if exp else None,
+            "active": d.get("active", True),
+            "impressions": d.get("impressions", 0),
+            "created_at": d.get("created_at", now()).strftime("%d %b %Y %H:%M") if hasattr(d.get("created_at"), "strftime") else "",
+        })
+    total, active_count = await ad_count()
+    return aio_web.json_response({"ok": True, "ads": result, "total": total, "active": active_count})
+
+@routes.post("/api/ads/create")
+async def api_ads_create(request):
+    """Naya ad create karo (admin only)."""
+    if not _is_admin(request):
+        return aio_web.json_response({"ok": False, "error": "Unauthorized"}, status=403)
+    try:
+        data = await request.json()
+    except:
+        return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    title       = data.get("title", "").strip()
+    description = data.get("description", "").strip()
+    button_name = data.get("button_name", "Visit Ad").strip()
+    if not title or not description or not button_name:
+        return aio_web.json_response({"ok": False, "error": "title, description, button_name required"})
+
+    ad_url      = data.get("ad_url", "").strip()
+    image_url   = data.get("image_url", "").strip()
+    script      = data.get("script", "").strip()
+    timer1      = max(10, min(300, int(data.get("timer1", 60))))
+    timer2      = max(10, min(300, int(data.get("timer2", 30))))
+
+    # Expiry date parse
+    expiry_date = None
+    exp_str = data.get("expiry_date", "").strip()
+    if exp_str:
+        try:
+            from datetime import datetime as _dt
+            expiry_date = _dt.fromisoformat(exp_str)
+        except:
+            pass
+
+    doc = await ad_create(title, description, button_name, ad_url, image_url, script, timer1, timer2, expiry_date)
+    await send_log(f"📢 #NewAd Created\n\n**{title}**\nButton: {button_name}\nTimer: {timer1}s / {timer2}s")
+    return aio_web.json_response({"ok": True, "id": str(doc["_id"]), "message": "✅ Ad create ho gaya!"})
+
+@routes.delete("/api/ads/{ad_id}")
+async def api_ads_delete(request):
+    """Ad delete karo (admin only)."""
+    if not _is_admin(request):
+        return aio_web.json_response({"ok": False, "error": "Unauthorized"}, status=403)
+    ad_id = request.match_info.get("ad_id", "")
+    deleted = await ad_delete(ad_id)
+    if deleted:
+        return aio_web.json_response({"ok": True, "message": "✅ Ad delete ho gaya!"})
+    return aio_web.json_response({"ok": False, "error": "Ad nahi mila"})
+
+@routes.post("/api/ads/{ad_id}/toggle")
+async def api_ads_toggle(request):
+    """Ad active/inactive toggle (admin only)."""
+    if not _is_admin(request):
+        return aio_web.json_response({"ok": False, "error": "Unauthorized"}, status=403)
+    ad_id = request.match_info.get("ad_id", "")
+    new_val = await ad_toggle(ad_id)
+    if new_val is None:
+        return aio_web.json_response({"ok": False, "error": "Ad nahi mila"})
+    return aio_web.json_response({"ok": True, "active": new_val, "message": f"✅ Ad {'active' if new_val else 'inactive'} ho gaya!"})
+
+@routes.get("/api/ads/next")
+async def api_ads_next(request):
+    """Next active ad fetch karo (user ke liye)."""
+    try:
+        uid = int(request.rel_url.query.get("uid", "0"))
+    except:
+        uid = 0
+    ad = await ad_get_next(uid)
+    if not ad:
+        return aio_web.json_response({"ok": False, "error": "Koi active ad nahi"})
+    return aio_web.json_response({
+        "ok": True,
+        "id": str(ad["_id"]),
+        "title": ad.get("title", ""),
+        "description": ad.get("description", ""),
+        "button_name": ad.get("button_name", "Visit"),
+        "ad_url": ad.get("ad_url", ""),
+        "image_url": ad.get("image_url", ""),
+        "script": ad.get("script", ""),
+        "timer1": ad.get("timer1", 60),
+        "timer2": ad.get("timer2", 30),
+    })
 
 
 # ═══════════════════════════════════════
