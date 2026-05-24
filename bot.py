@@ -43,6 +43,7 @@ from config import (
     FORCE_SUB_ID, FORCE_SUB_CHANNEL, SHORTLINK_API, SHORTLINK_URL,
     KOYEB_URL, ADMINS, IST, UPI_ID, PORT, SUPPORT_LINK, HOW_TO_VERIFY,
     TMDB_API_KEY, TMDB_BASE, TMDB_IMG,
+    AD_SYSTEM_ENABLED,
     _shortlink_cache, _search_locks, _search_cooldown, _user_warnings,
     DEFAULT_SETTINGS, GROUP_DEFAULTS,
     now, now_ist, make_aware, logger
@@ -161,6 +162,7 @@ from database import (
     do_search, send_file_to_pm,
     check_link_in_message, get_user_warns, add_user_warn, reset_user_warns,
     ensure_search_cache_ttl,
+    ad_create, ad_list, ad_active_list, ad_get_next, ad_delete, ad_toggle, ad_count,
     set_clients as db_set_clients,
 )
 from routes import (
@@ -1420,17 +1422,129 @@ async def cb_handler(client, query: CallbackQuery):
 
         # ── PM mein hai — pura flow ──
 
-        # STEP 1: Shortlink Verify (group premium wale groups mein global shortlink skip)
+        # STEP 1: Ad Verify (shortlink ki jagah) ya Shortlink Verify
         if not prem:
-            async def _grp_sl(cid):
-                sls = []
-                async for doc in group_sl_col.find({"chat_id": cid, "active": True}).sort("order", 1):
-                    sls.append(doc)
-                return sls
+            # ── AD SYSTEM (shortlink off hone pr) ──
+            if AD_SYSTEM_ENABLED and KOYEB_URL:
+                all_done, _, _ = await get_user_verify_state(uid)
+                if not all_done:
+                    # Next active ad fetch karo
+                    ad = await ad_get_next(uid)
+                    if ad:
+                        token = await make_token(uid, "av")
+                        from urllib.parse import quote as _qp
+                        ad_page_url = (
+                            f"{KOYEB_URL}/?uid={uid}"
+                            f"&avt={token}"
+                            f"&adu={_qp(ad.get('ad_url',''), safe='')}"
+                            f"&adl={_qp(ad.get('title',''), safe='')}"
+                            f"&add={_qp(ad.get('description',''), safe='')}"
+                            f"&adbn={_qp(ad.get('button_name','Visit'), safe='')}"
+                            f"&adimg={_qp(ad.get('image_url',''), safe='')}"
+                            f"&adscript={_qp(ad.get('script',''), safe='')}"
+                            f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
+                        )
+                        await users_col.update_one(
+                            {"user_id": uid},
+                            {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
+                            upsert=True
+                        )
+                        await query.answer()
+                        await query.message.reply(
+                            "🎬 **File Unlock Karo — 1 Step Only!**\n\n"
+                            "📢 Ek sponsor ka page explore karo aur **free mein** apni file lo! ✅\n\n"
+                            "💎 Premium users ko yeh step nahi karna!",
+                            reply_markup=InlineKeyboardMarkup([[
+                                InlineKeyboardButton("🔓 Unlock Karo — Ad Dekho", web_app=WebAppInfo(url=ad_page_url))
+                            ],[
+                                InlineKeyboardButton("💎 Premium lo — Skip Karo!", callback_data="show_premium")
+                            ]])
+                        )
+                        return
+            # ── SHORTLINK SYSTEM (fallback agar AD_SYSTEM_ENABLED=False) ──
+            elif not AD_SYSTEM_ENABLED:
+                async def _grp_sl(cid):
+                    sls = []
+                    async for doc in group_sl_col.find({"chat_id": cid, "active": True}).sort("order", 1):
+                        sls.append(doc)
+                    return sls
 
-            async def _is_grp_prem_cb(cid):
-                doc = await group_prem_col.find_one({"chat_id": cid, "status": "approved"})
-                if not doc: return False
+                async def _is_grp_prem_cb(cid):
+                    doc = await group_prem_col.find_one({"chat_id": cid, "status": "approved"})
+                    if not doc: return False
+                    exp = make_aware(doc.get("expiry"))
+                    if exp and now() > exp:
+                        await group_prem_col.update_one({"chat_id": cid}, {"$set": {"status": "expired"}})
+                        return False
+                    return True
+
+                grp_sl_list = await _grp_sl(chat_id_for_sl) if chat_id_for_sl else []
+                grp_prem_cb = await _is_grp_prem_cb(chat_id_for_sl) if chat_id_for_sl else False
+                needs_verify = False
+                short = None; sl_label = "Verify"; hours = 24
+
+                if grp_prem_cb and not grp_sl_list:
+                    needs_verify = False
+                elif grp_sl_list:
+                    sl = grp_sl_list[0]
+                    sl_id = str(sl["_id"]); hours = sl.get("hours", 24)
+                    log_doc = await verify_log_col.find_one(
+                        {"user_id": uid, "shortlink_id": sl_id}, sort=[("verified_at", -1)]
+                    )
+                    if not log_doc or now() - make_aware(log_doc.get("verified_at")) >= timedelta(hours=hours):
+                        needs_verify = True
+                    if needs_verify:
+                        token = await make_token(uid, f"sv_{sl_id}")
+                        verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
+                        short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, sl)
+                        sl_label = sl.get("label", "Verify")
+                elif not grp_prem_cb:
+                    all_done, next_sl, _ = await get_user_verify_state(uid)
+                    if not all_done and s.get("shortlink_enabled", True):
+                        needs_verify = True
+                        if next_sl:
+                            sl_id = str(next_sl["_id"]); sl_label = next_sl.get("label", "Verify"); hours = next_sl.get("hours", 24)
+                            token = await make_token(uid, f"sv_{sl_id}")
+                            verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}_{sl_id}"
+                            short = await get_cached_shortlink(uid, chat_id_for_sl, verify_url, next_sl)
+                        elif SHORTLINK_API:
+                            token = await make_token(uid, "sv_env")
+                            verify_url = f"https://t.me/{me.username}?start=sv_{uid}_{token}"
+                            try:
+                                api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={verify_url}&format=text"
+                                async with aiohttp.ClientSession() as sess:
+                                    async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                                        res_text = (await r.text()).strip()
+                                        short = res_text if res_text.startswith("http") else verify_url
+                            except: short = verify_url
+                        else:
+                            needs_verify = False
+
+                if needs_verify and short:
+                    await users_col.update_one(
+                        {"user_id": uid},
+                        {"$set": {"pending_file_id": msg_id, "pending_file_chat": chat_id_for_sl}},
+                        upsert=True
+                    )
+                    await query.answer()
+                    await query.message.reply(
+                        f"🔐 **File Lene Ke Liye Ek Step!**\n\n"
+                        f"**Kaise kare:**\n"
+                        f"1️⃣ Neeche **LINK** button dabao\n"
+                        f"2️⃣ Page pe steps complete karo\n"
+                        f"3️⃣ Wapas bot pe aao — file milegi! ✅\n\n"
+                        f"⏰ Har **{hours} ghante** mein sirf ek baar\n"
+                        f"💡 _Link copy karke Chrome mein bhi paste kar sakte ho_\n\n"
+                        f"💎 Premium = verify bilkul nahi!",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton(f"🔗 {sl_label} — Verify Karo", url=short)],
+                            [InlineKeyboardButton("❓ Verify Kaise Kare?", url=HOW_TO_VERIFY)],
+                            [InlineKeyboardButton("💎 Premium lo — No Verify!", callback_data="show_premium")],
+                        ])
+                    )
+                    return
+
+        # STEP 2: Force Sub
                 exp = make_aware(doc.get("expiry"))
                 if exp and now() > exp:
                     await group_prem_col.update_one({"chat_id": cid}, {"$set": {"status": "expired"}})
@@ -3387,6 +3501,31 @@ async def set_commands(client, message: Message):
     ]
     await client.set_bot_commands(cmds)
     await message.reply("✅ Commands set!")
+
+
+# ═══════════════════════════════════════
+#  AD MANAGER — ADMIN COMMAND
+# ═══════════════════════════════════════
+@bot.on_message(filters.command("admanager") & filters.user(ADMINS) & filters.private)
+async def ad_manager_cmd(client, message: Message):
+    """Admin ke liye Ad Manager — miniapp open karo."""
+    if not KOYEB_URL:
+        await message.reply("❌ KOYEB_URL set nahi hai! .env mein set karo.")
+        return
+    uid = message.from_user.id
+    # Admin ID pass karo so miniapp admin mode mein khule
+    admin_url = f"{KOYEB_URL}/?uid={uid}&admin_id={uid}&page=admanager"
+    total, active_count = await ad_count()
+    await message.reply(
+        f"📢 **Ad Manager**\n\n"
+        f"📊 Total Ads: `{total}` | ✅ Active: `{active_count}`\n\n"
+        f"Neeche button dabo — Ad Manager page khulega!\n"
+        f"Wahan naye ads create, purane delete/toggle kar sakte ho.",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("📢 Ad Manager Kholo", web_app=WebAppInfo(url=admin_url))
+        ]])
+    )
+
 
 # ═══════════════════════════════════════
 #  GROUP EVENTS
