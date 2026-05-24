@@ -49,6 +49,9 @@ TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")  # .env mein set karo
 TMDB_BASE    = "https://api.themoviedb.org/3"
 TMDB_IMG     = "https://image.tmdb.org/t/p/w300"  # Poster base URL
 
+# ── Ad System ─────────────────────────────────────────────
+AD_SYSTEM_ENABLED = os.getenv("AD_SYSTEM_ENABLED", "true").lower() == "true"  # True = shortlink off, ad page use karo
+
 GOOGLE_SHEET_CSV_URL = os.getenv(
     "GOOGLE_SHEET_CSV_URL",
     "https://docs.google.com/spreadsheets/d/1j0QcRjoq20yP-BgOpLW562Kshtr-BLMwVTAgviBsjDY/pub?gid=0&single=true&output=csv"
