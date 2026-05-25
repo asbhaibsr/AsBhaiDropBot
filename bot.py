@@ -815,7 +815,7 @@ async def start_handler(client, message: Message):
 
     # ── Normal /start ──
     me = await client.get_me()
-    miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
+    miniapp_url = _miniapp_url(uid, getattr(message.from_user,'first_name',None) or 'User')
 
     buttons = [
         [
@@ -1322,7 +1322,7 @@ async def pm_search_handler(client, message: Message):
 
     prem = await is_premium(uid)
     if not prem and uid not in ADMINS:
-        miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
+        miniapp_url = _miniapp_url(uid, getattr(message.from_user,'first_name',None) or 'User')
         btns = []
         if miniapp_url:
             btns.append([InlineKeyboardButton("💎 Premium Lo — PM Search Enable", web_app=WebAppInfo(url=miniapp_url))])
@@ -2401,7 +2401,7 @@ async def cb_handler(client, query: CallbackQuery):
         return
 
     if data == "buy_premium":
-        miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
+        miniapp_url = _miniapp_url(uid, getattr(query.from_user,'first_name',None) or 'User')
         await query.answer()
         buttons = []
         if miniapp_url:
@@ -2484,7 +2484,7 @@ async def cb_handler(client, query: CallbackQuery):
 
     if data == "back_main":
         me = await client.get_me()
-        miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
+        miniapp_url = _miniapp_url(uid, getattr(query.from_user,'first_name',None) or 'User')
         buttons = [
             [
                 InlineKeyboardButton("📢 Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"),
@@ -3033,7 +3033,7 @@ async def premium_info(client, message: Message):
     prem = await is_premium(uid)
     exp = await get_premium_expiry(uid)
     exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else None
-    miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
+    miniapp_url = _miniapp_url(uid, getattr(message.from_user,'first_name',None) or 'User')
     if prem:
         text = (f"💎 **Premium Active!**\n"
                 f"Expiry: **{exp_str}**\n\n"
