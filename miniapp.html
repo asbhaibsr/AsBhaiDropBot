@@ -1261,15 +1261,20 @@ body.rotated-mode-active{overflow:hidden !important;}
 /* TELEGRAM */
 var tg=(window.Telegram&&window.Telegram.WebApp)||null;
 if(tg){try{tg.ready();tg.expand();}catch(e){}}
-var _adpUnlocked = false;  // Admin panel unlock state — early declare
+var _adpUnlocked = false;
 var TGU=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||null;
-// URL params — primary source (bot ne pass kiya)
 var _urlParams=new URLSearchParams(window.location.search);
 var _urlUID=_urlParams.get('uid');
-// UID: URL param pehle (reliable), phir Telegram WebApp
-var UID=(_urlUID&&!isNaN(_urlUID))?parseInt(_urlUID):(TGU?TGU.id:null);
-// Name/username: TGU se lao agar available, warna URL se
-var FNAME=(TGU&&TGU.first_name)||_urlParams.get('fname')||'User';
+var _urlFname=_urlParams.get('fname');
+// UID — URL se pehle, phir Telegram WebApp
+var UID=null;
+if(_urlUID && _urlUID!='null' && !isNaN(parseInt(_urlUID))){
+  UID=parseInt(_urlUID);
+} else if(TGU && TGU.id){
+  UID=TGU.id;
+}
+// FNAME — TGU se pehle (zyada accurate), phir URL param
+var FNAME=(TGU&&TGU.first_name)||(_urlFname&&_urlFname!='null'?decodeURIComponent(_urlFname):null)||'User';
 var LNAME=(TGU&&TGU.last_name)||'';
 var UNAME=(TGU&&TGU.username)||null;
 var BASE=window.location.origin.replace('http://','https://');
@@ -2371,9 +2376,11 @@ function adpInitFromUrl() {
 function showAdvertisePage() { go('pg-advertise'); }
 
 
-init();
+// Admin/ad page check karo PEHLE
 advInit();
 adpInitFromUrl();
+// Phir normal init
+init();
 </script>
 </body>
   </html>
