@@ -1261,6 +1261,7 @@ body.rotated-mode-active{overflow:hidden !important;}
 /* TELEGRAM */
 var tg=(window.Telegram&&window.Telegram.WebApp)||null;
 if(tg){try{tg.ready();tg.expand();}catch(e){}}
+var _adpUnlocked = false;  // Admin panel unlock state — early declare
 var TGU=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||null;
 // URL params — primary source (bot ne pass kiya)
 var _urlParams=new URLSearchParams(window.location.search);
@@ -1396,8 +1397,15 @@ function advInit() {
   var page    = p.get('page');
   var adminId = p.get('admin_id');
   if (page === 'admanager' && adminId) {
-    go('pg-admanager');
-    admLoadAds();
+    _adpUnlocked = true;
+    var lock = document.getElementById('adp-lock');
+    var cont = document.getElementById('adp-content');
+    var tab  = document.getElementById('tab-adpanel');
+    if (lock) lock.style.display = 'none';
+    if (cont) cont.style.display = 'block';
+    if (tab)  tab.style.display  = '';
+    go('pg-adpanel');
+    setTimeout(function(){ adpLoadAds(); }, 400);
     return;
   }
   if (!token || !adUrl) return;
@@ -2175,7 +2183,6 @@ function cp(txt,msg){if(navigator.clipboard){navigator.clipboard.writeText(txt).
 function fbCp(txt,msg){var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast(msg||'✅ Copied!');}
 
 /* ══ ADMIN PANEL (Password Protected) ══ */
-var _adpUnlocked = false;
 var _ADP_PASS = "9027527152";
 
 function adpCheckPass() {
