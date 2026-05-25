@@ -188,6 +188,9 @@ userbot = Client(
 
 scheduler = AsyncIOScheduler(timezone=IST)
 
+# ── Broadcast lock: ek time pe sirf ek broadcast chale ──
+_broadcast_lock = asyncio.Lock()
+
 # In-memory result cache
 _result_cache = {}  # {uid_qkey: [found_msgs]}
 
@@ -3649,14 +3652,20 @@ async def broadcast(client, message: Message):
     if not text and not reply_msg:
         await message.reply("❌ Ya text likho ya kisi message ko reply karke broadcast karo!"); return
 
-    sm = await message.reply(f"📡 **Broadcast shuru!** Target: `{target}`\n⏳ Please wait...")
-    total = done = failed = blocked = 0
-    start_time = time.time()
+    # ✅ FIX: Ek time pe sirf ek broadcast — duplicate broadcast block karo
+    if _broadcast_lock.locked():
+        await message.reply("⚠️ **Broadcast pehle se chal raha hai!**\nPehla wala khatam hone do.")
+        return
 
-    # ✅ FIX: Deduplicate — ek user ko sirf ek baar message jaye
-    sent_ids = set()
+    async with _broadcast_lock:
+     sm = await message.reply(f"📡 **Broadcast shuru!** Target: `{target}`\n⏳ Please wait...")
+     total = done = failed = blocked = 0
+     start_time = time.time()
 
-    async def _send_one(dest_id):
+     # ✅ FIX: Deduplicate — ek user ko sirf ek baar message jaye
+     sent_ids = set()
+
+     async def _send_one(dest_id):
         nonlocal done, failed, blocked
         if dest_id in sent_ids:
             return  # Already sent — skip!
@@ -3680,46 +3689,50 @@ async def broadcast(client, message: Message):
                 done += 1
             except:
                 failed += 1
-        except:
-            failed += 1
+        except Exception as e:
+            # ✅ FIX: RANDOM_ID_DUPLICATE = message already delivered by Telegram
+            if "RANDOM_ID_DUPLICATE" in str(e):
+                done += 1  # Count as success — message pehle hi chala gaya
+            else:
+                failed += 1
 
-    if target in ["users", "all"]:
-        # DISTINCT user_ids only
-        seen = set()
-        async for doc in users_col.find({}, {"user_id": 1}):
-            uid_bc = doc.get("user_id")
-            if not uid_bc or uid_bc in seen: continue
-            seen.add(uid_bc)
-            total += 1
-            await _send_one(uid_bc)
-            if total % 100 == 0:
-                elapsed = int(time.time() - start_time)
-                try: await sm.edit(f"📡 **Broadcasting...**\n\n✅ {done} | ❌ {failed} | 🚫 {blocked}\nTotal: {total} | Time: {elapsed}s")
-                except: pass
+     if target in ["users", "all"]:
+         # DISTINCT user_ids only
+         seen = set()
+         async for doc in users_col.find({}, {"user_id": 1}):
+             uid_bc = doc.get("user_id")
+             if not uid_bc or uid_bc in seen: continue
+             seen.add(uid_bc)
+             total += 1
+             await _send_one(uid_bc)
+             if total % 100 == 0:
+                 elapsed = int(time.time() - start_time)
+                 try: await sm.edit(f"📡 **Broadcasting...**\n\n✅ {done} | ❌ {failed} | 🚫 {blocked}\nTotal: {total} | Time: {elapsed}s")
+                 except: pass
 
-    if target in ["groups", "all"]:
-        seen_g = set()
-        async for doc in groups_col.find({}, {"chat_id": 1}):
-            cid_bc = doc.get("chat_id")
-            if not cid_bc or cid_bc in seen_g: continue
-            seen_g.add(cid_bc)
-            total += 1
-            await _send_one(cid_bc)
-            if total % 50 == 0:
-                elapsed = int(time.time() - start_time)
-                try: await sm.edit(f"📡 **Broadcasting...**\n\n✅ {done} | ❌ {failed} | 🚫 {blocked}\nTotal: {total} | Time: {elapsed}s")
-                except: pass
+     if target in ["groups", "all"]:
+         seen_g = set()
+         async for doc in groups_col.find({}, {"chat_id": 1}):
+             cid_bc = doc.get("chat_id")
+             if not cid_bc or cid_bc in seen_g: continue
+             seen_g.add(cid_bc)
+             total += 1
+             await _send_one(cid_bc)
+             if total % 50 == 0:
+                 elapsed = int(time.time() - start_time)
+                 try: await sm.edit(f"📡 **Broadcasting...**\n\n✅ {done} | ❌ {failed} | 🚫 {blocked}\nTotal: {total} | Time: {elapsed}s")
+                 except: pass
 
-    elapsed = int(time.time() - start_time)
-    await sm.edit(
-        f"📡 **Broadcast Complete!** ✅\n\n"
-        f"📊 **Stats:**\n"
-        f"├ Total unique: **{total}**\n"
-        f"├ ✅ Success: **{done}**\n"
-        f"├ ❌ Failed: **{failed}**\n"
-        f"├ 🚫 Blocked: **{blocked}**\n"
-        f"└ ⏱ Time: **{elapsed}s**"
-    )
+     elapsed = int(time.time() - start_time)
+     await sm.edit(
+         f"📡 **Broadcast Complete!** ✅\n\n"
+         f"📊 **Stats:**\n"
+         f"├ Total unique: **{total}**\n"
+         f"├ ✅ Success: **{done}**\n"
+         f"├ ❌ Failed: **{failed}**\n"
+         f"├ 🚫 Blocked: **{blocked}**\n"
+         f"└ ⏱ Time: **{elapsed}s**"
+     )
 
 @bot.on_message(filters.command("setcommands") & filters.user(ADMINS))
 async def set_commands(client, message: Message):
