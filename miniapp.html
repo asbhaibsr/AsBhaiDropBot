@@ -1286,10 +1286,15 @@ var curRotation=0,curZoom=1,curEngine='html5';
 
 /* ══ INIT ══ */
 function init(){
-  setEl('uc-nm',FNAME+(LNAME?' '+LNAME:''));
-  setEl('uc-un',UNAME?('@'+UNAME):'Username nahi');
-  setEl('uc-id','ID: '+(UID||'—'));
-  if(!UID){setEl('nav-txt','FREE');setRefUI(0);return;}
+  // Naam/ID hamesha set karo chahe UID ho ya na ho
+  setEl('uc-nm', FNAME+(LNAME?' '+LNAME:''));
+  setEl('uc-un', UNAME?('@'+UNAME):'');
+  setEl('uc-id', UID?('ID: '+UID):'');
+  if(!UID){
+    setNavBadge('free');
+    setRefUI(0);
+    return;
+  }
 
   fetch(BASE+'/api/user_status/'+UID)
     .then(function(r){return r.json();})
@@ -2376,11 +2381,12 @@ function adpInitFromUrl() {
 function showAdvertisePage() { go('pg-advertise'); }
 
 
-// Admin/ad page check karo PEHLE
-advInit();
-adpInitFromUrl();
-// Phir normal init
-init();
+// DOM ready hone ke baad sab run karo
+document.addEventListener('DOMContentLoaded', function() {
+  advInit();
+  adpInitFromUrl();
+  init();
+});
 </script>
 </body>
   </html>
