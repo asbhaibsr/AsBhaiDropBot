@@ -1084,6 +1084,154 @@ body.rotated-mode-active{overflow:hidden !important;}
       <button onclick="admContactOwner()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0088cc,#006699);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
         📩 Ad Lagwane Ke Liye Message Karo
       </button>
+    <!-- Advertise CTA -->
+    <div onclick="showAdvertisePage()" style="margin-top:14px;padding:14px;background:linear-gradient(135deg,rgba(108,99,255,.15),rgba(124,58,237,.1));border:1px solid rgba(108,99,255,.3);border-radius:12px;text-align:center;cursor:pointer">
+      <div style="font-size:20px;margin-bottom:4px">📣</div>
+      <div style="font-size:13px;font-weight:700;color:var(--acc2)">Apna Ad Lagwao</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:3px">Thousands of users tak pahuncho — ₹100 se shuru!</div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ADMIN AD PANEL (Password Protected) ════ -->
+<div class="pg" id="pg-adpanel">
+  <div style="max-width:520px;margin:0 auto;padding:16px 16px 80px">
+
+    <!-- Password Screen -->
+    <div id="adp-lock" style="text-align:center;padding:40px 20px">
+      <div style="font-size:48px;margin-bottom:16px">🔐</div>
+      <h2 style="font-size:18px;font-weight:800;color:var(--acc2);margin-bottom:8px">Admin Panel</h2>
+      <p style="font-size:12px;color:var(--t3);margin-bottom:20px">Password dalo access ke liye</p>
+      <input id="adp-pass-input" type="password" placeholder="Password..."
+        style="width:100%;max-width:280px;padding:12px 16px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;color:var(--t);font-size:16px;text-align:center;outline:none;margin-bottom:12px;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter')adpCheckPass()">
+      <br>
+      <button onclick="adpCheckPass()"
+        style="padding:12px 32px;background:linear-gradient(135deg,var(--acc),#7c3aed);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">
+        🔓 Enter
+      </button>
+      <div id="adp-pass-err" style="color:#f87171;font-size:11px;margin-top:10px;display:none">❌ Wrong password!</div>
+    </div>
+
+    <!-- Admin Content (hidden until password) -->
+    <div id="adp-content" style="display:none">
+
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0d0820,#1a0a3a);border:1px solid rgba(108,99,255,.3);border-radius:16px;padding:16px;margin-bottom:14px;text-align:center">
+        <div style="font-size:28px;margin-bottom:4px">📢</div>
+        <h2 style="font-size:17px;font-weight:900;color:var(--acc2)">Ad Manager</h2>
+        <div id="adp-stats" style="display:flex;gap:10px;justify-content:center;margin-top:10px">
+          <div style="background:rgba(255,255,255,.05);border-radius:8px;padding:6px 14px;text-align:center">
+            <div id="adp-total" style="font-size:18px;font-weight:900;color:var(--t)">—</div>
+            <div style="font-size:9px;color:var(--t3)">Total</div>
+          </div>
+          <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:6px 14px;text-align:center">
+            <div id="adp-active" style="font-size:18px;font-weight:900;color:var(--grn2)">—</div>
+            <div style="font-size:9px;color:var(--grn)">Active</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button onclick="adpOpenCreate()" style="flex:1;padding:10px 6px;background:linear-gradient(135deg,var(--acc),#7c3aed);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">➕ New Ad</button>
+        <button onclick="adpLoadAds()" style="flex:1;padding:10px 6px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">🔄 Refresh</button>
+        <button onclick="adpShowPricing()" style="flex:1;padding:10px 6px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">💰 Pricing</button>
+      </div>
+
+      <!-- Ad List -->
+      <div id="adp-list" style="display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;padding:30px;color:var(--t3);font-size:12px"><span class="spi"></span> Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ USER ADVERTISE PAGE ════ -->
+<div class="pg" id="pg-advertise">
+  <div style="max-width:480px;margin:0 auto;padding:16px 16px 80px">
+
+    <div style="text-align:center;padding:20px 0 14px">
+      <div style="font-size:38px;margin-bottom:8px">📣</div>
+      <h2 style="font-size:20px;font-weight:900;background:linear-gradient(90deg,var(--acc2),var(--acc3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Apna Ad Lagwao</h2>
+      <p style="font-size:11px;color:var(--t2);margin-top:5px">Thousands of movie lovers tak pahuncho — daily!</p>
+    </div>
+
+    <!-- Why advertise -->
+    <div style="background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);border-radius:12px;padding:14px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--acc2);margin-bottom:8px">🎯 Kyun Advertise Karein?</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.9">
+        ✅ Har movie download pe guaranteed impression<br>
+        ✅ Real engaged users — movie lovers audience<br>
+        ✅ Koi bhi legal product/service/website promote karo<br>
+        ✅ Low cost, high visibility<br>
+        ✅ Instant setup — aaj lagwao, aaj dikhne lage
+      </div>
+    </div>
+
+    <!-- Plans -->
+    <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px">💎 Ad Plans</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+
+      <div style="background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:13px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--t)">Starter</div>
+          <div style="font-size:10px;color:var(--t3)">5 Days Active</div>
+          <div style="font-size:9px;color:var(--acc3);margin-top:2px">⭐ Most Popular</div>
+        </div>
+        <div style="font-size:20px;font-weight:900;color:var(--gold)">₹100</div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,#0d0820,#130a2e);border:1px solid rgba(108,99,255,.3);border-radius:12px;padding:13px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--acc2)">Standard</div>
+          <div style="font-size:10px;color:var(--t3)">20 Days Active</div>
+          <div style="font-size:9px;color:var(--acc3);margin-top:2px">🔥 Best Value</div>
+        </div>
+        <div style="font-size:20px;font-weight:900;color:var(--acc2)">₹300</div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,#081a0f,#0a2518);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:13px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--grn2)">Premium</div>
+          <div style="font-size:10px;color:var(--t3)">35 Days Active</div>
+        </div>
+        <div style="font-size:20px;font-weight:900;color:var(--grn2)">₹500</div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,#1a0d00,#2a1500);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:13px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold)">Ultra</div>
+          <div style="font-size:10px;color:var(--t3)">60 Days Active</div>
+          <div style="font-size:9px;color:var(--gold);margin-top:2px">👑 Max Exposure</div>
+        </div>
+        <div style="font-size:20px;font-weight:900;color:var(--gold)">₹800</div>
+      </div>
+    </div>
+
+    <!-- Payment Info -->
+    <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:12px;padding:13px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--grn);margin-bottom:6px">💳 Payment</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.9">
+        📱 UPI: <span style="color:var(--t);font-family:var(--mono)">arsadsaifi8272@ibl</span><br>
+        🏦 Bank transfer bhi hota hai — message karo<br>
+        ✅ Payment ke baad screenshot bhejo
+      </div>
+    </div>
+
+    <!-- Contact Button -->
+    <button onclick="window.open('https://t.me/asbhaibsr','_blank')"
+      style="width:100%;padding:14px;background:linear-gradient(135deg,#0088cc,#006699);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer">
+      📩 Message Karo — Ad Lagwao
+    </button>
+
+    <!-- Note -->
+    <div style="margin-top:12px;padding:10px;background:var(--s1);border-radius:10px;border:1px solid var(--bd);text-align:center">
+      <div style="font-size:9px;color:var(--t3);line-height:1.7">
+        ⚠️ Copyright/illegal content allowed nahi<br>
+        ✅ Legal websites, apps, services, products — sab chalega
+      </div>
     </div>
   </div>
 </div>
@@ -1097,6 +1245,7 @@ body.rotated-mode-active{overflow:hidden !important;}
   <div class="tb" id="tab-panel" onclick="switchTab('panel')"><div class="ti">💎</div>Panel</div>
   <div class="tb" id="tab-refer" onclick="switchTab('refer')"><div class="ti">🔗</div>Refer</div>
   <div class="tb" id="tab-help" onclick="switchTab('help')"><div class="ti">ℹ️</div>Help</div>
+  <div class="tb" id="tab-adpanel" onclick="switchTab('adpanel')" style="display:none"><div class="ti">📢</div>Ads</div>
 </div>
 
 <script>
@@ -1217,7 +1366,7 @@ function go(id){
   var el=document.getElementById(id);if(el)el.classList.add('on');
   window.scrollTo({top:0,behavior:'smooth'});
   // Sync tab
-  var tabMap={'pg-home':'tab-home','pg-premium':'tab-home','pg-stream':'tab-stream','pg-panel':'tab-panel','pg-refer':'tab-refer','pg-group':'tab-home','pg-help':'tab-help','pg-adverify':'tab-home','pg-admanager':'tab-home'};
+  var tabMap={'pg-home':'tab-home','pg-premium':'tab-home','pg-stream':'tab-stream','pg-panel':'tab-panel','pg-refer':'tab-refer','pg-group':'tab-home','pg-help':'tab-help','pg-adverify':'tab-home','pg-admanager':'tab-home','pg-adpanel':'tab-adpanel','pg-advertise':'tab-home'};
   document.querySelectorAll('.tabs .tb').forEach(function(t){t.classList.remove('on');});
   var tabId=tabMap[id];if(tabId){var te=document.getElementById(tabId);if(te)te.classList.add('on');}
 }
@@ -2022,8 +2171,140 @@ function toast(msg){var t=document.getElementById('toast');if(!t)return;t.textCo
 function cp(txt,msg){if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){toast(msg||'✅ Copied!');}).catch(function(){fbCp(txt,msg);});}else fbCp(txt,msg);}
 function fbCp(txt,msg){var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast(msg||'✅ Copied!');}
 
+/* ══ ADMIN PANEL (Password Protected) ══ */
+var _adpUnlocked = false;
+var _ADP_PASS = "9027527152";
+
+function adpCheckPass() {
+  var inp = document.getElementById('adp-pass-input');
+  var err = document.getElementById('adp-pass-err');
+  if (!inp) return;
+  if (inp.value === _ADP_PASS) {
+    _adpUnlocked = true;
+    document.getElementById('adp-lock').style.display = 'none';
+    document.getElementById('adp-content').style.display = 'block';
+    // Show tab
+    var tab = document.getElementById('tab-adpanel');
+    if (tab) tab.style.display = '';
+    adpLoadAds();
+  } else {
+    if (err) err.style.display = 'block';
+    inp.value = '';
+    setTimeout(function(){ if(err) err.style.display='none'; }, 2000);
+  }
+}
+
+function adpGetAdminId() {
+  return UID ? parseInt(UID) : 0;
+}
+
+function adpLoadAds() {
+  if (!_adpUnlocked) return;
+  var aid = adpGetAdminId();
+  var list = document.getElementById('adp-list');
+  if (list) list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px"><span class="spi"></span> Loading...</div>';
+  fetch(BASE+'/api/ads?admin_id='+aid)
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d.ok) { toast('❌ '+(d.error||'Error')); return; }
+    var total = document.getElementById('adp-total');
+    var active = document.getElementById('adp-active');
+    if (total) total.textContent = d.total||0;
+    if (active) active.textContent = d.active||0;
+    _admAds = d.ads||[];
+    adpRenderAds();
+  })
+  .catch(function(){ toast('❌ Network error'); });
+}
+
+function adpRenderAds() {
+  var list = document.getElementById('adp-list');
+  if (!list) return;
+  if (!_admAds.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--t3)"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:13px">Koi ad nahi — create karo!</div></div>';
+    return;
+  }
+  list.innerHTML = '';
+  _admAds.forEach(function(ad){
+    var isActive = ad.active;
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--s1);border:1px solid var(--bd'+(isActive?'2':'')+');border-radius:14px;padding:14px;border-left:3px solid '+(isActive?'var(--grn)':'var(--t3)');
+    card.innerHTML =
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:800;color:var(--t);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(ad.title)+'</div>'+
+          '<div style="font-size:10px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(ad.description)+'</div>'+
+        '</div>'+
+        '<span style="flex-shrink:0;padding:3px 8px;border-radius:20px;font-size:9px;font-weight:700;'+(isActive?'background:rgba(34,197,94,.15);color:var(--grn)':'background:rgba(255,255,255,.06);color:var(--t3)')+'">'+(isActive?'✅ Active':'⏸ Paused')+'</span>'+
+      '</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">'+
+        '<span style="font-size:10px;color:var(--acc3);background:rgba(108,99,255,.1);padding:2px 7px;border-radius:6px">🔘 '+escHtml(ad.button_name)+'</span>'+
+        '<span style="font-size:10px;color:var(--t3);background:var(--s2);padding:2px 7px;border-radius:6px">⏱ '+ad.timer1+'s/'+ad.timer2+'s</span>'+
+        '<span style="font-size:10px;color:var(--t3);background:var(--s2);padding:2px 7px;border-radius:6px">👁 '+ad.impressions+'</span>'+
+        (ad.expiry_date?'<span style="font-size:10px;color:var(--gold2);background:rgba(245,158,11,.1);padding:2px 7px;border-radius:6px">📅 '+(ad.expiry_date||'').substring(0,10)+'</span>':'')+
+        (ad.script?'<span style="font-size:10px;color:#22d3ee;background:rgba(34,211,238,.1);padding:2px 7px;border-radius:6px">📜 Script</span>':'')+
+      '</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button onclick="adpToggle(''+ad.id+'')" style="flex:1;padding:9px 6px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+(isActive?'⏸ Pause':'▶️ Activate')+'</button>'+
+        '<button onclick="adpDelete(''+ad.id+'',this)" style="flex:1;padding:9px 6px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer">🗑 Delete</button>'+
+      '</div>';
+    list.appendChild(card);
+  });
+}
+
+function adpToggle(adId) {
+  var aid = adpGetAdminId();
+  fetch(BASE+'/api/ads/'+adId+'/toggle?admin_id='+aid, {method:'POST'})
+  .then(function(r){ return r.json(); })
+  .then(function(d){ if(d.ok){toast(d.message||'✅ Done!');adpLoadAds();}else toast('❌ '+(d.error||'Error')); })
+  .catch(function(){ toast('❌ Network error'); });
+}
+
+function adpDelete(adId, btn) {
+  var doIt = function(){
+    var aid = adpGetAdminId();
+    if(btn){btn.disabled=true;btn.textContent='...';}
+    fetch(BASE+'/api/ads/'+adId+'?admin_id='+aid,{method:'DELETE'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){toast('✅ Deleted!');adpLoadAds();}
+      else{toast('❌ '+(d.error||'Error'));if(btn){btn.disabled=false;btn.textContent='🗑 Delete';}}
+    })
+    .catch(function(){toast('❌ Error');if(btn){btn.disabled=false;btn.textContent='🗑 Delete';}});
+  };
+  if(tg&&tg.showConfirm) tg.showConfirm('Delete karna hai?',function(ok){if(ok)doIt();});
+  else doIt();
+}
+
+// ── Create Ad Form (reuse existing admCreateAd logic) ──
+function adpOpenCreate() { document.getElementById('adm-create-modal').style.display='block'; }
+
+function adpShowPricing() { document.getElementById('adm-info-modal').style.display='block'; }
+
+// ── Show Admin Panel from URL param (admin_id) ──
+function adpInitFromUrl() {
+  var p = new URLSearchParams(window.location.search);
+  var adminId = p.get('admin_id');
+  var page = p.get('page');
+  if (adminId && page === 'admanager') {
+    // Auto-unlock for URL-based access (bot command se aaya)
+    _adpUnlocked = true;
+    document.getElementById('adp-lock').style.display = 'none';
+    document.getElementById('adp-content').style.display = 'block';
+    var tab = document.getElementById('tab-adpanel');
+    if (tab) tab.style.display = '';
+    go('pg-adpanel');
+    adpLoadAds();
+  }
+}
+
+// ── Advertise tab trigger ──
+function showAdvertisePage() { go('pg-advertise'); }
+
+
 init();
 advInit();
+adpInitFromUrl();
 </script>
 </body>
   </html>

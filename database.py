@@ -42,7 +42,6 @@ free_trial_col    = db["free_trials"]
 help_msgs_col     = db["help_msgs"]
 payments_col      = db["payments"]
 shortlinks_col    = db["shortlinks"]
-blogger_posts_col = db["blogger_posts"]   # Blogger verify post URLs
 verify_log_col    = db["verify_logs"]
 group_prem_col    = db["group_premium"]
 group_sl_col      = db["group_shortlinks"]
@@ -1152,79 +1151,6 @@ _sheet_posts_cache: list = []
 _sheet_last_sync: float = 0.0
 
 
-async def sync_blogger_posts_from_sheet() -> dict:
-    """
-    Google Sheets CSV se blogger post URLs fetch karo aur DB mein sync karo.
-    Sheet format (har row):
-      Column A = Blog post URL (required, https:// se start ho)
-      Column B = Label (optional)
-    Returns: {"ok": True/False, "added": N, "total": N, "error": "..."}
-    """
-    import aiohttp, time
-    global _sheet_posts_cache, _sheet_last_sync
-    from config import GOOGLE_SHEET_CSV_URL
-    if not GOOGLE_SHEET_CSV_URL:
-        return {"ok": False, "error": "GOOGLE_SHEET_CSV_URL config nahi hai"}
-
-    try:
-        timeout = aiohttp.ClientTimeout(total=15)
-        async with aiohttp.ClientSession(timeout=timeout) as sess:
-            async with sess.get(GOOGLE_SHEET_CSV_URL) as resp:
-                if resp.status != 200:
-                    return {"ok": False, "error": f"Sheet fetch failed: HTTP {resp.status}"}
-                text = await resp.text(encoding="utf-8", errors="replace")
-                # Agar HTML aa raha hai matlab sheet published nahi hai
-                if text.strip().startswith("<!"):
-                    return {
-                        "ok": False,
-                        "error": "Sheet published nahi hai! Google Sheets mein:\nFile → Share → Publish to web → CSV → Publish karo"
-                    }
-    except Exception as e:
-        return {"ok": False, "error": f"Sheet fetch error: {e}"}
-
-    # CSV parse karo
-    rows = []
-    try:
-        reader = csv.reader(io.StringIO(text))
-        for row in reader:
-            if not row: continue
-            url = row[0].strip() if len(row) > 0 else ""
-            label = row[1].strip() if len(row) > 1 else ""
-            if url.startswith("http"):
-                rows.append({"url": url, "label": label or url})
-    except Exception as e:
-        return {"ok": False, "error": f"CSV parse error: {e}"}
-
-    if not rows:
-        return {"ok": False, "error": "Sheet mein koi valid URL nahi mili (Column A mein https:// URL daalo)"}
-
-    # DB sync — sheet wali entries replace karo, manual entries rakho
-    await blogger_posts_col.delete_many({"source": "sheet"})
-    added = 0
-    for i, row in enumerate(rows):
-        existing = await blogger_posts_col.find_one({"url": row["url"]})
-        if existing:
-            await blogger_posts_col.update_one(
-                {"_id": existing["_id"]},
-                {"$set": {"label": row["label"] or existing.get("label", ""), "source": "sheet", "order": i + 1}}
-            )
-        else:
-            await blogger_posts_col.insert_one({
-                "url": row["url"],
-                "label": row["label"] or f"Blog Post {i + 1}",
-                "active": True,
-                "order": i + 1,
-                "source": "sheet",
-                "added_at": now()
-            })
-            added += 1
-
-    total = await blogger_posts_col.count_documents({"active": True})
-    _sheet_posts_cache = [{"url": r["url"], "label": r["label"]} for r in rows]
-    _sheet_last_sync = time.time()
-    return {"ok": True, "added": added, "total": total, "sheet_rows": len(rows)}
-
-
 async def get_random_blogger_post():
     """Return a random active Blogger post URL.
     Priority: DB (sheet-synced + manual) → sheet direct fetch → config fallback
@@ -1255,45 +1181,6 @@ async def get_random_blogger_post():
         return random.choice(BLOGGER_POST_URLS)
 
     return KOYEB_URL or ""
-
-async def add_blogger_post(url: str, label: str = "") -> dict:
-    """Add a new Blogger post URL to DB."""
-    url = url.strip()
-    if not url.startswith("http"):
-        return {"ok": False, "msg": "URL https:// se start honi chahiye!"}
-    existing = await blogger_posts_col.find_one({"url": url})
-    if existing:
-        return {"ok": False, "msg": "Ye URL pehle se add hai!"}
-    count = await blogger_posts_col.count_documents({})
-    label = label.strip() or f"Blog Post {count + 1}"
-    await blogger_posts_col.insert_one({
-        "url": url,
-        "label": label,
-        "active": True,
-        "order": count + 1,
-        "added_at": now()
-    })
-    return {"ok": True, "label": label, "number": count + 1}
-
-async def remove_blogger_post(number: int) -> dict:
-    """Remove a Blogger post by its list number."""
-    posts = []
-    async for doc in blogger_posts_col.find({}).sort("order", 1):
-        posts.append(doc)
-    if not posts:
-        return {"ok": False, "msg": "Koi blog post nahi hai."}
-    if number < 1 or number > len(posts):
-        return {"ok": False, "msg": f"Number 1-{len(posts)} ke beech hona chahiye!"}
-    target = posts[number - 1]
-    await blogger_posts_col.delete_one({"_id": target["_id"]})
-    return {"ok": True, "label": target.get("label", target["url"]), "url": target["url"]}
-
-async def list_blogger_posts() -> list:
-    """Return all Blogger posts sorted by order."""
-    posts = []
-    async for doc in blogger_posts_col.find({}).sort("order", 1):
-        posts.append(doc)
-    return posts
 
 async def make_blogger_verify_url(user_id: int, token: str, sl_id: str = "blogger") -> str:
     """Build Blogger page URL with verify params."""

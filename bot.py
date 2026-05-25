@@ -147,7 +147,6 @@ from database import (
     requests_col, banned_col, refers_col, free_trial_col, help_msgs_col,
     payments_col, shortlinks_col, verify_log_col, group_prem_col,
     group_sl_col, group_settings_col, warn_col, action_log_col,
-    blogger_posts_col,
     get_settings, update_setting, get_group_settings, update_group_setting,
     save_user, save_group, is_banned, ban_user, unban_user,
     get_free_trial_status, is_premium, add_premium, remove_premium, get_premium_expiry,
@@ -156,8 +155,6 @@ from database import (
     get_fsub_list, check_member_multi, build_fsub_keyboard, force_sub_check,
     get_active_shortlinks, make_shortlink_with, make_shortlink,
     get_user_verify_state, mark_sl_verified, get_cached_shortlink, verify_check,
-    add_blogger_post, remove_blogger_post, list_blogger_posts,
-    sync_blogger_posts_from_sheet,
     clean_caption, get_file_name, get_file_size, del_later, send_log,
     do_search, send_file_to_pm,
     check_link_in_message, get_user_warns, add_user_warn, reset_user_warns,
@@ -1128,9 +1125,9 @@ async def search_handler(client, message: Message):
             return
 
         if prem:
-            limit = gs.get("premium_results", 10)
+            limit = s.get("premium_results", gs.get("premium_results", 10))
         else:
-            limit = gs.get("free_results", 5)
+            limit = s.get("free_results", gs.get("free_results", 5))
 
         found = await do_search(query, limit=limit)
 
@@ -3031,12 +3028,19 @@ async def premium_info(client, message: Message):
     exp = await get_premium_expiry(uid)
     exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else None
     miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
-    text = f"💎 Premium {'Active!' if prem else 'nahi hai'}\n"
-    if prem: text += f"Expiry: {exp_str}\n\nEnjoy karo! No verify, unlimited!\n"
-    else: text += "\nMini App se kharido ya 10 refer karo!\n"
+    if prem:
+        text = (f"💎 **Premium Active!**\n"
+                f"Expiry: **{exp_str}**\n\n"
+                f"✅ No ad verify\n✅ Unlimited downloads\n✅ HD Stream + Download")
+    else:
+        text = ("💎 **Premium Lo — Sab Milega!**\n\n"
+                "✅ No ad/verify\n✅ Unlimited downloads\n"
+                "✅ HD Stream + Download\n\n"
+                "**Plans:** ₹99/7d | ₹199/30d | ₹499/90d\n"
+                "**FREE:** 10 refer karo → 15 din premium!")
     buttons = []
     if miniapp_url:
-        buttons.append([InlineKeyboardButton("🌐 Mini App — Plans", web_app=WebAppInfo(url=miniapp_url))])
+        buttons.append([InlineKeyboardButton("💎 Plans Dekho", web_app=WebAppInfo(url=miniapp_url))])
     await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons) if buttons else None)
 
 @bot.on_message(filters.command("mystats"))
@@ -3052,28 +3056,34 @@ async def mystats(client, message: Message):
     exp = await get_premium_expiry(uid)
     exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else "N/A"
     await message.reply(
-        f"📊 **Aapki Stats**\n\n"
-        f"👤 {message.from_user.mention} | `{uid}`\n"
-        f"📅 Joined: {joined}\n"
-        f"💎 Premium: {'✅ — ' + exp_str if prem else '❌'}\n"
-        f"📥 Downloads: {count}/{limit}\n"
-        f"🔗 Refers: {refers}"
+        f"📊 **{message.from_user.first_name} ki Stats**\n\n"
+        f"`{uid}` | Joined: {joined}\n"
+        f"💎 Premium: {'✅ ' + exp_str if prem else '❌ Nahi'}\n"
+        f"📥 Aaj: {count}/{limit} | 🔗 Refers: {refers}\n\n"
+        f"{'🏆 Boss ho tum!' if prem else '💡 10 refer karo → FREE premium!'}",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("💎 Premium Lo", callback_data="show_premium"),
+            InlineKeyboardButton("🔗 Refer Link", callback_data="refer_info")
+        ]])
     )
 
 @bot.on_message(filters.command("help"))
 async def help_cmd(client, message: Message):
+    uid = message.from_user.id
+    prem = await is_premium(uid)
     await message.reply(
-        "📖 **Bot Guide**\n\n"
-        "1️⃣ Channel join karo\n"
-        "2️⃣ Shortlink verify karo\n"
-        "3️⃣ Group mein movie naam type karo\n"
-        "4️⃣ Button dabao → PM mein file!\n\n"
-        "💎 Premium = Skip all verification!\n"
-        "🔗 10 Refer = 15 din FREE Premium!\n\n"
-        "/premium | /mystats | /referlink | /request\n\n"
-        "🆘 Koi problem hai? Support pe aao!",
+        f"❓ **Help — {message.from_user.first_name}**\n\n"
+        f"**Kaise use karo:**\n"
+        f"1️⃣ Channel join karo (mandatory)\n"
+        f"2️⃣ Group mein movie naam type karo\n"
+        f"3️⃣ File ka button dabao\n"
+        f"4️⃣ {'Seedha PM mein file! 🎉' if prem else 'Ek ad dekho → file PM mein! 📥'}\n\n"
+        f"💎 **Premium** = No ad, unlimited, HD stream\n"
+        f"🎁 **10 Refer** = 15 din FREE Premium\n\n"
+        f"/premium | /mystats | /referlink",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK)]
+            [InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK)],
+            [InlineKeyboardButton("💎 Premium Lo", callback_data="show_premium")]
         ])
     )
 
@@ -3516,10 +3526,6 @@ async def list_shortlinks_cmd(client, message: Message):
 
 # ═══════════════════════════════════════
 #  BLOGGER POSTS MANAGEMENT
-#  /addblog  /removeblog  /blogposts
-#  © asbhaibsr | github.com/asbhaibsr
-# ═══════════════════════════════════════
-
 @bot.on_message(filters.command("addblog") & filters.user(ADMINS))
 async def addblog_cmd(client, message: Message):
     """Blogger system hata diya gaya hai"""
@@ -3862,16 +3868,17 @@ async def admin_panel(client, message: Message):
     total_groups = await groups_col.count_documents({})
     prem_users = await premium_col.count_documents({})
     pending_pay = await payments_col.count_documents({"status": "pending"})
+    from database import ad_count as _adc
+    _total_ads, _active_ads = await _adc()
     await message.reply(
-        f"👑 **Admin Panel**\n{'─'*25}\n"
-        f"👤 Users: {total_users} | Groups: {total_groups}\n"
-        f"💎 Premium: {prem_users} | 💰 Pending: {pending_pay}\n"
-        f"{'─'*25}\n"
-        f"🔧 Maintenance: {'ON' if s.get('maintenance') else 'OFF'}\n"
-        f"🔗 Shortlink: {'ON' if s.get('shortlink_enabled') else 'OFF'}\n"
-        f"📢 Force sub: {'ON' if s.get('force_sub') else 'OFF'}\n"
-        f"🛡 Link Protect: {'ON' if s.get('link_protection', True) else 'OFF'}\n\n"
-        f"/stats | /settings | /broadcast | /requests"
+        f"👑 **Admin Panel**\n"
+        f"👤 Users: {total_users} | 🏘 Groups: {total_groups}\n"
+        f"💎 Premium: {prem_users} | 💰 Pending: {pending_pay}\n\n"
+        f"🔧 Maintenance: {'ON🔴' if s.get('maintenance') else 'OFF✅'}\n"
+        f"📢 Force Sub: {'ON✅' if s.get('force_sub') else 'OFF❌'}\n"
+        f"📊 Ad System: {'ON✅' if AD_SYSTEM_ENABLED else 'OFF❌'} ({_active_ads} active ads)\n"
+        f"🛡 Link Protect: {'ON✅' if s.get('link_protection', True) else 'OFF❌'}\n\n"
+        f"/stats | /settings | /fsub | /adstatus | /broadcast"
     )
 
 # ═══════════════════════════════════════
