@@ -466,16 +466,20 @@ async def _vj_check_single(ch_id, user_id):
         logger.warning(f"_vj_check_single jr_get_user error: {e}")
 
     # Layer 3: Telegram API join requests iterate
+    # ✅ FIX: get_chat_join_requests (messages.GetChatInviteImporters) bots use nahi kar sakte
+    # Userbot use karo agar available hai, warna silently skip karo
     try:
-        count = 0
-        async for req in bot.get_chat_join_requests(ch_id):
-            if req.from_user.id == user_id:
-                # Record kar lo future ke liye
-                await jr_add_user(user_id, ch_id)
-                return True
-            count += 1
-            if count >= 150:
-                break
+        _client_to_use = userbot if userbot else None
+        if _client_to_use:
+            count = 0
+            async for req in _client_to_use.get_chat_join_requests(ch_id):
+                if req.from_user.id == user_id:
+                    # Record kar lo future ke liye
+                    await jr_add_user(user_id, ch_id)
+                    return True
+                count += 1
+                if count >= 150:
+                    break
     except Exception as e:
         logger.warning(f"_vj_check_single join_requests error {ch_id}/{user_id}: {e}")
 
