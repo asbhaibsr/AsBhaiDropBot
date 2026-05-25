@@ -483,6 +483,8 @@ async def api_user_status(request):
             "expiry":           expiry_str,
             "refer_count":      user_doc.get("refer_count", 0) if user_doc else 0,
             "pending_payments": pending,
+            "name":             user_doc.get("name", "") if user_doc else "",
+            "username":         user_doc.get("username", "") if user_doc else "",
         })
     except Exception as e:
         logger.error(f"api_user_status: {e}")
