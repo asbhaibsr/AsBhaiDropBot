@@ -1274,7 +1274,12 @@ if(_urlUID && _urlUID!='null' && !isNaN(parseInt(_urlUID))){
   UID=TGU.id;
 }
 // FNAME — TGU se pehle (zyada accurate), phir URL param
-var FNAME=(TGU&&TGU.first_name)||(_urlFname&&_urlFname!='null'?decodeURIComponent(_urlFname):null)||'User';
+var _rawFname = (_urlFname && _urlFname!='null') ? _urlFname : null;
+var _decodedFname = null;
+if (_rawFname) {
+  try { _decodedFname = decodeURIComponent(_rawFname); } catch(e) { _decodedFname = _rawFname; }
+}
+var FNAME=(TGU&&TGU.first_name)||_decodedFname||'User';
 var LNAME=(TGU&&TGU.last_name)||'';
 var UNAME=(TGU&&TGU.username)||null;
 var BASE=window.location.origin.replace('http://','https://');
@@ -1303,6 +1308,13 @@ function init(){
       trialUsed=d.trial_used||false;
       var isTrial=d.is_trial||false;
       var expiry=d.expiry||null;
+      // API se naam update karo agar mila
+      if(d.name && d.name !== 'User'){
+        setEl('uc-nm', d.name);
+        FNAME = d.name;
+      }
+      if(d.username){ setEl('uc-un', '@'+d.username); }
+      setEl('uc-id', 'ID: '+UID);
       if(isPrem&&!isTrial){setNavBadge('prem');setUserCard('prem',expiry);}
       else if(isTrial){setNavBadge('trial');setUserCard('trial',null);}
       else{setNavBadge('free');setUserCard('free',null);}
@@ -2268,8 +2280,8 @@ function adpRenderAds() {
         (ad.script?'<span style="font-size:10px;color:#22d3ee;background:rgba(34,211,238,.1);padding:2px 7px;border-radius:6px">📜 Script</span>':'')+
       '</div>'+
       '<div style="display:flex;gap:8px">'+
-        '<button onclick="adpToggle(''+ad.id+'')" style="flex:1;padding:9px 6px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+(isActive?'⏸ Pause':'▶️ Activate')+'</button>'+
-        '<button onclick="adpDelete(''+ad.id+'',this)" style="flex:1;padding:9px 6px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer">🗑 Delete</button>'+
+        '<button onclick="adpToggle(\'' + ad.id + '\')" style="flex:1;padding:9px 6px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+(isActive?'⏸ Pause':'▶️ Activate')+'</button>'+
+        '<button onclick="adpDelete(\'' + ad.id + '\',this)" style="flex:1;padding:9px 6px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer">🗑 Delete</button>'+
       '</div>';
     list.appendChild(card);
   });
@@ -2372,8 +2384,8 @@ function adpInitFromUrl() {
     if (cont) cont.style.display = 'block';
     if (tab)  tab.style.display  = '';
     go('pg-adpanel');
-    // Slight delay taaki DOM ready ho
-    setTimeout(function(){ adpLoadAds(); }, 300);
+    setTimeout(function(){ adpLoadAds(); }, 500);
+    return;
   }
 }
 
