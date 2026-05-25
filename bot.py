@@ -1294,14 +1294,12 @@ async def refer_link_cmd(client, message: Message):
         "premium","ping","shortlink","setlimit","setresults",
         "mystats","ban","unban","maintenance","request","referlink",
         "fsub","groupsettings","gsettings","gset",
-        "addshortlink","removeshortlink","shortlinks","addblog","removeblog","blogposts","syncsheet","setcommands",
+        "addshortlink","removeshortlink","shortlinks","setcommands",
         "gshortlink","gshortlinkremove","gshortlinks","requests",
         "admin","gstats","linkprotect","notify","warn","resetwarn",
         "addforcechannel","removeforcechannel","resetsettings",
-        "broadcast","addpremium","removepremium","ban","unban",
-        "id","setcommands","syncsheet","blogposts","addblog","removeblog",
-        "gshortlink","gshortlinkremove","gshortlinks","notify",
-        "warn","resetwarn","linkprotect","gstats","requests"
+        "id","myid","admanager","adstatus","broadcast",
+        "addblog","removeblog","blogposts","syncsheet"
     ])
 )
 async def pm_search_handler(client, message: Message):
