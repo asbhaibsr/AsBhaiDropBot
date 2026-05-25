@@ -791,8 +791,10 @@ async def api_ads_create(request):
     timer2      = max(10, min(300, int(data.get("timer2", 30))))
 
     # Expiry date parse
+    # FIX: data.get("expiry_date", "") returns None when key exists but value is None
+    # (data.get("expiry_date") or "") safely handles None value
     expiry_date = None
-    exp_str = data.get("expiry_date", "").strip()
+    exp_str = (data.get("expiry_date") or "").strip()
     if exp_str:
         try:
             from datetime import datetime as _dt
