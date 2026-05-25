@@ -245,14 +245,16 @@ def _miniapp_url(uid, fname="User", extra=""):
     """Build miniapp URL with user data."""
     if not KOYEB_URL: return None
     from urllib.parse import quote as _muq
-    # Plain naam use karo — smallcaps mat karo
     plain = str(fname or "User")[:20]
-    # Sirf ASCII characters rakho
+    # Try ASCII first
     import unicodedata
     try:
-        plain = unicodedata.normalize('NFKD', plain).encode('ascii', 'ignore').decode('ascii').strip() or "User"
+        ascii_name = unicodedata.normalize('NFKD', plain).encode('ascii', 'ignore').decode('ascii').strip()
+        if ascii_name:
+            plain = ascii_name
+        # else keep original (URL encode karega)
     except:
-        plain = "User"
+        pass
     fn = _muq(plain)
     return f"{KOYEB_URL}/?uid={uid}&fname={fn}{extra}"
 
