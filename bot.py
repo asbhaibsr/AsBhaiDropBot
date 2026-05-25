@@ -241,6 +241,14 @@ async def cleanup():
     if deleted.deleted_count or expired_cache or expired_cd:
         logger.info(f"Cleanup: {deleted.deleted_count} tokens, {len(expired_cache)} sl_cache, {len(expired_cd)} cooldown")
 
+def _miniapp_url(uid, fname="User", extra=""):
+    """Build miniapp URL with user data."""
+    if not KOYEB_URL: return None
+    from urllib.parse import quote as _muq
+    fn = _muq(str(fname or "User")[:20])
+    return f"{KOYEB_URL}/?uid={uid}&fname={fn}{extra}"
+
+
 # ═══════════════════════════════════════
 #  HELPER: to_smallcaps
 # ═══════════════════════════════════════
@@ -807,7 +815,7 @@ async def start_handler(client, message: Message):
 
     # ── Normal /start ──
     me = await client.get_me()
-    miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
+    miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
 
     buttons = [
         [
@@ -1314,7 +1322,7 @@ async def pm_search_handler(client, message: Message):
 
     prem = await is_premium(uid)
     if not prem and uid not in ADMINS:
-        miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
+        miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
         btns = []
         if miniapp_url:
             btns.append([InlineKeyboardButton("💎 Premium Lo — PM Search Enable", web_app=WebAppInfo(url=miniapp_url))])
@@ -2393,7 +2401,7 @@ async def cb_handler(client, query: CallbackQuery):
         return
 
     if data == "buy_premium":
-        miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
+        miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
         await query.answer()
         buttons = []
         if miniapp_url:
@@ -2476,7 +2484,7 @@ async def cb_handler(client, query: CallbackQuery):
 
     if data == "back_main":
         me = await client.get_me()
-        miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
+        miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
         buttons = [
             [
                 InlineKeyboardButton("📢 Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"),
@@ -3025,7 +3033,7 @@ async def premium_info(client, message: Message):
     prem = await is_premium(uid)
     exp = await get_premium_expiry(uid)
     exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else None
-    miniapp_url = f"{KOYEB_URL}/?uid={uid}" if KOYEB_URL else None
+    miniapp_url = _miniapp_url(uid, getattr(message.from_user, "first_name", "User") if hasattr(message, "from_user") and message.from_user else "User")
     if prem:
         text = (f"💎 **Premium Active!**\n"
                 f"Expiry: **{exp_str}**\n\n"
