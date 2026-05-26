@@ -28,7 +28,8 @@ from config import (
 from database import (
     premium_col, free_trial_col, users_col, payments_col, help_msgs_col,
     is_premium, send_log, add_premium,
-    ads_col, ad_create, ad_list, ad_active_list, ad_get_next, ad_delete, ad_toggle, ad_count
+    ads_col, ad_create, ad_list, ad_active_list, ad_get_next, ad_delete, ad_toggle, ad_count, ad_update,
+    mark_ad_verified, is_ad_verified
 )
 
 bot     = None
@@ -681,7 +682,8 @@ async def api_ad_verify(request):
             return aio_web.json_response({"ok": False, "error": "Token invalid ya expire ho gaya! Bot pe /start karo."})
 
         await tokens_col.delete_one({"token": token})
-        await mark_verified(uid)
+        await mark_verified(uid)       # shortlink system ke liye (date-based)
+        await mark_ad_verified(uid)    # ✅ FIX: Ad system ke liye (3-ghante interval)
 
         # Log
         try:
@@ -757,13 +759,16 @@ async def api_ads_list(request):
             "button_name": d.get("button_name", "Visit"),
             "ad_url": d.get("ad_url", ""),
             "image_url": d.get("image_url", ""),
-            "script": d.get("script", ""),
             "timer1": d.get("timer1", 60),
             "timer2": d.get("timer2", 30),
             "expiry_date": exp.isoformat() if hasattr(exp, "isoformat") else str(exp) if exp else None,
             "active": d.get("active", True),
             "impressions": d.get("impressions", 0),
             "created_at": d.get("created_at", now()).strftime("%d %b %Y %H:%M") if hasattr(d.get("created_at"), "strftime") else "",
+            # ✅ Shortlink fields
+            "shortlink_enabled": d.get("shortlink_enabled", False),
+            "shortlink_url": d.get("shortlink_url", ""),
+            "shortlink_api": d.get("shortlink_api", ""),
         })
     total, active_count = await ad_count()
     return aio_web.json_response({"ok": True, "ads": result, "total": total, "active": active_count})
@@ -778,21 +783,26 @@ async def api_ads_create(request):
     except:
         return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
 
-    title       = data.get("title", "").strip()
-    description = data.get("description", "").strip()
-    button_name = data.get("button_name", "Visit Ad").strip()
+    if not data or not isinstance(data, dict):
+        return aio_web.json_response({"ok": False, "error": "Empty request"}, status=400)
+
+    title       = (data.get("title") or "").strip()
+    description = (data.get("description") or "").strip()
+    button_name = (data.get("button_name") or "Visit Ad").strip()
     if not title or not description or not button_name:
         return aio_web.json_response({"ok": False, "error": "title, description, button_name required"})
 
-    ad_url      = data.get("ad_url", "").strip()
-    image_url   = data.get("image_url", "").strip()
-    script      = data.get("script", "").strip()
-    timer1      = max(10, min(300, int(data.get("timer1", 60))))
-    timer2      = max(10, min(300, int(data.get("timer2", 30))))
+    ad_url      = (data.get("ad_url") or "").strip()
+    image_url   = (data.get("image_url") or "").strip()
+    timer1      = max(10, min(300, int(data.get("timer1") or 60)))
+    timer2      = max(10, min(300, int(data.get("timer2") or 30)))
+
+    # Shortlink fields
+    shortlink_enabled = bool(data.get("shortlink_enabled", False))
+    shortlink_url     = (data.get("shortlink_url") or "").strip()
+    shortlink_api     = (data.get("shortlink_api") or "").strip()
 
     # Expiry date parse
-    # FIX: data.get("expiry_date", "") returns None when key exists but value is None
-    # (data.get("expiry_date") or "") safely handles None value
     expiry_date = None
     exp_str = (data.get("expiry_date") or "").strip()
     if exp_str:
@@ -802,9 +812,59 @@ async def api_ads_create(request):
         except:
             pass
 
-    doc = await ad_create(title, description, button_name, ad_url, image_url, script, timer1, timer2, expiry_date)
-    await send_log(f"📢 #NewAd Created\n\n**{title}**\nButton: {button_name}\nTimer: {timer1}s / {timer2}s")
+    doc = await ad_create(title, description, button_name, ad_url, image_url, "",
+                          timer1, timer2, expiry_date,
+                          shortlink_enabled=shortlink_enabled,
+                          shortlink_url=shortlink_url,
+                          shortlink_api=shortlink_api)
+    sl_txt = " | 🔗 Shortlink ON" if shortlink_enabled else ""
+    await send_log(f"📢 #NewAd Created\n\n**{title}**\nButton: {button_name}\nTimer: {timer1}s / {timer2}s{sl_txt}")
     return aio_web.json_response({"ok": True, "id": str(doc["_id"]), "message": "✅ Ad create ho gaya!"})
+
+@routes.post("/api/ads/{ad_id}/update")
+async def api_ads_update(request):
+    """Ad update karo — all fields editable (admin only)."""
+    if not _is_admin(request):
+        return aio_web.json_response({"ok": False, "error": "Unauthorized"}, status=403)
+    ad_id = request.match_info.get("ad_id", "")
+    try:
+        data = await request.json()
+    except:
+        return aio_web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    if not data or not isinstance(data, dict):
+        return aio_web.json_response({"ok": False, "error": "Empty request"}, status=400)
+
+    update_data = {}
+    for field in ["title", "description", "button_name", "image_url", "ad_url"]:
+        v = data.get(field)
+        if v is not None:
+            update_data[field] = (v or "").strip()
+    for field in ["timer1", "timer2"]:
+        v = data.get(field)
+        if v is not None:
+            update_data[field] = max(10, min(300, int(v or 60)))
+    if "expiry_date" in data:
+        exp_str = (data.get("expiry_date") or "").strip()
+        if exp_str:
+            try:
+                from datetime import datetime as _dt
+                update_data["expiry_date"] = _dt.fromisoformat(exp_str)
+            except:
+                pass
+        else:
+            update_data["expiry_date"] = None
+    if "shortlink_enabled" in data:
+        update_data["shortlink_enabled"] = bool(data.get("shortlink_enabled", False))
+    if "shortlink_url" in data:
+        update_data["shortlink_url"] = (data.get("shortlink_url") or "").strip()
+    if "shortlink_api" in data:
+        update_data["shortlink_api"] = (data.get("shortlink_api") or "").strip()
+
+    ok = await ad_update(ad_id, update_data)
+    if ok:
+        return aio_web.json_response({"ok": True, "message": "✅ Ad updated!"})
+    return aio_web.json_response({"ok": False, "error": "Ad nahi mila ya kuch change nahi hua"})
 
 @routes.delete("/api/ads/{ad_id}")
 async def api_ads_delete(request):
