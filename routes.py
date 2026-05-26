@@ -656,6 +656,24 @@ async def api_help(request):
 # ═══════════════════════════════════════
 #  AD VERIFY API
 # ═══════════════════════════════════════
+@routes.get("/api/ad_verify")
+async def api_ad_verify_get(request):
+    """
+    GET handler — shortlink services (ShortXLinks, etc.) crawl target URL before allowing creation.
+    Returns a simple HTML page so crawler validates successfully.
+    """
+    return aio_web.Response(
+        text=(
+            "<!DOCTYPE html><html><head><title>Verified</title>"
+            "<meta name='robots' content='noindex'></head><body>"
+            "<h2>✅ Verification Complete!</h2>"
+            "<p>Come back to Telegram to get your file.</p>"
+            "</body></html>"
+        ),
+        content_type="text/html",
+        status=200
+    )
+
 @routes.post("/api/ad_verify")
 async def api_ad_verify(request):
     try:
@@ -769,6 +787,7 @@ async def api_ads_list(request):
             "shortlink_enabled": d.get("shortlink_enabled", False),
             "shortlink_url": d.get("shortlink_url", ""),
             "shortlink_api": d.get("shortlink_api", ""),
+            "how_to_verify_url": d.get("how_to_verify_url", ""),
         })
     total, active_count = await ad_count()
     return aio_web.json_response({"ok": True, "ads": result, "total": total, "active": active_count})
@@ -816,7 +835,8 @@ async def api_ads_create(request):
                           timer1, timer2, expiry_date,
                           shortlink_enabled=shortlink_enabled,
                           shortlink_url=shortlink_url,
-                          shortlink_api=shortlink_api)
+                          shortlink_api=shortlink_api,
+                          how_to_verify_url=(data.get("how_to_verify_url") or "").strip())
     sl_txt = " | 🔗 Shortlink ON" if shortlink_enabled else ""
     await send_log(f"📢 #NewAd Created\n\n**{title}**\nButton: {button_name}\nTimer: {timer1}s / {timer2}s{sl_txt}")
     return aio_web.json_response({"ok": True, "id": str(doc["_id"]), "message": "✅ Ad create ho gaya!"})
@@ -860,6 +880,8 @@ async def api_ads_update(request):
         update_data["shortlink_url"] = (data.get("shortlink_url") or "").strip()
     if "shortlink_api" in data:
         update_data["shortlink_api"] = (data.get("shortlink_api") or "").strip()
+    if "how_to_verify_url" in data:
+        update_data["how_to_verify_url"] = (data.get("how_to_verify_url") or "").strip()
 
     ok = await ad_update(ad_id, update_data)
     if ok:
