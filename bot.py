@@ -161,6 +161,7 @@ from database import (
     ensure_search_cache_ttl,
     ad_create, ad_list, ad_active_list, ad_get_next, ad_delete, ad_toggle, ad_count,
     set_clients as db_set_clients,
+    is_ad_verified, mark_ad_verified,
 )
 from routes import (
     aio_app, routes, run_aiohttp_server,
@@ -188,8 +189,31 @@ userbot = Client(
 
 scheduler = AsyncIOScheduler(timezone=IST)
 
-# ── Broadcast lock: ek time pe sirf ek broadcast chale ──
+# ── Broadcast lock ──
 _broadcast_lock = asyncio.Lock()
+
+# ── Shortlink generator for ad system ──
+async def _generate_ad_shortlink(sl_domain: str, sl_api: str, target_url: str) -> str:
+    """
+    Shortlink generate karo ad ke liye.
+    Returns shortlink URL or "" if failed.
+    Format: https://{domain}/api?api={key}&url={target}&format=text
+    """
+    if not sl_domain or not sl_api or not target_url:
+        return ""
+    try:
+        domain = sl_domain.strip().rstrip("/")
+        if not domain.startswith("http"):
+            domain = f"https://{domain}"
+        api_url = f"{domain}/api?api={sl_api}&url={target_url}&format=text"
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(api_url, timeout=aiohttp.ClientTimeout(total=8)) as r:
+                text = (await r.text()).strip()
+                if text.startswith("http"):
+                    return text
+    except Exception as e:
+        logger.warning(f"Shortlink gen failed [{sl_domain}]: {e}")
+    return ""
 
 # In-memory result cache
 _result_cache = {}  # {uid_qkey: [found_msgs]}
@@ -544,8 +568,8 @@ async def start_handler(client, message: Message):
         if not prem:
             # ── AD SYSTEM ──
             if AD_SYSTEM_ENABLED and KOYEB_URL:
-                all_done, _, _ = await get_user_verify_state(uid)
-                if not all_done:
+                ad_verified = await is_ad_verified(uid)  # ✅ FIX: 3-ghante interval
+                if not ad_verified:
                     ad = await ad_get_next(uid)
                     if not ad:
                         # Koi active ad nahi — admin ko remind karo, user ko seedha file do
@@ -555,6 +579,11 @@ async def start_handler(client, message: Message):
                     if ad:
                         from urllib.parse import quote as _qp
                         token = await make_token(uid, "av")
+                        # ✅ Generate shortlink if ad has shortlink enabled
+                        _sl_url = ""
+                        if ad.get("shortlink_enabled") and ad.get("shortlink_url") and ad.get("shortlink_api"):
+                            _verify_url = f"{KOYEB_URL}/api/ad_verify"
+                            _sl_url = await _generate_ad_shortlink(ad["shortlink_url"], ad["shortlink_api"], _verify_url)
                         ad_page_url = (
                             f"{KOYEB_URL}/?uid={uid}"
                             f"&avt={token}"
@@ -563,7 +592,7 @@ async def start_handler(client, message: Message):
                             f"&add={_qp(ad.get('description',''), safe='')}"
                             f"&adbn={_qp(ad.get('button_name','Visit'), safe='')}"
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
-                            f"&adscript={_qp(ad.get('script',''), safe='')}"
+                            f"&adsl={_qp(_sl_url, safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await users_col.update_one(
@@ -711,8 +740,8 @@ async def start_handler(client, message: Message):
         # STEP 1: Ad Verify ya Shortlink Verify
         if not prem:
             if AD_SYSTEM_ENABLED and KOYEB_URL:
-                all_done, _, _ = await get_user_verify_state(uid)
-                if not all_done:
+                ad_verified = await is_ad_verified(uid)  # ✅ FIX: 3-ghante interval
+                if not ad_verified:
                     ad = await ad_get_next(uid)
                     if not ad:
                         # Koi active ad nahi — admin ko remind karo, user ko seedha file do
@@ -722,6 +751,11 @@ async def start_handler(client, message: Message):
                     if ad:
                         from urllib.parse import quote as _qp
                         token = await make_token(uid, "av")
+                        # ✅ Generate shortlink if ad has shortlink enabled
+                        _sl_url = ""
+                        if ad.get("shortlink_enabled") and ad.get("shortlink_url") and ad.get("shortlink_api"):
+                            _verify_url = f"{KOYEB_URL}/api/ad_verify"
+                            _sl_url = await _generate_ad_shortlink(ad["shortlink_url"], ad["shortlink_api"], _verify_url)
                         ad_page_url = (
                             f"{KOYEB_URL}/?uid={uid}"
                             f"&avt={token}"
@@ -730,7 +764,7 @@ async def start_handler(client, message: Message):
                             f"&add={_qp(ad.get('description',''), safe='')}"
                             f"&adbn={_qp(ad.get('button_name','Visit'), safe='')}"
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
-                            f"&adscript={_qp(ad.get('script',''), safe='')}"
+                            f"&adsl={_qp(_sl_url, safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await users_col.update_one(
@@ -1563,8 +1597,8 @@ async def cb_handler(client, query: CallbackQuery):
         if not prem:
             # ── AD SYSTEM (shortlink off hone pr) ──
             if AD_SYSTEM_ENABLED and KOYEB_URL:
-                all_done, _, _ = await get_user_verify_state(uid)
-                if not all_done:
+                ad_verified = await is_ad_verified(uid)  # ✅ FIX: 3-ghante interval
+                if not ad_verified:
                     ad = await ad_get_next(uid)
                     if not ad:
                         logger.warning(f"AD_SYSTEM ON but no active ad uid={uid}")
@@ -1572,6 +1606,10 @@ async def cb_handler(client, query: CallbackQuery):
                     if ad:
                         token = await make_token(uid, "av")
                         from urllib.parse import quote as _qp
+                        _sl_url = ""
+                        if ad.get("shortlink_enabled") and ad.get("shortlink_url") and ad.get("shortlink_api"):
+                            _verify_url = f"{KOYEB_URL}/api/ad_verify"
+                            _sl_url = await _generate_ad_shortlink(ad["shortlink_url"], ad["shortlink_api"], _verify_url)
                         ad_page_url = (
                             f"{KOYEB_URL}/?uid={uid}"
                             f"&avt={token}"
@@ -1580,7 +1618,7 @@ async def cb_handler(client, query: CallbackQuery):
                             f"&add={_qp(ad.get('description',''), safe='')}"
                             f"&adbn={_qp(ad.get('button_name','Visit'), safe='')}"
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
-                            f"&adscript={_qp(ad.get('script',''), safe='')}"
+                            f"&adsl={_qp(_sl_url, safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await users_col.update_one(
@@ -2148,8 +2186,8 @@ async def cb_handler(client, query: CallbackQuery):
         if not prem:
             # ── AD SYSTEM ──
             if AD_SYSTEM_ENABLED and KOYEB_URL:
-                all_done_sa, _, _ = await get_user_verify_state(uid)
-                if not all_done_sa:
+                ad_verified_sa = await is_ad_verified(uid)  # ✅ FIX: 3-ghante interval
+                if not ad_verified_sa:
                     ad = await ad_get_next(uid)
                     if not ad:
                         logger.warning(f"AD_SYSTEM ON but no active ad uid={uid}")
@@ -2157,6 +2195,10 @@ async def cb_handler(client, query: CallbackQuery):
                     if ad:
                         from urllib.parse import quote as _qp
                         token_sa = await make_token(uid, "av")
+                        _sl_url_sa = ""
+                        if ad.get("shortlink_enabled") and ad.get("shortlink_url") and ad.get("shortlink_api"):
+                            _verify_url_sa = f"{KOYEB_URL}/api/ad_verify"
+                            _sl_url_sa = await _generate_ad_shortlink(ad["shortlink_url"], ad["shortlink_api"], _verify_url_sa)
                         ad_page_url_sa = (
                             f"{KOYEB_URL}/?uid={uid}"
                             f"&avt={token_sa}"
@@ -2165,7 +2207,7 @@ async def cb_handler(client, query: CallbackQuery):
                             f"&add={_qp(ad.get('description',''), safe='')}"
                             f"&adbn={_qp(ad.get('button_name','Visit'), safe='')}"
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
-                            f"&adscript={_qp(ad.get('script',''), safe='')}"
+                            f"&adsl={_qp(_sl_url_sa, safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await query.answer()
@@ -3306,10 +3348,14 @@ async def forcesub_cmd(client, message: Message):
                 cid = ch.get('id', '?')
                 ctitle = ch.get('title', 'Channel')
                 cuname = ch.get('username', '')
-                text += f"`{i}.` **{ctitle}**\n"
+                req_only = ch.get('req_only', False)
+                mode_icon = "📨" if req_only else "📢"
+                text += f"`{i}.` {mode_icon} **{ctitle}**\n"
                 text += f"    ID: `{cid}`"
                 if cuname:
                     text += f" | @{cuname}"
+                if req_only:
+                    text += " | `[Request-only]`"
                 text += "\n"
         else:
             text += "⚠️ **Koi channel nahi!** Pehle channel add karo.\n"
@@ -3318,8 +3364,9 @@ async def forcesub_cmd(client, message: Message):
             f"\n**Commands:**\n"
             f"`/fsub on` — Force sub ON karo\n"
             f"`/fsub off` — Force sub OFF karo\n"
-            f"`/fsub add @username` — Channel add karo\n"
-            f"`/fsub add -100xxxxxxx Title` — ID se add karo\n"
+            f"`/fsub add @username` — Channel add karo (join type)\n"
+            f"`/fsub add -100xxx Title` — ID se add karo\n"
+            f"`/fsub add -100xxx Title req` — Request-only channel add karo 📨\n"
             f"`/fsub remove 1` — Number se remove karo\n"
             f"`/fsub remove @username` — Username se remove karo\n"
         )
@@ -3341,10 +3388,16 @@ async def forcesub_cmd(client, message: Message):
     # ADD
     elif action in ["add", "+"]:
         if len(args) < 3:
-            await message.reply("❌ Usage: `/fsub add @username` ya `/fsub add -100xxx Title`")
+            await message.reply("❌ Usage: `/fsub add @username` ya `/fsub add -100xxx Title`\n\n💡 Request-only channel ke liye: `/fsub add -100xxx Title req`")
             return
         ch_input = args[2].strip()
-        custom_title = " ".join(args[3:]) if len(args) > 3 else None
+        # ✅ FIX: req_only support — last arg 'req' hoga to request-only channel
+        remaining_args = args[3:] if len(args) > 3 else []
+        req_only = False
+        if remaining_args and remaining_args[-1].lower() == "req":
+            req_only = True
+            remaining_args = remaining_args[:-1]
+        custom_title = " ".join(remaining_args) if remaining_args else None
         try:
             chat = await client.get_chat(ch_input)
             ch_id = chat.id
@@ -3364,13 +3417,16 @@ async def forcesub_cmd(client, message: Message):
             await message.reply(f"⚠️ **{ch_title}** already list mein hai!")
             return
 
-        channels.append({"id": ch_id, "title": ch_title, "username": ch_username})
+        channels.append({"id": ch_id, "title": ch_title, "username": ch_username, "req_only": req_only})
         await update_setting("fsub_channels", channels)
+        mode_txt = "📨 Request-only (users sirf request bhejenge, join nahi karenge)" if req_only else "📢 Join channel"
         await message.reply(
             f"✅ **{ch_title}** add ho gaya!\n"
             f"ID: `{ch_id}`\n"
+            f"Mode: {mode_txt}\n"
             f"Total: **{len(channels)} channels**\n\n"
-            f"⚠️ _Bot ko us channel ka admin banana zaruri hai!_"
+            f"⚠️ _Bot ko us channel ka admin banana zaruri hai!_\n"
+            f"💡 Mode change karne ke liye remove karke dobara add karo with/without `req`"
         )
         return
 
