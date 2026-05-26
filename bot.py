@@ -582,7 +582,8 @@ async def start_handler(client, message: Message):
                         # ✅ Generate shortlink if ad has shortlink enabled
                         _sl_url = ""
                         if ad.get("shortlink_enabled") and ad.get("shortlink_url") and ad.get("shortlink_api"):
-                            _verify_url = f"{KOYEB_URL}/api/ad_verify"
+                            # ✅ FIX: Shortlink target = ad URL (user lands on ad after shortlink, then comes back)
+                            _verify_url = ad.get("ad_url") or f"{KOYEB_URL}/"
                             _sl_url = await _generate_ad_shortlink(ad["shortlink_url"], ad["shortlink_api"], _verify_url)
                         ad_page_url = (
                             f"{KOYEB_URL}/?uid={uid}"
@@ -593,6 +594,7 @@ async def start_handler(client, message: Message):
                             f"&adbn={_qp(ad.get('button_name','Visit'), safe='')}"
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
                             f"&adsl={_qp(_sl_url, safe='')}"
+                            f"&howto={_qp(ad.get('how_to_verify_url',''), safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await users_col.update_one(
@@ -754,7 +756,8 @@ async def start_handler(client, message: Message):
                         # ✅ Generate shortlink if ad has shortlink enabled
                         _sl_url = ""
                         if ad.get("shortlink_enabled") and ad.get("shortlink_url") and ad.get("shortlink_api"):
-                            _verify_url = f"{KOYEB_URL}/api/ad_verify"
+                            # ✅ FIX: Shortlink target = ad URL (user lands on ad after shortlink, then comes back)
+                            _verify_url = ad.get("ad_url") or f"{KOYEB_URL}/"
                             _sl_url = await _generate_ad_shortlink(ad["shortlink_url"], ad["shortlink_api"], _verify_url)
                         ad_page_url = (
                             f"{KOYEB_URL}/?uid={uid}"
@@ -765,6 +768,7 @@ async def start_handler(client, message: Message):
                             f"&adbn={_qp(ad.get('button_name','Visit'), safe='')}"
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
                             f"&adsl={_qp(_sl_url, safe='')}"
+                            f"&howto={_qp(ad.get('how_to_verify_url',''), safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await users_col.update_one(
@@ -1608,7 +1612,8 @@ async def cb_handler(client, query: CallbackQuery):
                         from urllib.parse import quote as _qp
                         _sl_url = ""
                         if ad.get("shortlink_enabled") and ad.get("shortlink_url") and ad.get("shortlink_api"):
-                            _verify_url = f"{KOYEB_URL}/api/ad_verify"
+                            # ✅ FIX: Shortlink target = ad URL (user lands on ad after shortlink, then comes back)
+                            _verify_url = ad.get("ad_url") or f"{KOYEB_URL}/"
                             _sl_url = await _generate_ad_shortlink(ad["shortlink_url"], ad["shortlink_api"], _verify_url)
                         ad_page_url = (
                             f"{KOYEB_URL}/?uid={uid}"
@@ -1619,6 +1624,7 @@ async def cb_handler(client, query: CallbackQuery):
                             f"&adbn={_qp(ad.get('button_name','Visit'), safe='')}"
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
                             f"&adsl={_qp(_sl_url, safe='')}"
+                            f"&howto={_qp(ad.get('how_to_verify_url',''), safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await users_col.update_one(
@@ -2197,7 +2203,7 @@ async def cb_handler(client, query: CallbackQuery):
                         token_sa = await make_token(uid, "av")
                         _sl_url_sa = ""
                         if ad.get("shortlink_enabled") and ad.get("shortlink_url") and ad.get("shortlink_api"):
-                            _verify_url_sa = f"{KOYEB_URL}/api/ad_verify"
+                            _verify_url_sa = ad.get("ad_url") or f"{KOYEB_URL}/"
                             _sl_url_sa = await _generate_ad_shortlink(ad["shortlink_url"], ad["shortlink_api"], _verify_url_sa)
                         ad_page_url_sa = (
                             f"{KOYEB_URL}/?uid={uid}"
@@ -2208,6 +2214,7 @@ async def cb_handler(client, query: CallbackQuery):
                             f"&adbn={_qp(ad.get('button_name','Visit'), safe='')}"
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
                             f"&adsl={_qp(_sl_url_sa, safe='')}"
+                            f"&howto={_qp(ad.get('how_to_verify_url',''), safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await query.answer()
@@ -3735,6 +3742,12 @@ async def broadcast(client, message: Message):
             await asyncio.sleep(0.05)  # 20 msg/sec max (safe)
         except (UserIsBlocked, InputUserDeactivated, PeerIdInvalid):
             blocked += 1
+            # ✅ FIX: Auto-cleanup — blocked/deactivated users DB se hata do
+            try:
+                await users_col.delete_one({"user_id": dest_id})
+                await groups_col.delete_one({"chat_id": dest_id})
+            except Exception:
+                pass
         except FloodWait as e:
             await asyncio.sleep(min(e.value + 2, 60))
             try:
@@ -3743,12 +3756,26 @@ async def broadcast(client, message: Message):
                 else:
                     await client.send_message(dest_id, text)
                 done += 1
-            except:
+            except (UserIsBlocked, InputUserDeactivated, PeerIdInvalid):
+                blocked += 1
+                try:
+                    await users_col.delete_one({"user_id": dest_id})
+                    await groups_col.delete_one({"chat_id": dest_id})
+                except Exception:
+                    pass
+            except Exception:
                 failed += 1
         except Exception as e:
             # ✅ FIX: RANDOM_ID_DUPLICATE = message already delivered by Telegram
             if "RANDOM_ID_DUPLICATE" in str(e):
                 done += 1  # Count as success — message pehle hi chala gaya
+            elif "PEER_ID_INVALID" in str(e) or "USER_DEACTIVATED" in str(e) or "USER_IS_BLOCKED" in str(e):
+                blocked += 1
+                try:
+                    await users_col.delete_one({"user_id": dest_id})
+                    await groups_col.delete_one({"chat_id": dest_id})
+                except Exception:
+                    pass
             else:
                 failed += 1
 
