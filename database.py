@@ -50,6 +50,7 @@ warn_col          = db["warnings"]       # link warnings
 action_log_col    = db["action_logs"]    # all action logs
 search_cache_col  = db["search_cache"]   # temp search cache (MongoDB TTL auto-deletes)
 ads_col           = db["ads"]            # Ad manager — admin creates ads here
+ad_verify_col     = db["ad_verifies"]    # ✅ Ad verify log — 3 ghante interval
 
 
 # ── db module signature ──
@@ -302,6 +303,34 @@ async def mark_verified(user_id):
     )
 
 # ═══════════════════════════════════════
+#  AD VERIFY — 3 GHANTE INTERVAL
+#  (Shortlink verify se alag — sirf ad system ke liye)
+# ═══════════════════════════════════════
+async def is_ad_verified(user_id: int, hours: int = 3) -> bool:
+    """
+    Check karo user ne last N ghante mein ad verify kiya ya nahi.
+    Default: 3 ghante. Premium users ko skip.
+    """
+    if await is_premium(user_id):
+        return True
+    doc = await ad_verify_col.find_one(
+        {"user_id": user_id},
+        sort=[("verified_at", -1)]
+    )
+    if not doc:
+        return False
+    last_verify = make_aware(doc["verified_at"])
+    time_passed = (now() - last_verify).total_seconds() / 3600
+    return time_passed < hours
+
+async def mark_ad_verified(user_id: int):
+    """Ad verify mark karo — naya timestamp insert karo (3 ghante ke baad phir verify karana padega)."""
+    await ad_verify_col.insert_one({
+        "user_id": user_id,
+        "verified_at": now()
+    })
+
+# ═══════════════════════════════════════
 #  TOKEN
 # ═══════════════════════════════════════
 async def make_token(user_id, token_type="verify"):
@@ -491,33 +520,52 @@ async def build_fsub_keyboard(not_joined, uid):
         ch_id  = ch.get("id")
         uname  = ch.get("username", "")
         title  = ch.get("title", "Channel")
-        btn_text = f"📢 {title} — Join Karo"
+        # ✅ FIX: req_only flag — sirf request bhejo, join mat karwao
+        req_only = ch.get("req_only", False)
         url = None
 
         if ch_id:
             try:
-                ctype, cusername = await _detect_channel_type(ch_id)
-                if ctype == "public" or cusername or uname:
-                    u = cusername or uname
-                    url = f"https://t.me/{u.replace('@', '')}"
-                elif ctype in ("private_req", "private_open"):
+                if req_only:
+                    # Request-only channel — creates_join_request=True invite link
+                    btn_text = f"📨 {title} — Request Bhejo"
                     try:
                         link = await bot.create_chat_invite_link(ch_id, creates_join_request=True)
                         url = link.invite_link
-                        btn_text = f"📢 {title} — Request Bhejo"
                     except Exception as le:
-                        logger.warning(f"invite_link error {ch_id}: {le}")
+                        logger.warning(f"req_only invite_link error {ch_id}: {le}")
                         try:
                             url = await bot.export_chat_invite_link(ch_id)
                         except:
                             url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
                 else:
-                    try:
-                        url = await bot.export_chat_invite_link(ch_id)
-                    except:
-                        url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
+                    ctype, cusername = await _detect_channel_type(ch_id)
+                    if ctype == "public" or cusername or uname:
+                        u = cusername or uname
+                        url = f"https://t.me/{u.replace('@', '')}"
+                        btn_text = f"📢 {title} — Join Karo"
+                    elif ctype in ("private_req", "private_open"):
+                        try:
+                            link = await bot.create_chat_invite_link(ch_id, creates_join_request=True)
+                            url = link.invite_link
+                            btn_text = f"📨 {title} — Request Bhejo"
+                        except Exception as le:
+                            logger.warning(f"invite_link error {ch_id}: {le}")
+                            try:
+                                url = await bot.export_chat_invite_link(ch_id)
+                                btn_text = f"📢 {title} — Join Karo"
+                            except:
+                                url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
+                                btn_text = f"📢 {title} — Join Karo"
+                    else:
+                        btn_text = f"📢 {title} — Join Karo"
+                        try:
+                            url = await bot.export_chat_invite_link(ch_id)
+                        except:
+                            url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
             except Exception as e:
                 logger.warning(f"build_fsub_keyboard error {ch_id}: {e}")
+                btn_text = f"📢 {title} — Join Karo"
                 if uname:
                     url = f"https://t.me/{uname.replace('@', '')}"
                 else:
@@ -526,6 +574,7 @@ async def build_fsub_keyboard(not_joined, uid):
                     except:
                         url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
         else:
+            btn_text = f"📢 {title} — Join Karo"
             url = f"https://t.me/{FORCE_SUB_CHANNEL.replace('@','')}"
 
         if url:
@@ -1284,22 +1333,25 @@ async def blogger_verify_check(client, message, prem=False):
 # ═══════════════════════════════════════
 
 async def ad_create(title, description, button_name, ad_url=None, image_url=None,
-                    script=None, timer1=60, timer2=30, expiry_date=None):
+                    script=None, timer1=60, timer2=30, expiry_date=None,
+                    shortlink_enabled=False, shortlink_url="", shortlink_api=""):
     """Naya ad create karo."""
-    import datetime as _dt
     doc = {
         "title": title,
         "description": description,
         "button_name": button_name,
         "ad_url": ad_url or "",
         "image_url": image_url or "",
-        "script": script or "",
         "timer1": int(timer1),
         "timer2": int(timer2),
-        "expiry_date": expiry_date,   # datetime object ya None
+        "expiry_date": expiry_date,
         "active": True,
         "created_at": now(),
-        "impressions": 0,  # kitni baar show hua
+        "impressions": 0,
+        # ✅ Shortlink fields
+        "shortlink_enabled": bool(shortlink_enabled),
+        "shortlink_url": shortlink_url or "",
+        "shortlink_api": shortlink_api or "",
     }
     result = await ads_col.insert_one(doc)
     doc["_id"] = result.inserted_id
@@ -1340,6 +1392,20 @@ async def ad_delete(ad_id):
     """Ad delete karo by ObjectId string."""
     result = await ads_col.delete_one({"_id": ObjectId(ad_id)})
     return result.deleted_count > 0
+
+async def ad_update(ad_id: str, data: dict) -> bool:
+    """Ad fields update karo — shortlink + basic fields."""
+    allowed = ["title", "description", "button_name", "image_url", "ad_url",
+               "timer1", "timer2", "expiry_date",
+               "shortlink_enabled", "shortlink_url", "shortlink_api"]
+    update_data = {k: v for k, v in data.items() if k in allowed}
+    if not update_data:
+        return False
+    r = await ads_col.update_one(
+        {"_id": ObjectId(ad_id)},
+        {"$set": update_data}
+    )
+    return r.modified_count > 0
 
 async def ad_toggle(ad_id):
     """Ad active/inactive toggle karo."""
