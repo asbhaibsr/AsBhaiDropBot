@@ -1334,7 +1334,8 @@ async def blogger_verify_check(client, message, prem=False):
 
 async def ad_create(title, description, button_name, ad_url=None, image_url=None,
                     script=None, timer1=60, timer2=30, expiry_date=None,
-                    shortlink_enabled=False, shortlink_url="", shortlink_api=""):
+                    shortlink_enabled=False, shortlink_url="", shortlink_api="",
+                    how_to_verify_url=""):
     """Naya ad create karo."""
     doc = {
         "title": title,
@@ -1348,10 +1349,10 @@ async def ad_create(title, description, button_name, ad_url=None, image_url=None
         "active": True,
         "created_at": now(),
         "impressions": 0,
-        # ✅ Shortlink fields
         "shortlink_enabled": bool(shortlink_enabled),
         "shortlink_url": shortlink_url or "",
         "shortlink_api": shortlink_api or "",
+        "how_to_verify_url": how_to_verify_url or "",  # Admin-set help link for users
     }
     result = await ads_col.insert_one(doc)
     doc["_id"] = result.inserted_id
