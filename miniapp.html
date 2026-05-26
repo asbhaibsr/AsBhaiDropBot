@@ -862,13 +862,13 @@ body.rotated-mode-active{overflow:hidden !important;}
         <div style="width:8px;height:8px;border-radius:50%;background:var(--acc);animation:pulse 1.5s infinite;flex-shrink:0"></div>
         <span style="font-size:10px;font-weight:700;color:var(--acc3);text-transform:uppercase;letter-spacing:1px">Sponsored</span>
       </div>
-      <div id="adv-title" style="font-size:15px;font-weight:800;color:var(--t);margin-bottom:6px">Loading...</div>
-      <div id="adv-desc" style="font-size:12px;color:var(--t2);line-height:1.7;min-height:30px;margin-bottom:10px"></div>
+      <div id="adv-title" style="font-size:15px;font-weight:800;color:#f1f5f9;margin-bottom:6px">Loading...</div>
+      <div id="adv-desc" style="font-size:12px;color:#cbd5e1;line-height:1.7;min-height:30px;margin-bottom:10px"></div>
 
       <!-- Instruction text (updated by advInit) -->
-      <div id="adv-instruction" style="font-size:11px;color:var(--t2);background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.15);border-radius:8px;padding:9px 11px;margin-bottom:12px;line-height:1.7">
+      <div id="adv-instruction" style="font-size:11px;color:#e2e8f0;background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);border-radius:8px;padding:9px 11px;margin-bottom:12px;line-height:1.7">
         🔒 <b>Click the button below → Explore the sponsored page → Come back here → Verify to get your file.</b><br>
-        <span style="font-size:10px;color:var(--t3)">Browse the site, watch content, or interact — the more you engage, the better!</span>
+        <span style="font-size:10px;color:#94a3b8">Browse the site, watch content, or interact — the more you engage, the better!</span>
       </div>
 
       <!-- Visit Button -->
@@ -901,8 +901,8 @@ body.rotated-mode-active{overflow:hidden !important;}
     </div>
 
     <!-- Red notice -->
-    <div id="adv-notice" style="margin:8px 0;padding:10px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:10px;text-align:center">
-      <span id="adv-notice-txt" style="font-size:12px;color:#f87171;font-weight:600;animation:blink 1.2s infinite;display:inline-block">⚠️ Please explore the ad to unlock your file</span>
+    <div id="adv-notice" style="margin:8px 0;padding:10px 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);border-radius:10px;text-align:center">
+      <span id="adv-notice-txt" style="font-size:12px;color:#fca5a5;font-weight:700;animation:blink 1.2s infinite;display:inline-block">⚠️ Please explore the ad to unlock your file</span>
     </div>
 
     <!-- Hidden progress -->
@@ -929,15 +929,15 @@ body.rotated-mode-active{overflow:hidden !important;}
     </button>
 
     <!-- Info + How to verify -->
-    <div style="margin-top:14px;padding:12px 14px;background:var(--s1);border-radius:10px;border:1px solid var(--bd)">
-      <div style="font-size:10px;color:var(--t3);line-height:1.9;text-align:center">
+    <div style="margin-top:14px;padding:12px 14px;background:rgba(30,41,59,.8);border-radius:10px;border:1px solid rgba(100,116,139,.3)">
+      <div style="font-size:10px;color:#94a3b8;line-height:1.9;text-align:center">
         🔓 Visit the ad → Explore it → Verify → File is yours, free!<br>
-        💎 <span style="color:var(--acc3)">Premium users</span> skip this step entirely
+        💎 <span style="color:#a78bfa">Premium users</span> skip this step entirely
       </div>
-      <a href="https://astoolswala.online" target="_blank"
-        style="display:block;margin-top:10px;padding:9px;background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.2);border-radius:8px;text-align:center;color:var(--acc3);font-size:11px;font-weight:700;text-decoration:none">
+      <button id="adv-howto-btn" onclick="advOpenHowTo()"
+        style="display:block;width:100%;margin-top:10px;padding:9px;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.35);border-radius:8px;text-align:center;color:#a5b4fc;font-size:11px;font-weight:700;cursor:pointer">
         ❓ How to Verify Ad — Click Here
-      </a>
+      </button>
     </div>
 
     <!-- Pricing section (visible to all users) -->
@@ -1035,7 +1035,17 @@ body.rotated-mode-active{overflow:hidden !important;}
 
       <!-- Image URL (optional) -->
       <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">🖼 Image URL <span style="color:var(--t3)">(Optional)</span></label>
-      <input id="adm-imgurl" placeholder="https://example.com/image.jpg" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;margin-bottom:12px;outline:none;box-sizing:border-box">
+      <input id="adm-imgurl" placeholder="https://i.ibb.co/xxx/image.jpg" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;margin-bottom:4px;outline:none;box-sizing:border-box" oninput="admPreviewImg(this.value)">
+      <div style="font-size:9px;color:#f59e0b;margin-bottom:4px">⚠️ <b>Direct image URL</b> chahiye! ImgBB pe: Upload → <b>"Direct Link"</b> copy karo (i.ibb.co/... format). Normal ibb.co/xxx link kaam nahi karta.</div>
+      <div id="adm-img-preview" style="display:none;margin-bottom:6px;border-radius:8px;overflow:hidden;max-height:90px">
+        <img id="adm-img-preview-el" src="" style="width:100%;max-height:90px;object-fit:cover;border-radius:8px" onerror="document.getElementById('adm-img-preview').style.display='none';document.getElementById('adm-img-err').style.display='block'">
+      </div>
+      <div id="adm-img-err" style="display:none;font-size:10px;color:#f87171;margin-bottom:6px;padding:6px 8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px">❌ Image load nahi hui — Direct image link paste karo (.jpg/.png/.gif ending)</div>
+
+      <!-- How to Verify URL -->
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">❓ How to Verify — Help Link</label>
+      <input id="adm-howto" placeholder="https://youtube.com/watch?v=... (tutorial video link)" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;margin-bottom:4px;outline:none;box-sizing:border-box">
+      <div style="font-size:9px;color:var(--t3);margin-bottom:12px">💡 Jab user "How to Verify" dabayega tab yeh link khulega. Video tutorial ya guide link dalo. Blank = default site.</div>
 
       <!-- Ad URL -->
       <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">🔗 Ad URL *</label>
@@ -1486,8 +1496,8 @@ function go(id){
 /* ══ AD VERIFY SYSTEM ══ */
 var _advState = {
   token:null, adUrl:null, adTitle:null, adDesc:null, adBtn:null,
-  adImg:null, adShortlink:null, timer1:60, timer2:30,
-  step:0, timerInterval:null
+  adImg:null, adShortlink:null, howToUrl:'https://astoolswala.online',
+  timer1:60, timer2:30, step:0, timerInterval:null
 };
 
 function advInit() {
@@ -1499,6 +1509,7 @@ function advInit() {
   var adBtn   = p.get('adbn');
   var adImg   = p.get('adimg');
   var adSl    = p.get('adsl');   // ✅ Shortlink URL
+  var howto   = p.get('howto');  // ✅ How to verify URL (admin-set)
   var t1      = parseInt(p.get('t1')||'60');
   var t2      = parseInt(p.get('t2')||'30');
   var page    = p.get('page');
@@ -1522,8 +1533,16 @@ function advInit() {
   _advState.adDesc      = adDesc   ? decodeURIComponent(adDesc)   : 'Explore this sponsor and get your file for free!';
   _advState.adBtn       = adBtn    ? decodeURIComponent(adBtn)    : 'Visit Now';
   // ✅ FIX: adImg — URLSearchParams already decodes once, don't double-decode
-  _advState.adImg       = adImg    ? adImg : '';
+  // Also auto-fix ibb.co gallery URL → i.ibb.co direct URL where possible
+  var rawImg = adImg || '';
+  if (rawImg && rawImg.match(/^https?:\/\/ibb\.co\//)) {
+    // ibb.co/XXXXX is a gallery page, NOT a direct image
+    // Try converting to i.ibb.co format (may work for some)
+    rawImg = rawImg.replace('://ibb.co/', '://i.ibb.co/') + '/img.jpg';
+  }
+  _advState.adImg = rawImg;
   _advState.adShortlink = adSl     ? decodeURIComponent(adSl)     : null;
+  _advState.howToUrl    = howto    ? decodeURIComponent(howto)    : 'https://astoolswala.online';
   _advState.timer1      = Math.max(10, t1);
   _advState.timer2      = Math.max(10, t2);
 
@@ -1593,6 +1612,37 @@ function advLinkClicked(e) {
       });
     }
   }, 2000);
+}
+
+/* Image preview in admin form */
+function admPreviewImg(url) {
+  var prev = document.getElementById('adm-img-preview');
+  var el = document.getElementById('adm-img-preview-el');
+  var err = document.getElementById('adm-img-err');
+  if (!url || !url.trim()) {
+    if (prev) prev.style.display = 'none';
+    if (err) err.style.display = 'none';
+    return;
+  }
+  if (err) err.style.display = 'none';
+  if (el) {
+    el.src = url.trim();
+    el.onerror = function(){
+      if (prev) prev.style.display = 'none';
+      if (err) err.style.display = 'block';
+    };
+    el.onload = function(){
+      if (prev) prev.style.display = 'block';
+      if (err) err.style.display = 'none';
+    };
+  }
+}
+
+/* How to verify — admin-set URL */
+function advOpenHowTo() {
+  var url = _advState.howToUrl || 'https://astoolswala.online';
+  if (tg) { try { tg.openLink(url); return; } catch(e){} }
+  window.open(url, '_blank');
 }
 
 /* Skip to shortlink directly */
@@ -1950,7 +2000,8 @@ function admCreateAd() {
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({title:title,description:desc,button_name:btnNm,image_url:imgUrl,
       ad_url:adUrl,timer1:t1,timer2:t2,expiry_date:expiry||null,
-      shortlink_enabled:slEnabled,shortlink_url:slDomain,shortlink_api:slApi})
+      shortlink_enabled:slEnabled,shortlink_url:slDomain,shortlink_api:slApi,
+      how_to_verify_url:(document.getElementById('adm-howto')||{}).value||''})
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
@@ -1958,7 +2009,7 @@ function admCreateAd() {
     if (d.ok) {
       toast('✅ Ad create ho gaya!');
       admCloseCreate();
-      ['adm-title','adm-desc','adm-btnname','adm-imgurl','adm-adurl','adm-sl-domain','adm-sl-api','adm-expiry'].forEach(function(id){
+      ['adm-title','adm-desc','adm-btnname','adm-imgurl','adm-adurl','adm-sl-domain','adm-sl-api','adm-howto','adm-expiry'].forEach(function(id){
         var el = document.getElementById(id); if (el) el.value='';
       });
       if (_admSLOn) admToggleSL();
@@ -2577,7 +2628,8 @@ function adpCreateAd() {
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({title:title,description:desc,button_name:btnNm,image_url:imgUrl,
       ad_url:adUrl,timer1:t1,timer2:t2,expiry_date:expiry||null,
-      shortlink_enabled:slEnabled,shortlink_url:slDomain,shortlink_api:slApi})
+      shortlink_enabled:slEnabled,shortlink_url:slDomain,shortlink_api:slApi,
+      how_to_verify_url:(document.getElementById('adm-howto')||{}).value||''})
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
@@ -2585,7 +2637,7 @@ function adpCreateAd() {
     if (d.ok) {
       toast('✅ Ad create ho gaya!');
       document.getElementById('adm-create-modal').style.display='none';
-      ['adm-title','adm-desc','adm-btnname','adm-imgurl','adm-adurl','adm-sl-domain','adm-sl-api','adm-expiry'].forEach(function(id){
+      ['adm-title','adm-desc','adm-btnname','adm-imgurl','adm-adurl','adm-sl-domain','adm-sl-api','adm-howto','adm-expiry'].forEach(function(id){
         var el=document.getElementById(id); if(el) el.value='';
       });
       if (_admSLOn) admToggleSL();
@@ -2622,6 +2674,7 @@ function adpEditAd(adId) {
   else if (!ad.shortlink_enabled && _admSLOn) admToggleSL();
   set('adm-sl-domain', ad.shortlink_url||'');
   set('adm-sl-api', ad.shortlink_api||'');
+  set('adm-howto', ad.how_to_verify_url||'');
   // Update header text
   var h = modal.querySelector('h3');
   if (h) h.textContent = '✏️ Edit Ad';
@@ -2659,7 +2712,8 @@ function adpUpdateAd(adId) {
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({title:title,description:desc,button_name:btnNm,image_url:imgUrl,
       ad_url:adUrl,timer1:t1,timer2:t2,expiry_date:expiry||null,
-      shortlink_enabled:slEnabled,shortlink_url:slDomain,shortlink_api:slApi})
+      shortlink_enabled:slEnabled,shortlink_url:slDomain,shortlink_api:slApi,
+      how_to_verify_url:(document.getElementById('adm-howto')||{}).value||''})
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
