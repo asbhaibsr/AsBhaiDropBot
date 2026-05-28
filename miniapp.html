@@ -827,28 +827,25 @@ body.rotated-mode-active{overflow:hidden !important;}
 
 <!-- ════ AD VERIFY PAGE (User) ════ -->
 <div class="pg" id="pg-adverify">
-  <div style="max-width:480px;margin:0 auto;padding:16px 16px 24px">
+  <div style="max-width:480px;margin:0 auto;padding:12px 16px 24px">
 
-    <!-- Header with action buttons -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <div></div>
-      <div style="display:flex;gap:6px">
-        <button onclick="go('pg-advertise')"
-          style="padding:5px 10px;background:rgba(108,99,255,.15);border:1px solid rgba(108,99,255,.3);border-radius:8px;color:var(--acc3);font-size:10px;font-weight:700;cursor:pointer">
-          📢 Advertise
-        </button>
-        <button onclick="go('pg-premium')"
-          style="padding:5px 10px;background:linear-gradient(135deg,rgba(108,99,255,.3),rgba(124,58,237,.2));border:1px solid rgba(108,99,255,.4);border-radius:8px;color:var(--acc2);font-size:10px;font-weight:700;cursor:pointer">
-          💎 Premium
-        </button>
-      </div>
+    <!-- BIG Advertise + Premium buttons at top -->
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button onclick="go('pg-advertise')"
+        style="flex:1;padding:13px 8px;background:linear-gradient(135deg,#6c63ff,#7c3aed);border:none;border-radius:12px;color:#fff;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 15px rgba(108,99,255,.4)">
+        📢 Apna Ad Lagwao
+      </button>
+      <button onclick="go('pg-premium')"
+        style="flex:1;padding:13px 8px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:12px;color:#000;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 15px rgba(245,158,11,.35)">
+        💎 Premium Lo
+      </button>
     </div>
 
     <!-- Header -->
-    <div style="text-align:center;padding:16px 0 14px">
-      <div style="font-size:40px;margin-bottom:8px">🎬</div>
-      <h2 style="font-size:20px;font-weight:900;background:linear-gradient(90deg,var(--acc2),var(--acc3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">File Unlock Karo</h2>
-      <p style="font-size:11px;color:var(--t2);margin-top:5px;line-height:1.6">Sponsor ka page explore karo — movie bilkul free milegi!</p>
+    <div style="text-align:center;padding:8px 0 12px">
+      <div style="font-size:36px;margin-bottom:6px">🎬</div>
+      <h2 style="font-size:18px;font-weight:900;background:linear-gradient(90deg,var(--acc2),var(--acc3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">File Unlock Karo</h2>
+      <p style="font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.6">Sponsor ka page explore karo — movie bilkul free milegi!</p>
     </div>
 
     <!-- Ad Image (optional) -->
@@ -860,7 +857,7 @@ body.rotated-mode-active{overflow:hidden !important;}
     <div id="adv-main-card" style="background:linear-gradient(135deg,#0d0d1a,#131320);border:1px solid var(--bd2);border-radius:14px;padding:16px;margin:0 0 12px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <div style="width:8px;height:8px;border-radius:50%;background:var(--acc);animation:pulse 1.5s infinite;flex-shrink:0"></div>
-        <span style="font-size:10px;font-weight:700;color:var(--acc3);text-transform:uppercase;letter-spacing:1px">Sponsored</span>
+        <span style="font-size:11px;font-weight:900;color:#94a3b8;letter-spacing:1px">#AD</span>
       </div>
       <div id="adv-title" style="font-size:15px;font-weight:800;color:#f1f5f9;margin-bottom:6px">Loading...</div>
       <div id="adv-desc" style="font-size:12px;color:#cbd5e1;line-height:1.7;min-height:30px;margin-bottom:10px"></div>
@@ -895,14 +892,14 @@ body.rotated-mode-active{overflow:hidden !important;}
         style="width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#0369a1);border:none;border-radius:11px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px">
         🔗 Open Verification Link
       </button>
-      <div id="adv-sl-notice" style="display:none;text-align:center;padding:10px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:9px;font-size:11px;color:var(--gold2)">
-        ⏳ Please stay on the page... come back after the timer completes.
+      <div id="adv-sl-notice" style="display:none;text-align:center;padding:10px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:9px;font-size:11px;color:#fbbf24">
+        ⏳ <span id="adv-sl-countdown" style="font-size:15px;font-weight:900;color:#fcd34d">30</span>s baad file mil jaayegi — is page pe raho!
       </div>
     </div>
 
     <!-- Red notice -->
     <div id="adv-notice" style="margin:8px 0;padding:10px 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);border-radius:10px;text-align:center">
-      <span id="adv-notice-txt" style="font-size:12px;color:#fca5a5;font-weight:700;animation:blink 1.2s infinite;display:inline-block">⚠️ Please explore the ad to unlock your file</span>
+      <span id="adv-notice-txt" style="font-size:12px;color:#fca5a5;font-weight:700;animation:blink 1.2s infinite;display:inline-block">👆 Click karo aur 1-2 minute app pe raho — Verify button aayega!</span>
     </div>
 
     <!-- Hidden progress -->
@@ -928,40 +925,134 @@ body.rotated-mode-active{overflow:hidden !important;}
       🎬 Get My File — Free!
     </button>
 
-    <!-- Info + How to verify -->
-    <div style="margin-top:14px;padding:12px 14px;background:rgba(30,41,59,.8);border-radius:10px;border:1px solid rgba(100,116,139,.3)">
-      <div style="font-size:10px;color:#94a3b8;line-height:1.9;text-align:center">
-        🔓 Visit the ad → Explore it → Verify → File is yours, free!<br>
+    <!-- Info + Language + Help -->
+    <div style="margin-top:14px;padding:12px 14px;background:rgba(15,23,42,.9);border-radius:10px;border:1px solid rgba(100,116,139,.25)">
+      <div id="adv-info-en" style="font-size:10px;color:#cbd5e1;line-height:1.9;text-align:center">
+        🔓 Click the ad → Spend 1-2 min → Come back → Verify → File is free!<br>
         💎 <span style="color:#a78bfa">Premium users</span> skip this step entirely
       </div>
-      <button id="adv-howto-btn" onclick="advOpenHowTo()"
-        style="display:block;width:100%;margin-top:10px;padding:9px;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.35);border-radius:8px;text-align:center;color:#a5b4fc;font-size:11px;font-weight:700;cursor:pointer">
-        ❓ How to Verify Ad — Click Here
-      </button>
+      <div id="adv-info-hi" style="display:none;font-size:10px;color:#cbd5e1;line-height:1.9;text-align:center">
+        🔓 Ad dabao → 1-2 minute raho → Wapas aao → Verify karo → File free!<br>
+        💎 <span style="color:#a78bfa">Premium users</span> ko yeh step nahi karna
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <button onclick="advOpenSupport()"
+          style="flex:1;padding:8px 4px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);border-radius:8px;color:#67e8f9;font-size:10px;font-weight:700;cursor:pointer">
+          💬 Help
+        </button>
+        <button id="adv-lang-btn" onclick="advToggleLang()"
+          style="flex:1;padding:8px 4px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);border-radius:8px;color:#fcd34d;font-size:10px;font-weight:700;cursor:pointer">
+          🇮🇳 Hindi
+        </button>
+      </div>
     </div>
 
-    <!-- Pricing section (visible to all users) -->
-    <div style="margin-top:16px;padding-bottom:4px">
-      <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:8px;text-align:center">Want to advertise here? Place your ad in this spot!</div>
+    <!-- BIG How to Verify button -->
+    <button onclick="go('pg-howto')"
+      style="width:100%;margin-top:12px;padding:16px;background:linear-gradient(135deg,rgba(99,102,241,.25),rgba(124,58,237,.15));border:2px solid rgba(99,102,241,.45);border-radius:13px;color:#c7d2fe;font-size:15px;font-weight:900;cursor:pointer">
+      ❓ Verify Kaise Kare? — Guide Dekho
+    </button>
+
+    <!-- Pricing section -->
+    <div style="margin-top:14px">
+      <div style="font-size:12px;font-weight:700;color:#cbd5e1;margin-bottom:8px;text-align:center">📢 Apna Ad Yahan Lagwao</div>
       <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:10px">
-        <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-size:12px;font-weight:700;color:var(--t)">Starter</div><div style="font-size:9px;color:var(--t3)">5 Days • ⭐ Popular</div></div>
-          <div style="font-size:16px;font-weight:900;color:var(--gold)">₹100</div>
+        <div style="background:rgba(20,20,35,.8);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:13px;font-weight:800;color:#f1f5f9">Starter</div><div style="font-size:9px;color:#94a3b8">5 Days • ⭐ Popular</div></div>
+          <div style="font-size:18px;font-weight:900;color:#fbbf24">₹100</div>
         </div>
-        <div style="background:linear-gradient(135deg,#0d0820,#130a2e);border:1px solid rgba(108,99,255,.3);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-size:12px;font-weight:700;color:var(--acc2)">Standard</div><div style="font-size:9px;color:var(--t3)">20 Days • 🔥 Most Popular</div></div>
-          <div style="font-size:16px;font-weight:900;color:var(--acc2)">₹300</div>
+        <div style="background:linear-gradient(135deg,#0d0820,#130a2e);border:1px solid rgba(108,99,255,.4);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:13px;font-weight:800;color:#c4b5fd">Standard</div><div style="font-size:9px;color:#94a3b8">20 Days • 🔥 Most Popular</div></div>
+          <div style="font-size:18px;font-weight:900;color:#a78bfa">₹300</div>
         </div>
-        <div style="background:linear-gradient(135deg,#081a0f,#0a2518);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-size:12px;font-weight:700;color:var(--grn2)">Premium</div><div style="font-size:9px;color:var(--t3)">35 Days • 💪 Best Value</div></div>
-          <div style="font-size:16px;font-weight:900;color:var(--grn2)">₹500</div>
+        <div style="background:linear-gradient(135deg,#081a0f,#0a2518);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:13px;font-weight:800;color:#86efac">Premium</div><div style="font-size:9px;color:#94a3b8">35 Days • 💪 Best Value</div></div>
+          <div style="font-size:18px;font-weight:900;color:#4ade80">₹500</div>
         </div>
       </div>
       <button onclick="go('pg-advertise')"
-        style="width:100%;padding:11px;background:linear-gradient(135deg,var(--acc),#7c3aed);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">
-        📢 Place Your Ad Here — Start from ₹100
+        style="width:100%;padding:13px;background:linear-gradient(135deg,#6c63ff,#7c3aed);border:none;border-radius:11px;color:#fff;font-size:13px;font-weight:800;cursor:pointer">
+        📢 Apna Ad Lagwao — ₹100 se shuru
       </button>
     </div>
+  </div>
+</div>
+
+<!-- ══ HOW TO VERIFY PAGE ══ -->
+<div class="pg" id="pg-howto">
+  <div style="max-width:480px;margin:0 auto;padding:16px 16px 80px">
+
+    <!-- Back button -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button onclick="go('pg-adverify')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#94a3b8;padding:7px 12px;font-size:12px;cursor:pointer">← Back</button>
+      <h2 style="font-size:16px;font-weight:900;color:#f1f5f9;margin:0">🎬 Movie Kaise Milegi?</h2>
+    </div>
+
+    <!-- BIG VIDEO/GUIDE BUTTON at top -->
+    <a href="https://t.me/asbhai_bsr/667" id="howto-ext-btn" target="_blank"
+      style="display:block;margin-bottom:14px;padding:16px;background:linear-gradient(135deg,#dc2626,#991b1b);border:none;border-radius:13px;color:#fff;text-align:center;font-size:15px;font-weight:900;text-decoration:none;box-shadow:0 4px 20px rgba(220,38,38,.4)">
+      ▶️ Video Tutorial Dekho — Click Here
+    </a>
+
+    <!-- Language toggle -->
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <button onclick="advHowToLang('en')" id="howto-en-btn"
+        style="flex:1;padding:9px;background:linear-gradient(135deg,#6c63ff,#7c3aed);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">
+        🇬🇧 English
+      </button>
+      <button onclick="advHowToLang('hi')" id="howto-hi-btn"
+        style="flex:1;padding:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">
+        🇮🇳 Hindi
+      </button>
+    </div>
+
+    <!-- English guide -->
+    <div id="howto-content-en" style="line-height:1.9">
+      <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:14px;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:800;color:#c7d2fe;margin-bottom:10px">📋 Steps to get your movie:</div>
+        <div style="font-size:12px;color:#e2e8f0;line-height:2">
+          <b style="color:#86efac">Step 1:</b> Click the button <b>"Visit Now"</b> on the ad page<br>
+          <b style="color:#86efac">Step 2:</b> A website or Telegram channel/bot will open. <b>Spend 1-2 minutes there</b> — browse, scroll, or explore<br>
+          <b style="color:#86efac">Step 3:</b> Come back to this page — <b>do not close Telegram</b><br>
+          <b style="color:#86efac">Step 4:</b> A <b>"Verify ✅"</b> button will appear — click it<br>
+          <b style="color:#fbbf24">Step 5:</b> 🎬 Your file is sent to you FREE in Telegram chat!
+        </div>
+      </div>
+      <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#86efac">
+        💡 <b>Tip:</b> Stay on the sponsor page for at least 1-2 minutes. Scroll down, read something — then come back!
+      </div>
+      <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:10px 12px;font-size:11px;color:#c4b5fd">
+        💎 <b>Get Premium</b> to skip ads forever and receive files instantly every time!
+      </div>
+    </div>
+
+    <!-- Hindi guide -->
+    <div id="howto-content-hi" style="display:none;line-height:1.9">
+      <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:14px;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:800;color:#c7d2fe;margin-bottom:10px">📋 Movie pane ke steps:</div>
+        <div style="font-size:12px;color:#e2e8f0;line-height:2">
+          <b style="color:#86efac">Step 1:</b> Ad page pe <b>"Visit Now"</b> button dabao<br>
+          <b style="color:#86efac">Step 2:</b> Ek website ya Telegram channel/bot khulega. Wahan <b>1-2 minute raho</b> — scroll karo, dekho, explore karo<br>
+          <b style="color:#86efac">Step 3:</b> Is page pe wapas aao — <b>Telegram band mat karna</b><br>
+          <b style="color:#86efac">Step 4:</b> <b>"Verify ✅"</b> button aayega — use dabao<br>
+          <b style="color:#fbbf24">Step 5:</b> 🎬 Tumhari file Telegram chat mein bilkul FREE aa jaayegi!
+        </div>
+      </div>
+      <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#86efac">
+        💡 <b>Tip:</b> Sponsor ke page pe 1-2 minute raho. Neeche scroll karo, kuch padho — phir wapas aao!
+      </div>
+      <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:10px 12px;font-size:11px;color:#c4b5fd">
+        💎 <b>Premium lo</b> — Ads hamesha skip karo, file turant milegi!
+      </div>
+    </div>
+
+    <!-- Support + Back -->
+    <button onclick="advOpenSupport()" style="width:100%;margin-top:14px;padding:12px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);border-radius:10px;color:#67e8f9;font-size:13px;font-weight:700;cursor:pointer">
+      💬 Help Chahiye? @asbhai_bsr se Contact Karo
+    </button>
+    <button onclick="go('pg-adverify')" style="width:100%;margin-top:8px;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer">
+      ← Wapas Ad Page Pe Jao
+    </button>
   </div>
 </div>
 
@@ -1033,14 +1124,35 @@ body.rotated-mode-active{overflow:hidden !important;}
       <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">🔘 Button Ka Naam *</label>
       <input id="adm-btnname" placeholder="e.g. Visit Now, Explore, Claim Free" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:13px;margin-bottom:12px;outline:none;box-sizing:border-box">
 
-      <!-- Image URL (optional) -->
-      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">🖼 Image URL <span style="color:var(--t3)">(Optional)</span></label>
-      <input id="adm-imgurl" placeholder="https://i.ibb.co/xxx/image.jpg" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;margin-bottom:4px;outline:none;box-sizing:border-box" oninput="admPreviewImg(this.value)">
-      <div style="font-size:9px;color:#f59e0b;margin-bottom:4px">⚠️ <b>Direct image URL</b> chahiye! ImgBB pe: Upload → <b>"Direct Link"</b> copy karo (i.ibb.co/... format). Normal ibb.co/xxx link kaam nahi karta.</div>
-      <div id="adm-img-preview" style="display:none;margin-bottom:6px;border-radius:8px;overflow:hidden;max-height:90px">
-        <img id="adm-img-preview-el" src="" style="width:100%;max-height:90px;object-fit:cover;border-radius:8px" onerror="document.getElementById('adm-img-preview').style.display='none';document.getElementById('adm-img-err').style.display='block'">
+      <!-- Image/Video Toggle -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;font-weight:700;color:var(--t2);display:flex;justify-content:space-between;align-items:center">
+          🎨 Ad Media
+          <span style="display:flex;gap:4px">
+            <button type="button" id="adm-type-img-btn" onclick="admSetAdType('image')"
+              style="padding:5px 12px;background:linear-gradient(135deg,var(--acc),#7c3aed);border:none;border-radius:7px;color:#fff;font-size:10px;font-weight:700;cursor:pointer">🖼 Image</button>
+            <button type="button" id="adm-type-vid-btn" onclick="admSetAdType('video')"
+              style="padding:5px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer">🎬 Video</button>
+          </span>
+        </label>
+        <input type="hidden" id="adm-adtype" value="image">
       </div>
-      <div id="adm-img-err" style="display:none;font-size:10px;color:#f87171;margin-bottom:6px;padding:6px 8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px">❌ Image load nahi hui — Direct image link paste karo (.jpg/.png/.gif ending)</div>
+
+      <!-- Image fields -->
+      <div id="adm-img-section">
+        <input id="adm-imgurl" placeholder="https://i.ibb.co/xxx/image.jpg" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;margin-bottom:4px;outline:none;box-sizing:border-box" oninput="admPreviewImg(this.value)">
+        <div style="font-size:9px;color:#f59e0b;margin-bottom:4px">⚠️ Direct image URL (i.ibb.co/... format). ibb.co/xxx kaam nahi karta.</div>
+        <div id="adm-img-preview" style="display:none;margin-bottom:6px;border-radius:8px;overflow:hidden;max-height:90px">
+          <img id="adm-img-preview-el" src="" style="width:100%;max-height:90px;object-fit:cover;border-radius:8px" onerror="document.getElementById('adm-img-preview').style.display='none';document.getElementById('adm-img-err').style.display='block'">
+        </div>
+        <div id="adm-img-err" style="display:none;font-size:10px;color:#f87171;margin-bottom:6px;padding:6px 8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px">❌ Image load nahi hui — Direct link chahiye (.jpg/.png)</div>
+      </div>
+
+      <!-- Video fields (hidden by default) -->
+      <div id="adm-vid-section" style="display:none;margin-bottom:4px">
+        <input id="adm-videourl" placeholder="Stream link paste karo (/streamlink command se milega)" style="width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;color:var(--t);font-size:12px;margin-bottom:4px;outline:none;box-sizing:border-box">
+        <div style="font-size:9px;color:#38bdf8;margin-bottom:8px">💡 Bot mein <b>/streamlink</b> → video bhejo → link milega → yahan paste karo</div>
+      </div>
 
       <!-- How to Verify URL -->
       <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px">❓ How to Verify — Help Link</label>
@@ -1488,7 +1600,7 @@ function go(id){
   var el=document.getElementById(id);if(el)el.classList.add('on');
   window.scrollTo({top:0,behavior:'smooth'});
   // Sync tab
-  var tabMap={'pg-home':'tab-home','pg-premium':'tab-home','pg-stream':'tab-stream','pg-panel':'tab-panel','pg-refer':'tab-refer','pg-group':'tab-home','pg-help':'tab-help','pg-adverify':'tab-home','pg-admanager':'tab-home','pg-adpanel':'tab-adpanel','pg-advertise':'tab-home'};
+  var tabMap={'pg-home':'tab-home','pg-premium':'tab-home','pg-stream':'tab-stream','pg-panel':'tab-panel','pg-refer':'tab-refer','pg-group':'tab-home','pg-help':'tab-help','pg-adverify':'tab-home','pg-howto':'tab-home','pg-admanager':'tab-home','pg-adpanel':'tab-adpanel','pg-advertise':'tab-home'};
   document.querySelectorAll('.tabs .tb').forEach(function(t){t.classList.remove('on');});
   var tabId=tabMap[id];if(tabId){var te=document.getElementById(tabId);if(te)te.classList.add('on');}
 }
@@ -1497,6 +1609,7 @@ function go(id){
 var _advState = {
   token:null, adUrl:null, adTitle:null, adDesc:null, adBtn:null,
   adImg:null, adShortlink:null, howToUrl:'https://astoolswala.online',
+  adType:'image', adVideoUrl:'',
   timer1:60, timer2:30, step:0, timerInterval:null
 };
 
@@ -1532,8 +1645,8 @@ function advInit() {
   _advState.adTitle     = adTitle  ? decodeURIComponent(adTitle)  : 'Sponsored';
   _advState.adDesc      = adDesc   ? decodeURIComponent(adDesc)   : 'Explore this sponsor and get your file for free!';
   _advState.adBtn       = adBtn    ? decodeURIComponent(adBtn)    : 'Visit Now';
-  // ✅ FIX: adImg — URLSearchParams already decodes once, don't double-decode
-  // Also auto-fix ibb.co gallery URL → i.ibb.co direct URL where possible
+  // ✅ Handle image/video ad media
+  // Also auto-fix ibb.co gallery URL
   var rawImg = adImg || '';
   if (rawImg && rawImg.match(/^https?:\/\/ibb\.co\//)) {
     // ibb.co/XXXXX is a gallery page, NOT a direct image
@@ -1541,8 +1654,23 @@ function advInit() {
     rawImg = rawImg.replace('://ibb.co/', '://i.ibb.co/') + '/img.jpg';
   }
   _advState.adImg = rawImg;
+
+  // Show video if ad_type is video
+  if (_advState.adType === 'video' && _advState.adVideoUrl) {
+    var imgWrapV  = document.getElementById('adv-image-wrap');
+    var imgElV    = document.getElementById('adv-image');
+    if (imgWrapV && imgElV) {
+      // Replace img with video player
+      imgWrapV.style.display = 'block';
+      imgWrapV.innerHTML = '<video id="adv-video-player" src="'+_advState.adVideoUrl+'" controls autoplay muted playsinline style="width:100%;max-height:200px;border-radius:12px;display:block;background:#000"></video>';
+    }
+  }
   _advState.adShortlink = adSl     ? decodeURIComponent(adSl)     : null;
   _advState.howToUrl    = howto    ? decodeURIComponent(howto)    : 'https://astoolswala.online';
+  var adType  = p.get('adtype') || 'image';
+  var adVid   = p.get('advid') || '';
+  _advState.adType    = adType;
+  _advState.adVideoUrl = adVid ? decodeURIComponent(adVid) : '';
   _advState.timer1      = Math.max(10, t1);
   _advState.timer2      = Math.max(10, t2);
 
@@ -1571,7 +1699,7 @@ function advInit() {
       // Retry without crossOrigin
       imgEl.crossOrigin = '';
       imgEl.src = _advState.adImg + ((_advState.adImg.indexOf('?')>=0)?'&':'?') + '_t=' + Date.now();
-      imgEl.onerror = function(){ imgWrap.style.display='none'; };
+      imgEl.onerror = function(){ try{imgWrap.style.display='none';}catch(e){} };
     };
   }
 
@@ -1614,6 +1742,94 @@ function advLinkClicked(e) {
   }, 2000);
 }
 
+
+var _advLang = 'en';
+
+var _advText = {
+  en: {
+    instr: '\uD83D\uDD12 <b>Click the button below → Explore the page → Come back → Verify</b><br><span style="font-size:10px;color:#94a3b8">Spend 1-2 minutes on the sponsor page, then come back!</span>',
+    notice: '\uD83D\uDC46 Click karo aur 1-2 minute app pe raho — Verify button aayega!',
+    btn: '\uD83C\uDDEE\uD83C\uDDF3 Hindi',
+    info_show: 'adv-info-en', info_hide: 'adv-info-hi'
+  },
+  hi: {
+    instr: '\uD83D\uDD12 <b>Neeche button dabao → Page explore karo → Wapas aao → Verify karo</b><br><span style="font-size:10px;color:#94a3b8">Sponsor ke page pe 1-2 minute raho, phir wapas aao!</span>',
+    notice: '\uD83D\uDC46 Click karo aur 1-2 minute app pe raho — Verify button aayega!',
+    btn: '\uD83C\uDDEC\uD83C\uDDE7 English',
+    info_show: 'adv-info-hi', info_hide: 'adv-info-en'
+  }
+};
+
+function advToggleLang() {
+  try {
+    _advLang = (_advLang === 'en') ? 'hi' : 'en';
+    var t = _advText[_advLang];
+    var showEl  = document.getElementById(t.info_show);
+    var hideEl  = document.getElementById(t.info_hide);
+    var btn     = document.getElementById('adv-lang-btn');
+    var instrEl = document.getElementById('adv-instruction');
+    var noticeEl= document.getElementById('adv-notice-txt');
+    if (showEl)   showEl.style.display  = 'block';
+    if (hideEl)   hideEl.style.display  = 'none';
+    if (btn)      btn.textContent       = t.btn;
+    if (instrEl)  instrEl.innerHTML     = t.instr;
+    if (noticeEl) noticeEl.textContent  = t.notice;
+  } catch(e) { console.warn('advToggleLang error:', e); }
+}
+
+function advHowToLang(lang) {
+  var enC = document.getElementById('howto-content-en');
+  var hiC = document.getElementById('howto-content-hi');
+  var enB = document.getElementById('howto-en-btn');
+  var hiB = document.getElementById('howto-hi-btn');
+  var active = 'background:linear-gradient(135deg,#6c63ff,#7c3aed);border:none;color:#fff;';
+  var inact  = 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;';
+  if (lang === 'en') {
+    if (enC) enC.style.display = 'block';
+    if (hiC) hiC.style.display = 'none';
+    if (enB) enB.style.cssText += active;
+    if (hiB) hiB.style.cssText += inact;
+  } else {
+    if (enC) enC.style.display = 'none';
+    if (hiC) hiC.style.display = 'block';
+    if (enB) enB.style.cssText += inact;
+    if (hiB) hiB.style.cssText += active;
+  }
+}
+
+function advOpenSupport() {
+  var url = 'https://t.me/asbhaibsr';
+  if (tg) { try { tg.openLink(url); return; } catch(e){} }
+  window.open(url, '_blank');
+}
+
+
+/* Image/Video ad type toggle */
+var _admAdType = 'image';
+function admSetAdType(type) {
+  _admAdType = type;
+  var imgBtn = document.getElementById('adm-type-img-btn');
+  var vidBtn = document.getElementById('adm-type-vid-btn');
+  var imgSec = document.getElementById('adm-img-section');
+  var vidSec = document.getElementById('adm-vid-section');
+  var hidden = document.getElementById('adm-adtype');
+  var act = 'background:linear-gradient(135deg,var(--acc),#7c3aed);border:none;color:#fff;';
+  var inact= 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;';
+  if (type === 'video') {
+    if (imgBtn) imgBtn.style.cssText += inact;
+    if (vidBtn) vidBtn.style.cssText += act;
+    if (imgSec) imgSec.style.display = 'none';
+    if (vidSec) vidSec.style.display = 'block';
+    if (hidden) hidden.value = 'video';
+  } else {
+    if (imgBtn) imgBtn.style.cssText += act;
+    if (vidBtn) vidBtn.style.cssText += inact;
+    if (imgSec) imgSec.style.display = 'block';
+    if (vidSec) vidSec.style.display = 'none';
+    if (hidden) hidden.value = 'image';
+  }
+}
+
 /* Image preview in admin form */
 function admPreviewImg(url) {
   var prev = document.getElementById('adm-img-preview');
@@ -1638,11 +1854,13 @@ function admPreviewImg(url) {
   }
 }
 
-/* How to verify — admin-set URL */
+/* How to verify — open modal (with admin help link at bottom) */
 function advOpenHowTo() {
-  var url = _advState.howToUrl || 'https://astoolswala.online';
-  if (tg) { try { tg.openLink(url); return; } catch(e){} }
-  window.open(url, '_blank');
+  // ✅ Update external link with admin-set URL
+  var howtoUrl = _advState.howToUrl;
+  var extBtn = document.getElementById('howto-ext-btn');
+  if (extBtn && howtoUrl) extBtn.href = howtoUrl;
+  go('pg-howto');
 }
 
 /* Skip to shortlink directly */
@@ -1720,16 +1938,28 @@ function advShortlinkClicked() {
     if (_advState.step < 3) {
       _advState.step = 3;
       var nt = document.getElementById('adv-sl-notice');
+      var slBtn = document.getElementById('adv-sl-btn');
       if (nt) nt.style.display = 'block';
-      _advStartTimer(_advState.timer2, function(){
+      if (slBtn) slBtn.style.display = 'none';
+      // ✅ Countdown display
+      var cdEl = document.getElementById('adv-sl-countdown');
+      var secs = _advState.timer2;
+      if (cdEl) cdEl.textContent = secs;
+      var cdInt = setInterval(function(){
+        secs--;
+        if (cdEl) cdEl.textContent = Math.max(0, secs);
+        if (secs <= 0) clearInterval(cdInt);
+      }, 1000);
+      // ✅ FIX: Use setInterval directly (not _advStartTimer which uses hidden progress bar)
+      setTimeout(function(){
         _advState.step = 5;
         var getBtn = document.getElementById('adv-getlink-btn');
-        var slNotice = document.getElementById('adv-sl-notice');
-        var slBtn = document.getElementById('adv-sl-btn');
-        if (getBtn) getBtn.style.display = 'block';
-        if (slNotice) slNotice.style.display = 'none';
-        if (slBtn) slBtn.style.display = 'none';
-      });
+        if (nt) nt.style.display = 'none';
+        if (getBtn) {
+          getBtn.style.display = 'block';
+          getBtn.style.marginTop = '10px';
+        }
+      }, _advState.timer2 * 1000);
     }
   }, 2000);
 }
@@ -1893,8 +2123,8 @@ function admDeleteAd(adId, btn) {
   }
 }
 
-function admOpenCreate() { document.getElementById('adm-create-modal').style.display='block'; }
-function admCloseCreate() { document.getElementById('adm-create-modal').style.display='none'; }
+function admOpenCreate() { var _cm=document.getElementById('adm-create-modal'); if(_cm) _cm.style.display='block'; }
+function admCloseCreate() { var _cm2=document.getElementById('adm-create-modal'); if(_cm2) _cm2.style.display='none'; }
 
 function admCreateAd() {
   var aid    = admGetAdminId();
@@ -1944,7 +2174,7 @@ function admCreateAd() {
 }
 
 function admShowAdInfo() {
-  document.getElementById('adm-info-modal').style.display='block';
+  var _im=document.getElementById('adm-info-modal'); if(_im) _im.style.display='block';
 }
 
 function admContactOwner() {
@@ -2001,7 +2231,9 @@ function admCreateAd() {
     body:JSON.stringify({title:title,description:desc,button_name:btnNm,image_url:imgUrl,
       ad_url:adUrl,timer1:t1,timer2:t2,expiry_date:expiry||null,
       shortlink_enabled:slEnabled,shortlink_url:slDomain,shortlink_api:slApi,
-      how_to_verify_url:(document.getElementById('adm-howto')||{}).value||''})
+      how_to_verify_url:(document.getElementById('adm-howto')||{}).value||'',
+      ad_type:(document.getElementById('adm-adtype')||{}).value||'image',
+      video_url:(document.getElementById('adm-videourl')||{}).value||''})
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
@@ -2009,7 +2241,7 @@ function admCreateAd() {
     if (d.ok) {
       toast('✅ Ad create ho gaya!');
       admCloseCreate();
-      ['adm-title','adm-desc','adm-btnname','adm-imgurl','adm-adurl','adm-sl-domain','adm-sl-api','adm-howto','adm-expiry'].forEach(function(id){
+      ['adm-title','adm-desc','adm-btnname','adm-imgurl','adm-videourl','adm-adurl','adm-sl-domain','adm-sl-api','adm-howto','adm-expiry'].forEach(function(id){
         var el = document.getElementById(id); if (el) el.value='';
       });
       if (_admSLOn) admToggleSL();
@@ -2115,13 +2347,13 @@ function checkStream(){
   switchTab('stream');
   
   if(!uid&&!isPrem){
-    document.getElementById('strm-prem').style.display='block';
-    document.getElementById('strm-player').style.display='none';
+    var _strmP=document.getElementById('strm-prem'); if(_strmP) _strmP.style.display='block';
+    var _strmPl=document.getElementById('strm-player'); if(_strmPl) _strmPl.style.display='none';
     return;
   }
   
-  document.getElementById('strm-prem').style.display='none';
-  document.getElementById('strm-player').style.display='block';
+  var _strmP2=document.getElementById('strm-prem'); if(_strmP2) _strmP2.style.display='none';
+  var _strmPl2=document.getElementById('strm-player'); if(_strmPl2) _strmPl2.style.display='block';
   
   curMid=mid;
   var streamUrl=BASE+'/stream_file/'+mid+'?uid='+(uid||UID||'');
@@ -2489,8 +2721,8 @@ function adpCheckPass() {
   if (!inp) return;
   if (inp.value === _ADP_PASS) {
     _adpUnlocked = true;
-    document.getElementById('adp-lock').style.display = 'none';
-    document.getElementById('adp-content').style.display = 'block';
+    var _adpLock=document.getElementById('adp-lock'); if(_adpLock) _adpLock.style.display='none';
+    var _adpCont=document.getElementById('adp-content'); if(_adpCont) _adpCont.style.display='block';
     // Show tab
     var tab = document.getElementById('tab-adpanel');
     if (tab) tab.style.display = '';
@@ -2629,15 +2861,17 @@ function adpCreateAd() {
     body:JSON.stringify({title:title,description:desc,button_name:btnNm,image_url:imgUrl,
       ad_url:adUrl,timer1:t1,timer2:t2,expiry_date:expiry||null,
       shortlink_enabled:slEnabled,shortlink_url:slDomain,shortlink_api:slApi,
-      how_to_verify_url:(document.getElementById('adm-howto')||{}).value||''})
+      how_to_verify_url:(document.getElementById('adm-howto')||{}).value||'',
+      ad_type:(document.getElementById('adm-adtype')||{}).value||'image',
+      video_url:(document.getElementById('adm-videourl')||{}).value||''})
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
     if (createBtn) { createBtn.disabled=false; createBtn.textContent='✅ Ad Create Karo'; }
     if (d.ok) {
       toast('✅ Ad create ho gaya!');
-      document.getElementById('adm-create-modal').style.display='none';
-      ['adm-title','adm-desc','adm-btnname','adm-imgurl','adm-adurl','adm-sl-domain','adm-sl-api','adm-howto','adm-expiry'].forEach(function(id){
+      var _cm3=document.getElementById('adm-create-modal'); if(_cm3) _cm3.style.display='none';
+      ['adm-title','adm-desc','adm-btnname','adm-imgurl','adm-videourl','adm-adurl','adm-sl-domain','adm-sl-api','adm-howto','adm-expiry'].forEach(function(id){
         var el=document.getElementById(id); if(el) el.value='';
       });
       if (_admSLOn) admToggleSL();
@@ -2713,14 +2947,16 @@ function adpUpdateAd(adId) {
     body:JSON.stringify({title:title,description:desc,button_name:btnNm,image_url:imgUrl,
       ad_url:adUrl,timer1:t1,timer2:t2,expiry_date:expiry||null,
       shortlink_enabled:slEnabled,shortlink_url:slDomain,shortlink_api:slApi,
-      how_to_verify_url:(document.getElementById('adm-howto')||{}).value||''})
+      how_to_verify_url:(document.getElementById('adm-howto')||{}).value||'',
+      ad_type:(document.getElementById('adm-adtype')||{}).value||'image',
+      video_url:(document.getElementById('adm-videourl')||{}).value||''})
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
     if (updateBtn) { updateBtn.disabled=false; updateBtn.textContent='💾 Update Ad'; }
     if (d.ok) {
       toast('✅ Ad updated!');
-      document.getElementById('adm-create-modal').style.display='none';
+      var _cm3=document.getElementById('adm-create-modal'); if(_cm3) _cm3.style.display='none';
       var h = document.querySelector('#adm-create-modal h3');
       if(h) h.textContent='➕ New Ad Create';
       var btn2 = document.querySelector('#adm-create-modal button[onclick*="adpUpdateAd"]');
@@ -2735,7 +2971,7 @@ function adpUpdateAd(adId) {
   });
 }
 
-function adpShowPricing() { document.getElementById('adm-info-modal').style.display='block'; }
+function adpShowPricing() { var _im=document.getElementById('adm-info-modal'); if(_im) _im.style.display='block'; }
 
 // ── Show Admin Panel from URL param (admin_id) ──
 function adpInitFromUrl() {
