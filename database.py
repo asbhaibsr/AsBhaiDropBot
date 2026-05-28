@@ -1335,7 +1335,7 @@ async def blogger_verify_check(client, message, prem=False):
 async def ad_create(title, description, button_name, ad_url=None, image_url=None,
                     script=None, timer1=60, timer2=30, expiry_date=None,
                     shortlink_enabled=False, shortlink_url="", shortlink_api="",
-                    how_to_verify_url=""):
+                    how_to_verify_url="", ad_type="image", video_url=""):
     """Naya ad create karo."""
     doc = {
         "title": title,
@@ -1352,7 +1352,9 @@ async def ad_create(title, description, button_name, ad_url=None, image_url=None
         "shortlink_enabled": bool(shortlink_enabled),
         "shortlink_url": shortlink_url or "",
         "shortlink_api": shortlink_api or "",
-        "how_to_verify_url": how_to_verify_url or "",  # Admin-set help link for users
+        "how_to_verify_url": how_to_verify_url or "",
+        "ad_type": ad_type or "image",   # "image" ya "video"
+        "video_url": video_url or "",    # stream link when ad_type=video
     }
     result = await ads_col.insert_one(doc)
     doc["_id"] = result.inserted_id
@@ -1378,14 +1380,35 @@ async def ad_active_list():
     return docs
 
 async def ad_get_next(user_id):
-    """User ke liye agle active ad return karo (round-robin / random)."""
+    """
+    User ke liye random active ad return karo.
+    ✅ FIX: Pure random selection — har baar alag ad aata hai.
+    Weighted random: kam impressions wala ad ko thoda zyada chance milta hai.
+    Last shown ad exclude karo — same ad repeat nahi hoga.
+    """
+    import random as _random
     active = await ad_active_list()
     if not active:
         return None
-    # Simple round-robin using impression count (least shown first)
-    active.sort(key=lambda d: d.get("impressions", 0))
-    ad = active[0]
-    # Impression increment
+
+    if len(active) == 1:
+        ad = active[0]
+    else:
+        # Import here to avoid circular
+        from bot import _user_last_ad
+        last_id = _user_last_ad.get(user_id)
+        # Exclude last shown ad
+        candidates = [a for a in active if str(a["_id"]) != str(last_id)] if last_id else active
+        if not candidates:
+            candidates = active  # fallback if only 1 ad
+
+        # Weighted random: inverse of impressions (less shown = higher weight)
+        max_imp = max(d.get("impressions", 0) for d in candidates) + 1
+        weights = [max_imp - d.get("impressions", 0) + 1 for d in candidates]
+        ad = _random.choices(candidates, weights=weights, k=1)[0]
+        # Save to memory
+        _user_last_ad[user_id] = str(ad["_id"])
+
     await ads_col.update_one({"_id": ad["_id"]}, {"$inc": {"impressions": 1}})
     return ad
 
