@@ -788,6 +788,8 @@ async def api_ads_list(request):
             "shortlink_url": d.get("shortlink_url", ""),
             "shortlink_api": d.get("shortlink_api", ""),
             "how_to_verify_url": d.get("how_to_verify_url", ""),
+            "ad_type": d.get("ad_type", "image"),
+            "video_url": d.get("video_url", ""),
         })
     total, active_count = await ad_count()
     return aio_web.json_response({"ok": True, "ads": result, "total": total, "active": active_count})
@@ -836,7 +838,9 @@ async def api_ads_create(request):
                           shortlink_enabled=shortlink_enabled,
                           shortlink_url=shortlink_url,
                           shortlink_api=shortlink_api,
-                          how_to_verify_url=(data.get("how_to_verify_url") or "").strip())
+                          how_to_verify_url=(data.get("how_to_verify_url") or "").strip(),
+                          ad_type=(data.get("ad_type") or "image"),
+                          video_url=(data.get("video_url") or "").strip())
     sl_txt = " | 🔗 Shortlink ON" if shortlink_enabled else ""
     await send_log(f"📢 #NewAd Created\n\n**{title}**\nButton: {button_name}\nTimer: {timer1}s / {timer2}s{sl_txt}")
     return aio_web.json_response({"ok": True, "id": str(doc["_id"]), "message": "✅ Ad create ho gaya!"})
@@ -882,6 +886,10 @@ async def api_ads_update(request):
         update_data["shortlink_api"] = (data.get("shortlink_api") or "").strip()
     if "how_to_verify_url" in data:
         update_data["how_to_verify_url"] = (data.get("how_to_verify_url") or "").strip()
+    if "ad_type" in data:
+        update_data["ad_type"] = data.get("ad_type") or "image"
+    if "video_url" in data:
+        update_data["video_url"] = (data.get("video_url") or "").strip()
 
     ok = await ad_update(ad_id, update_data)
     if ok:
