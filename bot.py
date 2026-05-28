@@ -218,6 +218,14 @@ async def _generate_ad_shortlink(sl_domain: str, sl_api: str, target_url: str) -
 # In-memory result cache
 _result_cache = {}  # {uid_qkey: [found_msgs]}
 
+# ── Ad uniqueness per user session ──
+# {uid: ad_id} — last ad shown to each user, to avoid repeating same ad
+_user_last_ad: dict = {}
+
+# ── StreamLink waiting state ──
+# {uid: True} — user is waiting to send video for /streamlink
+_streamlink_waiting: dict = {}
+
 LANGUAGES = [
     ("🇬🇧 English", "english"), ("🇮🇳 Hindi", "hindi"),
     ("🎭 Malayalam", "malayalam"), ("🎵 Tamil", "tamil"),
@@ -435,7 +443,9 @@ async def start_handler(client, message: Message):
                         f"✅ **Verify ho gaya!** 🎉\n\nAb '{pending_q}' ke results dhundh raha hoon... 🔍"
                     )
                     prem_user = await is_premium(uid)
-                    found = await do_search(pending_q, limit=10 if prem_user else 5)
+                    _s_tmp = await get_settings()
+                    _limit_tmp = _s_tmp.get("premium_results", 10) if prem_user else _s_tmp.get("free_results", 5)
+                    found = await do_search(pending_q, limit=_limit_tmp)
                     if found:
                         try:
                             me_obj = await client.get_me()
@@ -595,6 +605,8 @@ async def start_handler(client, message: Message):
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
                             f"&adsl={_qp(_sl_url, safe='')}"
                             f"&howto={_qp(ad.get('how_to_verify_url',''), safe='')}"
+                            f"&adtype={ad.get('ad_type','image')}"
+                            f"&advid={_qp(ad.get('video_url',''), safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await users_col.update_one(
@@ -609,7 +621,9 @@ async def start_handler(client, message: Message):
                             reply_markup=InlineKeyboardMarkup([[
                                 InlineKeyboardButton("🔓 Unlock Karo — Ad Dekho", web_app=WebAppInfo(url=ad_page_url))
                             ],[
-                                InlineKeyboardButton("💎 Premium lo — Skip Karo!", callback_data="show_premium")
+                                InlineKeyboardButton("❓ Verify Kaise Kare?", url="https://t.me/asbhai_bsr/667")
+                            ],[
+                                InlineKeyboardButton("💎 Premium lo — Ads Skip Karo!", callback_data="show_premium")
                             ]])
                         )
                         return
@@ -769,6 +783,8 @@ async def start_handler(client, message: Message):
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
                             f"&adsl={_qp(_sl_url, safe='')}"
                             f"&howto={_qp(ad.get('how_to_verify_url',''), safe='')}"
+                            f"&adtype={ad.get('ad_type','image')}"
+                            f"&advid={_qp(ad.get('video_url',''), safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await users_col.update_one(
@@ -783,7 +799,9 @@ async def start_handler(client, message: Message):
                             reply_markup=InlineKeyboardMarkup([[
                                 InlineKeyboardButton("🔓 Unlock Karo — Ad Dekho", web_app=WebAppInfo(url=ad_page_url))
                             ],[
-                                InlineKeyboardButton("💎 Premium lo — Skip Karo!", callback_data="show_premium")
+                                InlineKeyboardButton("❓ Verify Kaise Kare?", url="https://t.me/asbhai_bsr/667")
+                            ],[
+                                InlineKeyboardButton("💎 Premium lo — Ads Skip Karo!", callback_data="show_premium")
                             ]])
                         )
                         return
@@ -1219,7 +1237,8 @@ async def search_handler(client, message: Message):
         await wait_msg.delete()
         me = await client.get_me()
 
-        page_size = 5
+        # ✅ FIX: page_size = settings se lo, hardcoded 5 nahi
+        page_size = limit  # Admin ne setresults se jo set kiya wahi show karo
         total_pages = max(1, (len(found) + page_size - 1) // page_size)
         page_found = found[:page_size]
 
@@ -1625,6 +1644,8 @@ async def cb_handler(client, query: CallbackQuery):
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
                             f"&adsl={_qp(_sl_url, safe='')}"
                             f"&howto={_qp(ad.get('how_to_verify_url',''), safe='')}"
+                            f"&adtype={ad.get('ad_type','image')}"
+                            f"&advid={_qp(ad.get('video_url',''), safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await users_col.update_one(
@@ -1640,7 +1661,9 @@ async def cb_handler(client, query: CallbackQuery):
                             reply_markup=InlineKeyboardMarkup([[
                                 InlineKeyboardButton("🔓 Unlock Karo — Ad Dekho", web_app=WebAppInfo(url=ad_page_url))
                             ],[
-                                InlineKeyboardButton("💎 Premium lo — Skip Karo!", callback_data="show_premium")
+                                InlineKeyboardButton("❓ Verify Kaise Kare?", url="https://t.me/asbhai_bsr/667")
+                            ],[
+                                InlineKeyboardButton("💎 Premium lo — Ads Skip Karo!", callback_data="show_premium")
                             ]])
                         )
                         return
@@ -2215,6 +2238,8 @@ async def cb_handler(client, query: CallbackQuery):
                             f"&adimg={_qp(ad.get('image_url',''), safe='')}"
                             f"&adsl={_qp(_sl_url_sa, safe='')}"
                             f"&howto={_qp(ad.get('how_to_verify_url',''), safe='')}"
+                            f"&adtype={ad.get('ad_type','image')}"
+                            f"&advid={_qp(ad.get('video_url',''), safe='')}"
                             f"&t1={ad.get('timer1',60)}&t2={ad.get('timer2',30)}"
                         )
                         await query.answer()
@@ -2227,7 +2252,9 @@ async def cb_handler(client, query: CallbackQuery):
                                 reply_markup=InlineKeyboardMarkup([[
                                     InlineKeyboardButton("🔓 Unlock Karo — Ad Dekho", web_app=WebAppInfo(url=ad_page_url_sa))
                                 ],[
-                                    InlineKeyboardButton("💎 Premium lo — Skip Karo!", callback_data="show_premium")
+                                    InlineKeyboardButton("❓ Verify Kaise Kare?", url="https://t.me/asbhai_bsr/667")
+                                ],[
+                                    InlineKeyboardButton("💎 Premium lo — Ads Skip Karo!", callback_data="show_premium")
                                 ]])
                             )
                         except: pass
@@ -3173,6 +3200,142 @@ async def file_request(client, message: Message):
         ]])
     )
 
+
+# ═══════════════════════════════════════
+#  STREAMLINK COMMAND
+#  /streamlink — video bhejo → stream link milega
+# ═══════════════════════════════════════
+@bot.on_message(filters.command("streamlink") & filters.private)
+async def streamlink_cmd(client, message: Message):
+    """
+    /streamlink — Video ka permanent stream link generate karo.
+    - Reply karo kisi video pe /streamlink se → link milega
+    - Ya /streamlink send karo → bot video maangega
+    """
+    uid = message.from_user.id
+
+    # Case 1: Replied to a video message
+    if message.reply_to_message and (
+        message.reply_to_message.video or
+        message.reply_to_message.document
+    ):
+        target = message.reply_to_message
+        await _process_streamlink(client, message, target, uid)
+        return
+
+    # Case 2: Ask user to send video
+    _streamlink_waiting[uid] = True
+    wait_msg = await message.reply(
+        "📤 **Stream Link Generator**\n\n"
+        "Video ya document file bhejo — main stream link bana dunga!\n\n"
+        "💡 Koi bhi video file bhejo (movie, series, any video)\n"
+        "⏱ 60 seconds mein bhejni hai, warna cancel ho jaayega"
+    )
+    # Auto-cancel after 60 seconds
+    async def _cancel_wait():
+        await asyncio.sleep(60)
+        if _streamlink_waiting.get(uid):
+            _streamlink_waiting.pop(uid, None)
+            try: await wait_msg.edit("⏰ Time out! Phir se `/streamlink` try karo.")
+            except: pass
+    asyncio.create_task(_cancel_wait())
+
+
+async def _process_streamlink(client, trigger_msg, video_msg, uid):
+    """Video message se stream link generate karo."""
+    processing = await trigger_msg.reply("⚙️ Stream link ban raha hai...")
+    try:
+        # Forward to FILE_CHANNEL to get permanent msg_id
+        forwarded = await video_msg.forward(FILE_CHANNEL)
+        msg_id = forwarded.id
+
+        prem = await is_premium(uid)
+        base = KOYEB_URL or ""
+
+        # Stream URL — direct player link
+        stream_url   = f"{base}/stream_file/{msg_id}?uid={uid}"
+        player_url   = f"{base}/?uid={uid}&mid={msg_id}"
+        download_url = f"{base}/download/{msg_id}?uid={uid}"
+
+        # File info
+        media = video_msg.video or video_msg.document
+        fname = getattr(media, 'file_name', 'video.mp4') or 'video.mp4'
+        size_mb = round((getattr(media, 'file_size', 0) or 0) / 1024 / 1024, 1)
+        duration = getattr(media, 'duration', 0) or 0
+        dur_str = f"{duration//60}m {duration%60}s" if duration else "N/A"
+
+        await processing.delete()
+        await trigger_msg.reply(
+            f"✅ **Stream Link Ready!**\n\n"
+            f"📁 `{fname}`\n"
+            f"📦 Size: `{size_mb} MB`\n"
+            f"⏱ Duration: `{dur_str}`\n\n"
+            f"🔗 **Stream Link (Mini App):**\n`{player_url}`\n\n"
+            f"🎬 **Direct Stream:**\n`{stream_url}`\n\n"
+            f"💡 _Is link ko Ad mein video ke liye use kar sakte ho!_",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("▶️ Stream Karo", web_app=WebAppInfo(url=player_url))
+            ],[
+                InlineKeyboardButton("📥 Download", url=download_url)
+            ]])
+        )
+        logger.info(f"✅ StreamLink generated: msg_id={msg_id} by uid={uid}")
+    except Exception as e:
+        await processing.edit(f"❌ Error: {e}")
+        logger.error(f"StreamLink error: {e}")
+
+
+@bot.on_message(filters.private & (filters.video | filters.document))
+async def handle_streamlink_video(client, message: Message):
+    """Video aaya — agar user streamlink wait kar raha tha to process karo."""
+    uid = message.from_user.id
+    if _streamlink_waiting.get(uid):
+        _streamlink_waiting.pop(uid, None)
+        await _process_streamlink(client, message, message, uid)
+
+
+# ═══════════════════════════════════════
+#  PREMIUM EXPIRY NOTIFICATION
+#  Daily check — 3 din pehle warn karo
+# ═══════════════════════════════════════
+async def _send_premium_expiry_reminders():
+    """Daily job — premium expire hone wale users ko notify karo."""
+    try:
+        from datetime import timedelta
+        now_dt = now()
+        # Users jinke premium 3 din mein expire honge
+        three_days_later = now_dt + timedelta(days=3)
+        async for doc in premium_col.find({
+            "expiry": {"$gt": now_dt, "$lte": three_days_later},
+            "expiry_warned": {"$ne": True}
+        }):
+            uid = doc.get("user_id")
+            exp = doc.get("expiry")
+            if not uid or not exp: continue
+            days_left = max(0, (exp - now_dt).days)
+            try:
+                await bot.send_message(
+                    uid,
+                    f"⚠️ **Premium Expiry Reminder!**\n\n"
+                    f"Aapka Premium plan **{days_left} din** mein expire ho raha hai!\n\n"
+                    f"📅 Expiry: `{exp.strftime('%d %b %Y')}`\n\n"
+                    f"Renew karo aur uninterrupted access enjoy karo! 💎",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("💎 Renew Premium", callback_data="show_premium")
+                    ]])
+                )
+                # Mark as warned
+                await premium_col.update_one(
+                    {"user_id": uid},
+                    {"$set": {"expiry_warned": True}}
+                )
+                await asyncio.sleep(0.1)
+            except Exception as e:
+                logger.warning(f"Premium expiry remind failed {uid}: {e}")
+        logger.info("✅ Premium expiry reminders sent")
+    except Exception as e:
+        logger.error(f"Premium expiry reminder job error: {e}")
+
 # Keep remaining admin commands: broadcast, shortlinks, fsub, gshortlink, setcommands, admin panel, etc
 # (These are the same as original — too long to duplicate, only the fixes above matter)
 
@@ -4064,6 +4227,13 @@ def start_bot():
                         asyncio.run_coroutine_threadsafe(cleanup(), bot.loop)
 
                 scheduler.add_job(_run_cleanup, 'interval', hours=1)
+
+                # ✅ Premium expiry reminder — daily 10 AM IST
+                def _run_expiry():
+                    if bot.loop and bot.loop.is_running():
+                        asyncio.run_coroutine_threadsafe(_send_premium_expiry_reminders(), bot.loop)
+
+                scheduler.add_job(_run_expiry, 'cron', hour=10, minute=0, timezone=IST)
                 scheduler.start()
                 logger.info("✅ Scheduler + aiohttp + watchdog started")
             asyncio.run_coroutine_threadsafe(_start(), loop)
@@ -4076,48 +4246,67 @@ def start_bot():
     @bot.on_chat_join_request()
     async def auto_approve_join_request(client, request):
         """
-        VJ Style join request handler:
-        1. Har request ko MongoDB mein save karo (3-layer check ke liye)
-        2. join_by_request=False channels pe auto-approve karo
-        3. join_by_request=True (request channel) pe admin manually approve karega
-           lekin bot MongoDB mein record rakhega taaki user ko file mil sake
+        Join request handler:
+        1. MongoDB mein save karo (3-layer check ke liye)
+        2. req_only channels pe NEVER auto-approve — admin manually approve karega
+        3. Normal join channels pe auto-approve karo
         """
         try:
-            from database import jr_add_user
-            uid    = request.from_user.id
-            ch_id  = request.chat.id
+            from database import jr_add_user, get_fsub_list
+            uid   = request.from_user.id
+            ch_id = request.chat.id
 
-            # Step 1: MongoDB mein save karo (VJ style tracking)
+            # Step 1: MongoDB mein save karo
             await jr_add_user(uid, ch_id)
             logger.info(f"📝 Join request tracked: {uid} → {ch_id}")
 
-            # Step 2: Channel type check
-            chat = await client.get_chat(ch_id)
-            join_by_req = getattr(chat, "join_by_request", False)
+            # Step 2: Check if this is a req_only channel in our fsub list
+            fsub_list = await get_fsub_list()
+            is_req_only = False
+            for ch in fsub_list:
+                if ch.get("id") == ch_id and ch.get("req_only", False):
+                    is_req_only = True
+                    break
 
-            if not join_by_req:
-                # Auto-approve mode (private_open)
-                await client.approve_chat_join_request(ch_id, uid)
-                logger.info(f"✅ Auto-approved: {uid} → {ch_id}")
-
-                # User ko confirm message bhejo
+            if is_req_only:
+                # ✅ FIX: req_only channel — NEVER auto-approve, admin karega
+                # User ko message bhejo — request received
                 try:
+                    chat = await client.get_chat(ch_id)
                     await client.send_message(
                         uid,
-                        f"✅ **{chat.title}** mein join ho gaye!\n\n"
-                        f"Ab wapas bot mein aao aur apni file lo! 🎬"
+                        f"📨 **{chat.title}** mein request bhej di!\n\n"
+                        f"Admin approve karenge. Tab tak wapas bot mein aao — **Verify** karo aur apni file lo! ✅"
                     )
                 except: pass
+                return  # ← IMPORTANT: auto-approve mat karo
 
-            else:
-                # Request channel — admin approve karega
-                # Lekin user ko message bhejo
+            # Normal channel — check Telegram's join_by_request setting
+            try:
+                chat = await client.get_chat(ch_id)
+                join_by_req = getattr(chat, "join_by_request", False)
+            except:
+                join_by_req = False
+
+            if not join_by_req:
+                # Auto-approve (private_open channel)
+                await client.approve_chat_join_request(ch_id, uid)
+                logger.info(f"✅ Auto-approved: {uid} → {ch_id}")
                 try:
+                    chat = await client.get_chat(ch_id)
                     await client.send_message(
                         uid,
-                        f"📨 **{chat.title}** mein aapki join request bhej di gayi!\n\n"
-                        f"Admin approve karenge. Tab tak wapas bot mein aao aur "
-                        f"**Verify** button dabao — file mil jaayegi! ✅"
+                        f"✅ **{chat.title}** mein join ho gaye!\n\nAb wapas bot mein aao aur file lo! 🎬"
+                    )
+                except: pass
+            else:
+                # join_by_request=True — admin approve karega
+                try:
+                    chat = await client.get_chat(ch_id)
+                    await client.send_message(
+                        uid,
+                        f"📨 **{chat.title}** mein request bhej di!\n\n"
+                        f"Admin approve karenge. Wapas bot mein aao — **Verify** karo! ✅"
                     )
                 except: pass
 
