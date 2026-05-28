@@ -3209,10 +3209,26 @@ async def file_request(client, message: Message):
 async def streamlink_cmd(client, message: Message):
     """
     /streamlink — Video ka permanent stream link generate karo.
-    - Reply karo kisi video pe /streamlink se → link milega
-    - Ya /streamlink send karo → bot video maangega
+    💎 PREMIUM ONLY feature.
     """
     uid = message.from_user.id
+
+    # ✅ Premium only check
+    if not await is_premium(uid):
+        await message.reply(
+            "💎 **StreamLink — Premium Only Feature!**\n\n"
+            "Kisi bhi video ka **permanent stream link** generate karo!\n\n"
+            "Premium members ko milta hai:\n"
+            "🔗 `/streamlink` — Any video ka stream link\n"
+            "⚡ Bina ads ke instant file delivery\n"
+            "🔍 Unlimited search results\n"
+            "🚀 Priority support\n\n"
+            "Premium lo aur sab unlock karo! 👇",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("💎 Premium Lo — Plans Dekho", callback_data="show_premium")
+            ]])
+        )
+        return
 
     # Case 1: Replied to a video message
     if message.reply_to_message and (
