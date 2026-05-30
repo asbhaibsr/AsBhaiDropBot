@@ -49,8 +49,12 @@ group_settings_col = db["group_settings"]
 warn_col          = db["warnings"]       # link warnings
 action_log_col    = db["action_logs"]    # all action logs
 search_cache_col  = db["search_cache"]   # temp search cache (MongoDB TTL auto-deletes)
-ads_col           = db["ads"]            # Ad manager — admin creates ads here
-ad_verify_col     = db["ad_verifies"]    # ✅ Ad verify log — 3 ghante interval
+ads_col           = db["ads"]
+ad_verify_col     = db["ad_verifies"]
+terms_col         = db["terms_accepted"]  # ✅ Users who accepted terms
+
+# In-memory cache: uid → last shown ad_id
+_ad_user_cache: dict = {}
 
 
 # ── db module signature ──
@@ -232,6 +236,22 @@ async def use_free_trial(user_id):
     await free_trial_col.update_one(
         {"user_id": user_id},
         {"$inc": {"uses": 1}, "$set": {"last_time": now(), "user_id": user_id}},
+        upsert=True
+    )
+
+# ═══════════════════════════════════════
+#  TERMS OF SERVICE
+# ═══════════════════════════════════════
+async def has_accepted_terms(user_id: int) -> bool:
+    """Check karo user ne terms accept kiye hain ya nahi."""
+    doc = await terms_col.find_one({"user_id": user_id})
+    return bool(doc)
+
+async def mark_terms_accepted(user_id: int):
+    """User ke terms accept record karo."""
+    await terms_col.update_one(
+        {"user_id": user_id},
+        {"$set": {"user_id": user_id, "accepted_at": now()}},
         upsert=True
     )
 
@@ -1095,23 +1115,29 @@ async def send_file_to_pm(client, user, msg_id, prem=False):
         fsize = get_file_size(file_msg)
         size_text = f"📦 Size: {fsize}\n" if fsize else ""
 
+        # ── Disclaimer (copyright protection) ──
+        DISCLAIMER = (
+            "\n\n⚠️ _For personal use only. Do not forward or distribute._"
+            "\n🗑 _File auto-deletes in {mins} min — save it!_"
+        ).format(mins=mins)
+
         # Roast captions — desi style 😂
         planet = random.choice(["🌍","🌎","🌏","🪐","🌕","⭐","💫","✨","🔥","💥"])
         if prem:
             caps = [
-                f"👑 **{fname}**\n\n{size_text}Aa gaya tujhe serve karne! 💎 VIP haina tu — {mins} min mein delete hogi, raja jaldi save kar! 🏃‍♂️",
-                f"🎬 **{fname}**\n\n{size_text}Premium wale bhaiya ji — ye lo tumhari file! {planet} {mins} min baad gayab, throne pe baith ke save karo! 👑",
-                f"🔥 **{fname}**\n\n{size_text}Tere liye bot ne jhand maar di! 💎 {mins} min mein delete — save kar varna paisa barbad! 📌",
-                f"💎 **{fname}**\n\n{size_text}Paisa vasool delivery! {planet} {mins} min ka countdown shuru — screenshot le ya save, kuch toh kar! ⏰",
-                f"🎁 **{fname}**\n\n{size_text}Dekh premium wale, sirf tere liye special service! 😏 {mins} min baad ye file bhi tujhe bhool jaayegi! 💨",
+                f"👑 **{fname}**\n\n{size_text}Aa gaya tujhe serve karne! 💎 VIP haina tu!{DISCLAIMER}",
+                f"🎬 **{fname}**\n\n{size_text}Premium wale bhaiya ji — ye lo tumhari file! {planet}{DISCLAIMER}",
+                f"🔥 **{fname}**\n\n{size_text}Tere liye bot ne jhand maar di! 💎{DISCLAIMER}",
+                f"💎 **{fname}**\n\n{size_text}Paisa vasool delivery! {planet}{DISCLAIMER}",
+                f"🎁 **{fname}**\n\n{size_text}Sirf tere liye special delivery! 😏{DISCLAIMER}",
             ]
         else:
             caps = [
-                f"{planet} **{fname}**\n\n{size_text}Le bhai, jhand maar di bot ne tere liye! 😂 {mins} min baad gayab — jaldi save kar!\n\n💎 /premium lo = Stream + No verify!",
-                f"📥 **{fname}**\n\n{size_text}Aa gaya? File bhi aa gayi! {planet} Par {mins} min ka time hai — save nahi kiya toh mat rona!\n\n💎 Premium = Unlimited + No ads!",
-                f"🎬 **{fname}**\n\n{size_text}Bot ki jaan nikal gayi ye dhoondne mein! 😤 {mins} min mein delete — ab save karna teri zimmedari hai!\n\n💎 /premium = Sab kuch free!",
-                f"🗂 **{fname}**\n\n{size_text}Le lo hazoor! {mins} min baad ye file bhi theek waise gayab hogi jaise college attendance! 👻\n\n💎 Premium kab le rahe? 😏",
-                f"🔥 **{fname}**\n\n{size_text}Delivered with love... aur thodi jhand! 😂 {mins} min countdown shuru — save kar varna dhoondta phirega!\n\n💎 Premium = Zero jhanjhat!",
+                f"{planet} **{fname}**\n\n{size_text}Le bhai, jhand maar di bot ne tere liye! 😂\n💎 /premium lo = No ads + Stream!{DISCLAIMER}",
+                f"📥 **{fname}**\n\n{size_text}Aa gaya? File bhi aa gayi! {planet}\n💎 Premium = Unlimited + No ads!{DISCLAIMER}",
+                f"🎬 **{fname}**\n\n{size_text}Bot ki jaan nikal gayi ye dhoondne mein! 😤\n💎 /premium = Sab kuch free!{DISCLAIMER}",
+                f"🗂 **{fname}**\n\n{size_text}Le lo hazoor! 👻\n💎 Premium kab le rahe? 😏{DISCLAIMER}",
+                f"🔥 **{fname}**\n\n{size_text}Delivered with love... aur thodi jhand! 😂\n💎 Premium = Zero jhanjhat!{DISCLAIMER}",
             ]
         clean_cap = random.choice(caps)
 
@@ -1382,9 +1408,7 @@ async def ad_active_list():
 async def ad_get_next(user_id):
     """
     User ke liye random active ad return karo.
-    ✅ FIX: Pure random selection — har baar alag ad aata hai.
-    Weighted random: kam impressions wala ad ko thoda zyada chance milta hai.
-    Last shown ad exclude karo — same ad repeat nahi hoga.
+    Weighted random + last-ad exclusion per user (no repeat).
     """
     import random as _random
     active = await ad_active_list()
@@ -1394,20 +1418,16 @@ async def ad_get_next(user_id):
     if len(active) == 1:
         ad = active[0]
     else:
-        # Import here to avoid circular
-        from bot import _user_last_ad
-        last_id = _user_last_ad.get(user_id)
-        # Exclude last shown ad
+        # ✅ FIX: Use module-level cache (no circular import)
+        last_id = _ad_user_cache.get(user_id)
         candidates = [a for a in active if str(a["_id"]) != str(last_id)] if last_id else active
         if not candidates:
-            candidates = active  # fallback if only 1 ad
+            candidates = active
 
-        # Weighted random: inverse of impressions (less shown = higher weight)
         max_imp = max(d.get("impressions", 0) for d in candidates) + 1
         weights = [max_imp - d.get("impressions", 0) + 1 for d in candidates]
         ad = _random.choices(candidates, weights=weights, k=1)[0]
-        # Save to memory
-        _user_last_ad[user_id] = str(ad["_id"])
+        _ad_user_cache[user_id] = str(ad["_id"])
 
     await ads_col.update_one({"_id": ad["_id"]}, {"$inc": {"impressions": 1}})
     return ad
