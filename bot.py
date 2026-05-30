@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from threading import Thread
 
 import pytz, aiohttp
-from pyrogram import Client, filters, enums
+from pyrogram import Client, filters, enums, StopPropagation
 from pyrogram.types import (
     Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery,
     WebAppInfo, ChatPermissions
@@ -162,6 +162,7 @@ from database import (
     ad_create, ad_list, ad_active_list, ad_get_next, ad_delete, ad_toggle, ad_count,
     set_clients as db_set_clients,
     is_ad_verified, mark_ad_verified,
+    has_accepted_terms, mark_terms_accepted,
 )
 from routes import (
     aio_app, routes, run_aiohttp_server,
@@ -331,6 +332,25 @@ async def start_handler(client, message: Message):
         except: pass
 
     is_new = await save_user(message.from_user, referred_by)
+
+    # ✅ Terms check — pehli baar use karne pe agreement
+    if not await has_accepted_terms(uid):
+        await message.reply(
+            "🎬 **AsBhai Drop Bot mein Swagat!**\n\n"
+            "⚠️ **Shuru karne se pehle — Terms of Service:**\n\n"
+            "• Yeh bot sirf **personal / educational use** ke liye hai\n"
+            "• Bot sirf publicly available content provide karta hai\n"
+            "• Download kiya gaya content **aage share mat karo**\n"
+            "• Copyright-protected files ko **distribute mat karo**\n"
+            "• Misuse karne par **account ban** ho sakta hai\n\n"
+            "✅ **Agree karke bot use karo:**",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("✅ Accept & Continue", callback_data="accept_terms")
+            ],[
+                InlineKeyboardButton("❌ Decline", callback_data="decline_terms")
+            ]])
+        )
+        return  # Jab tak accept nahi, aage nahi badhna
 
     if is_new:
         await send_log(
@@ -1530,6 +1550,36 @@ async def reset_warn_cmd(client, message: Message):
 async def cb_handler(client, query: CallbackQuery):
     data = query.data
     uid = query.from_user.id
+
+    # ✅ Terms Accept / Decline
+    if data == "accept_terms":
+        await mark_terms_accepted(uid)
+        await query.answer("✅ Terms accepted! Welcome!", show_alert=False)
+        try:
+            await query.message.edit_text(
+                "✅ **Terms Accepted!**\n\n"
+                "🎬 **AsBhai Drop Bot mein Swagat hai!**\n\n"
+                "Movie ya file dhundne ke liye naam type karo!\n"
+                "Commands ke liye /help",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🎬 Start Searching!", switch_inline_query_current_chat="")
+                ],[
+                    InlineKeyboardButton("💎 Premium Plans", callback_data="show_premium")
+                ]])
+            )
+        except: pass
+        return
+
+    if data == "decline_terms":
+        await query.answer("❌ Terms decline kiye — bot use nahi kar sakte.", show_alert=True)
+        try:
+            await query.message.edit_text(
+                "❌ **Terms Decline Kiye**\n\n"
+                "Bot use karne ke liye Terms accept karna zaroori hai.\n"
+                "Phir se try karne ke liye /start karo."
+            )
+        except: pass
+        return
 
     # ── noop ──
     if data == "noop":
@@ -3259,55 +3309,68 @@ async def streamlink_cmd(client, message: Message):
 
 async def _process_streamlink(client, trigger_msg, video_msg, uid):
     """Video message se stream link generate karo."""
-    processing = await trigger_msg.reply("⚙️ Stream link ban raha hai...")
+    processing = await trigger_msg.reply("⚙️ Stream link ban raha hai... ⏳")
     try:
-        # Forward to FILE_CHANNEL to get permanent msg_id
-        forwarded = await video_msg.forward(FILE_CHANNEL)
-        msg_id = forwarded.id
-
-        prem = await is_premium(uid)
-        base = KOYEB_URL or ""
-
-        # Stream URL — direct player link
-        stream_url   = f"{base}/stream_file/{msg_id}?uid={uid}"
-        player_url   = f"{base}/?uid={uid}&mid={msg_id}"
-        download_url = f"{base}/download/{msg_id}?uid={uid}"
-
-        # File info
         media = video_msg.video or video_msg.document
-        fname = getattr(media, 'file_name', 'video.mp4') or 'video.mp4'
-        size_mb = round((getattr(media, 'file_size', 0) or 0) / 1024 / 1024, 1)
+        if not media:
+            await processing.edit("❌ Valid video/document nahi mila!")
+            return
+
+        fname    = getattr(media, 'file_name', None) or 'video.mp4'
+        size_mb  = round((getattr(media, 'file_size', 0) or 0) / 1024 / 1024, 1)
         duration = getattr(media, 'duration', 0) or 0
-        dur_str = f"{duration//60}m {duration%60}s" if duration else "N/A"
+        dur_str  = f"{duration//60}m {duration%60}s" if duration else "N/A"
+
+        # ✅ FIX: Use copy_message (not forward) — works from any chat
+        try:
+            forwarded = await client.copy_message(
+                chat_id   = FILE_CHANNEL,
+                from_chat_id = video_msg.chat.id,
+                message_id   = video_msg.id
+            )
+        except Exception as ce:
+            # Fallback: download and re-upload
+            logger.warning(f"StreamLink copy failed, trying forward: {ce}")
+            forwarded = await video_msg.forward(FILE_CHANNEL)
+
+        msg_id = forwarded.id
+        base   = (KOYEB_URL or "").rstrip("/")
+
+        stream_url  = f"{base}/stream_file/{msg_id}?uid={uid}"
+        player_url  = f"{base}/?uid={uid}&mid={msg_id}"
 
         await processing.delete()
         await trigger_msg.reply(
             f"✅ **Stream Link Ready!**\n\n"
             f"📁 `{fname}`\n"
-            f"📦 Size: `{size_mb} MB`\n"
-            f"⏱ Duration: `{dur_str}`\n\n"
-            f"🔗 **Stream Link (Mini App):**\n`{player_url}`\n\n"
-            f"🎬 **Direct Stream:**\n`{stream_url}`\n\n"
-            f"💡 _Is link ko Ad mein video ke liye use kar sakte ho!_",
+            f"📦 Size: `{size_mb} MB` | ⏱ Duration: `{dur_str}`\n\n"
+            f"🎬 **Mini App Player:**\n`{player_url}`\n\n"
+            f"🔗 **Direct Stream:**\n`{stream_url}`\n\n"
+            f"💡 _Ad mein video add karne ke liye player link use karo!_",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("▶️ Stream Karo", web_app=WebAppInfo(url=player_url))
-            ],[
-                InlineKeyboardButton("📥 Download", url=download_url)
             ]])
         )
-        logger.info(f"✅ StreamLink generated: msg_id={msg_id} by uid={uid}")
+        logger.info(f"✅ StreamLink: uid={uid} msg_id={msg_id}")
+
     except Exception as e:
-        await processing.edit(f"❌ Error: {e}")
         logger.error(f"StreamLink error: {e}")
+        try:
+            await processing.edit(f"❌ Error: `{e}`\n\nRetry karo ya bot admin se contact karo.")
+        except:
+            pass
 
 
-@bot.on_message(filters.private & (filters.video | filters.document))
+@bot.on_message(filters.private & (filters.video | filters.document), group=1)
 async def handle_streamlink_video(client, message: Message):
     """Video aaya — agar user streamlink wait kar raha tha to process karo."""
-    uid = message.from_user.id
+    uid = message.from_user.id if message.from_user else None
+    if not uid:
+        return
     if _streamlink_waiting.get(uid):
         _streamlink_waiting.pop(uid, None)
         await _process_streamlink(client, message, message, uid)
+        raise StopPropagation  # ← Other handlers ko skip karo
 
 
 # ═══════════════════════════════════════
