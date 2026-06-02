@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from threading import Thread
 
 import pytz, aiohttp
-from pyrogram import Client, filters, enums, StopPropagation
+from pyrogram import Client, filters, enums
 from pyrogram.types import (
     Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery,
     WebAppInfo, ChatPermissions
@@ -2513,30 +2513,46 @@ async def cb_handler(client, query: CallbackQuery):
         return
 
     if data == "show_premium":
+        await query.answer()
+        miniapp_url = _miniapp_url(uid, getattr(query.from_user,'first_name',None) or 'User')
+        # ✅ Directly open mini app premium page
+        premium_url = miniapp_url.replace("/?uid=", "/?page=premium&uid=") if miniapp_url else None
         prem = await is_premium(uid)
-        exp = await get_premium_expiry(uid)
+        exp  = await get_premium_expiry(uid)
         exp_str = exp.astimezone(IST).strftime("%d %b %Y") if exp else "N/A"
-        kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💰 Premium Kharidein", callback_data="buy_premium")],
+        kb_btns = []
+        if premium_url:
+            kb_btns.append([InlineKeyboardButton("💎 Premium Plans Dekho — Mini App", web_app=WebAppInfo(url=premium_url))])
+        kb_btns += [
             [InlineKeyboardButton("🔗 Refer Karo — Free Premium", callback_data="refer_info")],
             [InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK)],
             [InlineKeyboardButton("🔙 Back", callback_data="back_main")]
-        ])
-        await query.message.edit(
-            f"💎 **Premium**\n\n"
-            f"Status: {'✅ Active' if prem else '❌ Nahi'}\n"
-            f"Expiry: {exp_str}\n\n"
-            f"**Benefits:**\n"
-            f"• 🔓 Force join nahi\n"
-            f"• 🔗 Shortlink nahi\n"
-            f"• 📦 10 results per search\n"
-            f"• ∞ Unlimited downloads\n"
-            f"• ▶️ Stream + Download\n"
-            f"• ⚡ PM mein search\n"
-            f"• 🎛 Results customize karo\n\n"
-            f"Mini App se kharido ya refer karo!",
-            reply_markup=kb
-        )
+        ]
+        try:
+            await query.message.edit(
+                f"💎 **Premium**\n\n"
+                f"Status: {'✅ Active' if prem else '❌ Nahi'}\n"
+                f"Expiry: {exp_str}\n\n"
+                f"**Benefits:**\n"
+                f"• 🔓 Ads bypass — Bina verify ke files\n"
+                f"• 🔗 `/streamlink` — Video stream links\n"
+                f"• 📦 Unlimited search results\n"
+                f"• ▶️ HD Stream + Download\n"
+                f"• ∞ Unlimited downloads\n"
+                f"• ⚡ Instant delivery\n\n"
+                f"👇 Mini App mein plans dekho aur kharido!",
+                reply_markup=InlineKeyboardMarkup(kb_btns)
+            )
+        except:
+            pass
+        return
+
+    # ✅ Streamlink cancel
+    if data == "streamlink_cancel":
+        await query.answer("❌ Cancelled", show_alert=False)
+        _streamlink_waiting.pop(uid, None)
+        try: await query.message.delete()
+        except: pass
         return
 
     if data == "buy_premium":
@@ -3257,120 +3273,69 @@ async def file_request(client, message: Message):
 # ═══════════════════════════════════════
 @bot.on_message(filters.command("streamlink") & filters.private)
 async def streamlink_cmd(client, message: Message):
-    """
-    /streamlink — Video ka permanent stream link generate karo.
-    💎 PREMIUM ONLY feature.
-    """
-    uid = message.from_user.id
-
-    # ✅ Premium only check
-    if not await is_premium(uid):
-        await message.reply(
-            "💎 **StreamLink — Premium Only Feature!**\n\n"
-            "Kisi bhi video ka **permanent stream link** generate karo!\n\n"
-            "Premium members ko milta hai:\n"
-            "🔗 `/streamlink` — Any video ka stream link\n"
-            "⚡ Bina ads ke instant file delivery\n"
-            "🔍 Unlimited search results\n"
-            "🚀 Priority support\n\n"
-            "Premium lo aur sab unlock karo! 👇",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("💎 Premium Lo — Plans Dekho", callback_data="show_premium")
-            ]])
-        )
-        return
-
-    # Case 1: Replied to a video message
-    if message.reply_to_message and (
-        message.reply_to_message.video or
-        message.reply_to_message.document
-    ):
-        target = message.reply_to_message
-        await _process_streamlink(client, message, target, uid)
-        return
-
-    # Case 2: Ask user to send video
-    _streamlink_waiting[uid] = True
-    wait_msg = await message.reply(
-        "📤 **Stream Link Generator**\n\n"
-        "Video ya document file bhejo — main stream link bana dunga!\n\n"
-        "💡 Koi bhi video file bhejo (movie, series, any video)\n"
-        "⏱ 60 seconds mein bhejni hai, warna cancel ho jaayega"
-    )
-    # Auto-cancel after 60 seconds
-    async def _cancel_wait():
-        await asyncio.sleep(60)
-        if _streamlink_waiting.get(uid):
-            _streamlink_waiting.pop(uid, None)
-            try: await wait_msg.edit("⏰ Time out! Phir se `/streamlink` try karo.")
-            except: pass
-    asyncio.create_task(_cancel_wait())
-
-
-async def _process_streamlink(client, trigger_msg, video_msg, uid):
-    """Video message se stream link generate karo."""
-    processing = await trigger_msg.reply("⚙️ Stream link ban raha hai... ⏳")
+    """💎 PREMIUM ONLY — Video stream link generator."""
     try:
-        media = video_msg.video or video_msg.document
-        if not media:
-            await processing.edit("❌ Valid video/document nahi mila!")
+        uid = message.from_user.id
+        logger.info(f"🔗 /streamlink uid={uid}")
+
+        if not await is_premium(uid):
+            await message.reply(
+                "💎 **StreamLink — Premium Feature!**\n\n"
+                "Trial expire ho gaya ya premium nahi liya.\n\n"
+                "Premium lo aur unlock karo:\n"
+                "🔗 Kisi bhi video ka stream link\n"
+                "⚡ Bina ads ke instant delivery",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("💎 Premium Plans", callback_data="show_premium")
+                ]])
+            )
             return
 
-        fname    = getattr(media, 'file_name', None) or 'video.mp4'
-        size_mb  = round((getattr(media, 'file_size', 0) or 0) / 1024 / 1024, 1)
-        duration = getattr(media, 'duration', 0) or 0
-        dur_str  = f"{duration//60}m {duration%60}s" if duration else "N/A"
+        # Case 1: Reply to video
+        if message.reply_to_message:
+            rmsg = message.reply_to_message
+            if rmsg.video or rmsg.document or rmsg.audio:
+                await _process_streamlink(client, message, rmsg, uid)
+                return
 
-        # ✅ FIX: Use copy_message (not forward) — works from any chat
-        try:
-            forwarded = await client.copy_message(
-                chat_id   = FILE_CHANNEL,
-                from_chat_id = video_msg.chat.id,
-                message_id   = video_msg.id
-            )
-        except Exception as ce:
-            # Fallback: download and re-upload
-            logger.warning(f"StreamLink copy failed, trying forward: {ce}")
-            forwarded = await video_msg.forward(FILE_CHANNEL)
-
-        msg_id = forwarded.id
-        base   = (KOYEB_URL or "").rstrip("/")
-
-        stream_url  = f"{base}/stream_file/{msg_id}?uid={uid}"
-        player_url  = f"{base}/?uid={uid}&mid={msg_id}"
-
-        await processing.delete()
-        await trigger_msg.reply(
-            f"✅ **Stream Link Ready!**\n\n"
-            f"📁 `{fname}`\n"
-            f"📦 Size: `{size_mb} MB` | ⏱ Duration: `{dur_str}`\n\n"
-            f"🎬 **Mini App Player:**\n`{player_url}`\n\n"
-            f"🔗 **Direct Stream:**\n`{stream_url}`\n\n"
-            f"💡 _Ad mein video add karne ke liye player link use karo!_",
+        # Case 2: Ask to send video
+        _streamlink_waiting[uid] = True
+        wait_msg = await message.reply(
+            "📤 **Stream Link Generator**\n\n"
+            "Ab koi bhi video file bhejo — stream link ban jaayega!\n\n"
+            "💡 Ya kisi video pe reply karke `/streamlink` use karo\n"
+            "⏱ 2 minutes mein bhejni hai",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("▶️ Stream Karo", web_app=WebAppInfo(url=player_url))
+                InlineKeyboardButton("❌ Cancel", callback_data="streamlink_cancel")
             ]])
         )
-        logger.info(f"✅ StreamLink: uid={uid} msg_id={msg_id}")
+        logger.info(f"🔗 Waiting for video from uid={uid}")
 
-    except Exception as e:
-        logger.error(f"StreamLink error: {e}")
-        try:
-            await processing.edit(f"❌ Error: `{e}`\n\nRetry karo ya bot admin se contact karo.")
-        except:
-            pass
+        async def _cancel_wait():
+            await asyncio.sleep(120)
+            if _streamlink_waiting.get(uid):
+                _streamlink_waiting.pop(uid, None)
+                try: await wait_msg.edit("⏰ Time out! Phir se `/streamlink` try karo.")
+                except: pass
+        asyncio.create_task(_cancel_wait())
+
+    except Exception as ex:
+        logger.error(f"streamlink_cmd error uid={getattr(message.from_user,'id',0)}: {ex}")
+        try: await message.reply(f"❌ Error: `{ex}`")
+        except: pass
 
 
-@bot.on_message(filters.private & (filters.video | filters.document), group=1)
+@bot.on_message(filters.private & (filters.video | filters.document | filters.audio), group=2)
 async def handle_streamlink_video(client, message: Message):
-    """Video aaya — agar user streamlink wait kar raha tha to process karo."""
-    uid = message.from_user.id if message.from_user else None
-    if not uid:
-        return
-    if _streamlink_waiting.get(uid):
-        _streamlink_waiting.pop(uid, None)
-        await _process_streamlink(client, message, message, uid)
-        raise StopPropagation  # ← Other handlers ko skip karo
+    """Video aaya — process if user was waiting for streamlink."""
+    try:
+        uid = message.from_user.id if message.from_user else None
+        if not uid: return
+        if _streamlink_waiting.get(uid):
+            _streamlink_waiting.pop(uid, None)
+            await _process_streamlink(client, message, message, uid)
+    except Exception as ex:
+        logger.error(f"handle_streamlink_video error: {ex}")
 
 
 # ═══════════════════════════════════════
