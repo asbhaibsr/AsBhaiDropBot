@@ -562,22 +562,22 @@ body.rotated-mode-active{overflow:hidden !important;}
 
 <!-- ════ STREAM PAGE — ULTRA HD PLAYER ════ -->
 <div class="pg" id="pg-stream">
-  <div style="padding:14px 14px 6px;font-size:16px;font-weight:900">▶️ <span style="background:linear-gradient(90deg,var(--acc2),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">HD Stream Player</span></div>
 
   <!-- Premium Gate -->
   <div class="strm-prem" id="strm-prem">
     <h3>💎 Premium Feature</h3>
-    <p>HD streaming sirf Premium users ke liye hai!<br><br>Premium lo — HD stream + download + multiple players!</p>
+    <p>HD streaming sirf Premium users ke liye hai!<br>Premium lo — stream + download + multiple players!</p>
     <button class="bf bfp" style="max-width:280px;margin:16px auto" onclick="go('pg-premium')">💎 Premium Plans Dekho →</button>
   </div>
 
-  <!-- Player Area -->
+  <!-- Player Area (YouTube-style) -->
   <div id="strm-player" style="display:none">
+
     <!-- Engine Selector -->
     <div class="engine-bar" id="engine-bar">
       <button class="eng-btn on" onclick="switchEngine('html5')">🎬 HTML5</button>
-      <button class="eng-btn" onclick="switchEngine('mx')">📱 MX Style</button>
-      <button class="eng-btn" onclick="switchEngine('vlc')">🔶 VLC Style</button>
+      <button class="eng-btn" onclick="switchEngine('mx')">📱 MX</button>
+      <button class="eng-btn" onclick="switchEngine('vlc')">🔶 VLC</button>
       <button class="eng-btn" onclick="switchEngine('mini')">⚡ Mini</button>
     </div>
 
@@ -585,59 +585,86 @@ body.rotated-mode-active{overflow:hidden !important;}
     <div class="player-wrap" id="player-wrap" onclick="togCtrl()">
       <div class="player-inner" id="player-inner">
         <video id="vid" playsinline preload="auto" crossorigin="anonymous"></video>
-
-        <!-- Loading -->
         <div class="player-loading" id="pld" style="display:none">
-          <div class="pl-spin"></div>
-          <p>Loading stream... ⏳</p>
+          <div class="pl-spin"></div><p>Loading stream... ⏳</p>
         </div>
-
-        <!-- Placeholder -->
         <div class="player-placeholder" id="pph">
           <div class="pp-icon">🎬</div>
-          <p>Koi video select nahi hai<br>Bot se file bhejo — stream link milega!</p>
+          <p>Koi video select nahi hai<br>Bot se stream link bhejo!</p>
         </div>
-
-        <!-- Controls Overlay -->
         <div class="ctrl-bar" id="ctrl-bar">
           <input type="range" class="ctrl-seek" id="ctrl-seek" min="0" max="100" value="0" oninput="seekV(this.value)">
           <div class="ctrl-row">
             <span class="ctrl-time" id="ct-cur">0:00</span>
-            <button class="ctrl-btn sm" onclick="skip(-10)" title="⏪ 10s">⏪</button>
+            <button class="ctrl-btn sm" onclick="skip(-10)">⏪</button>
             <button class="ctrl-btn" id="ctrl-play" onclick="playPause()" style="font-size:22px">▶</button>
-            <button class="ctrl-btn sm" onclick="skip(10)" title="⏩ 10s">⏩</button>
+            <button class="ctrl-btn sm" onclick="skip(10)">⏩</button>
             <span class="ctrl-time" id="ct-dur">0:00</span>
             <div class="ctrl-spacer"></div>
-            <span class="ctrl-fname" id="ctrl-fname"></span>
             <button class="ctrl-spd" onclick="cycSpd()" id="ctrl-spd">1×</button>
             <button class="ctrl-btn sm" onclick="togMute()">🔊</button>
             <input type="range" class="ctrl-vol" id="ctrl-vol" min="0" max="100" value="100" oninput="setVol(this.value)">
-            <button class="ctrl-btn sm" onclick="doPiP()" title="PiP">🖼</button>
-            <button class="ctrl-btn sm" onclick="doRotate()" title="Rotate">🔄</button>
-            <button class="ctrl-btn sm" onclick="doZoom()" title="Zoom">🔍</button>
-            <button class="ctrl-btn sm" onclick="doFull()" title="Fullscreen">⛶</button>
+            <button class="ctrl-btn sm" onclick="doPiP()">🖼</button>
+            <button class="ctrl-btn sm" onclick="doFull()">⛶</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- File Info Bar -->
-    <div class="file-info-bar" id="file-info-bar">
-      <div class="fib-icon">🎬</div>
-      <div class="fib-meta">
-        <div class="fib-name" id="fib-name">No file loaded</div>
-        <div class="fib-detail" id="fib-detail">—</div>
+    <!-- YouTube-style Info Section -->
+    <div style="padding:12px 14px 0">
+      <!-- Title -->
+      <div id="strm-yt-title" style="font-size:15px;font-weight:800;color:#f1f5f9;line-height:1.4;margin-bottom:6px">No file loaded</div>
+      <!-- Quality + Size badge -->
+      <div id="strm-yt-meta" style="font-size:11px;color:#64748b;margin-bottom:10px"></div>
+
+      <!-- Like / Dislike / Share / Download row -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px">
+        <button id="strm-like-btn" onclick="strmLike()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#f1f5f9;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          👍 <span id="strm-like-count">0</span>
+        </button>
+        <button id="strm-dislike-btn" onclick="strmDislike()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#f1f5f9;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          👎 <span id="strm-dislike-count">0</span>
+        </button>
+        <button onclick="copyStreamLink()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#f1f5f9;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          🔗 Share
+        </button>
+        <button onclick="doDl()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(108,99,255,.2);border:1px solid rgba(108,99,255,.35);border-radius:20px;color:#a5b4fc;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          ⬇ Download
+        </button>
+        <button onclick="openQuality()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;color:#64748b;font-size:12px;cursor:pointer;white-space:nowrap">
+          ⚙️
+        </button>
       </div>
-      <div class="fib-actions">
-        <button class="fib-btn fib-link" onclick="copyStreamLink()" title="Copy Stream Link">🔗</button>
-        <button class="fib-btn fib-dl" onclick="doDl()" title="Download">⬇</button>
+
+      <!-- Expandable description / info -->
+      <div id="strm-desc-box" style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px;margin-bottom:12px;cursor:pointer" onclick="strmToggleDesc()">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;font-weight:700;color:#94a3b8">📋 File Info</span>
+          <span id="strm-desc-arrow" style="font-size:11px;color:#64748b">▼</span>
+        </div>
+        <div id="strm-desc-content" style="display:none;margin-top:8px;font-size:11px;color:#94a3b8;line-height:1.8">
+          <div id="strm-fname-full" style="color:#cbd5e1;font-weight:600;margin-bottom:4px"></div>
+          <div id="strm-file-size"></div>
+          <div id="strm-file-dur"></div>
+          <div style="margin-top:6px;color:#475569;font-size:10px">⚠️ For personal use only. Do not share or distribute.</div>
+        </div>
       </div>
     </div>
 
-    <!-- Quality/Player Options -->
-    <div style="padding:8px 14px">
-      <div class="sc" onclick="openQuality()" style="margin:0">
-        <div class="sc-t" style="margin-bottom:0"><div class="sc-i" style="background:rgba(108,99,255,.15)">⚙️</div><div><div class="sc-nm">Player Settings</div><div class="sc-sub">Quality • Speed • Subtitles • Aspect</div></div></div>
+    <!-- Watch History (YouTube-style) -->
+    <div style="padding:0 14px 80px">
+      <div style="font-size:13px;font-weight:800;color:#94a3b8;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+        <span>📺 Watch History</span>
+        <button onclick="strmClearHistory()" style="background:none;border:none;color:#475569;font-size:10px;cursor:pointer">Clear All</button>
+      </div>
+      <div id="strm-history-list">
+        <div style="text-align:center;padding:20px;color:#475569;font-size:12px">No watch history yet.</div>
       </div>
     </div>
   </div>
@@ -1534,6 +1561,10 @@ function init(){
     })
     .catch(function(){setNavBadge('free');setRefUI(0);});
   checkStream();
+
+  // ✅ Direct page navigation from URL params
+  var _pg = _urlParams.get('page');
+  if (_pg === 'premium') { setTimeout(function(){ go('pg-premium'); }, 300); }
 }
 
 function setEl(id,val){var e=document.getElementById(id);if(e)e.textContent=val;}
@@ -2368,18 +2399,34 @@ function loadVid(su,du,mid){
   if(pph)pph.style.display='none';
   if(pld){pld.style.display='flex';var pt=pld.querySelector('p');if(pt)pt.textContent='Loading stream... ⏳';}
   
-  // Load file info
+  // Load file info + populate YouTube-style fields
   if(mid){
     fetch(BASE+'/file_info/'+mid)
     .then(function(r){return r.json();})
     .then(function(info){
-      setEl('fib-name',info.file_name||'Video');
-      setEl('ctrl-fname',info.file_name||'');
-      var sz=info.file_size||0;
-      var szTxt=sz>1073741824?(sz/1073741824).toFixed(1)+' GB':sz>1048576?(sz/1048576).toFixed(1)+' MB':sz>1024?(sz/1024).toFixed(0)+' KB':'—';
-      var durTxt=info.duration?fmt(info.duration):'';
-      setEl('fib-detail',(szTxt||'—')+(durTxt?' • '+durTxt:'')+(info.mime_type?' • '+info.mime_type:''));
-    }).catch(function(){});
+      var fname = info.file_name||'Video';
+      var sz = info.file_size||0;
+      var szTxt = sz>1073741824?(sz/1073741824).toFixed(1)+' GB':sz>1048576?(sz/1048576).toFixed(1)+' MB':sz>1024?(sz/1024).toFixed(0)+' KB':'—';
+      var durTxt = info.duration?fmt(info.duration):'';
+
+      // Old fib elements (compatibility)
+      setEl('fib-name', fname);
+      setEl('ctrl-fname', fname);
+      setEl('fib-detail', (szTxt||'—')+(durTxt?' • '+durTxt:'')+(info.mime_type?' • '+info.mime_type:''));
+
+      // ✅ YouTube-style fields
+      setEl('strm-yt-title', fname);
+      setEl('strm-yt-meta', (szTxt?szTxt+' • ':'') + (durTxt?durTxt+' • ':'') + '📡 Streaming');
+      setEl('strm-fname-full', fname);
+      setEl('strm-file-size', szTxt ? '📦 Size: ' + szTxt : '');
+      setEl('strm-file-dur', durTxt ? '⏱ Duration: ' + durTxt : '');
+
+      // ✅ Load like/dislike counts + add to history
+      strmLoadLikeState(mid);
+      strmAddHistory(mid, fname, szTxt, durTxt);
+    }).catch(function(){
+      setEl('strm-yt-title', 'Video');
+    });
   }
   
   if(!v)return;
@@ -2689,6 +2736,146 @@ function doDl(){
 }
 
 /* ── Stream Link Copy ── */
+/* ══ YouTube-style: Like/Dislike + History ══ */
+
+async function strmLoadLikeState(mid) {
+  if (!mid) return;
+  try {
+    var result = await window.storage.get('likes_' + mid);
+    var data = result ? JSON.parse(result.value) : {likes:0, dislikes:0, my:'none'};
+    setEl('strm-like-count', data.likes || 0);
+    setEl('strm-dislike-count', data.dislikes || 0);
+    var lb = document.getElementById('strm-like-btn');
+    var db = document.getElementById('strm-dislike-btn');
+    if (lb) lb.style.background = data.my === 'like' ? 'rgba(34,197,94,.2)' : 'rgba(255,255,255,.08)';
+    if (db) db.style.background = data.my === 'dislike' ? 'rgba(239,68,68,.2)' : 'rgba(255,255,255,.08)';
+  } catch(e) {}
+}
+
+async function strmLike() {
+  if (!curMid) return;
+  try {
+    var result = await window.storage.get('likes_' + curMid);
+    var data = result ? JSON.parse(result.value) : {likes:0, dislikes:0, my:'none'};
+    if (data.my === 'like') {
+      data.likes = Math.max(0, data.likes - 1);
+      data.my = 'none';
+    } else {
+      if (data.my === 'dislike') data.dislikes = Math.max(0, data.dislikes - 1);
+      data.likes++;
+      data.my = 'like';
+    }
+    await window.storage.set('likes_' + curMid, JSON.stringify(data));
+    strmLoadLikeState(curMid);
+  } catch(e) {}
+}
+
+async function strmDislike() {
+  if (!curMid) return;
+  try {
+    var result = await window.storage.get('likes_' + curMid);
+    var data = result ? JSON.parse(result.value) : {likes:0, dislikes:0, my:'none'};
+    if (data.my === 'dislike') {
+      data.dislikes = Math.max(0, data.dislikes - 1);
+      data.my = 'none';
+    } else {
+      if (data.my === 'like') data.likes = Math.max(0, data.likes - 1);
+      data.dislikes++;
+      data.my = 'dislike';
+    }
+    await window.storage.set('likes_' + curMid, JSON.stringify(data));
+    strmLoadLikeState(curMid);
+  } catch(e) {}
+}
+
+function strmToggleDesc() {
+  var c = document.getElementById('strm-desc-content');
+  var a = document.getElementById('strm-desc-arrow');
+  if (!c) return;
+  var open = c.style.display !== 'none';
+  c.style.display = open ? 'none' : 'block';
+  if (a) a.textContent = open ? '▼' : '▲';
+}
+
+async function strmAddHistory(mid, fname, szTxt, durTxt) {
+  try {
+    var res = await window.storage.get('watch_history');
+    var hist = res ? JSON.parse(res.value) : [];
+    // Remove duplicate
+    hist = hist.filter(function(h){ return h.mid !== mid; });
+    // Add to front
+    hist.unshift({ mid: mid, fname: fname, sz: szTxt, dur: durTxt, time: Date.now() });
+    // Keep max 5
+    if (hist.length > 5) hist = hist.slice(0, 5);
+    await window.storage.set('watch_history', JSON.stringify(hist));
+    strmRenderHistory(hist);
+  } catch(e) {}
+}
+
+async function strmLoadHistory() {
+  try {
+    var res = await window.storage.get('watch_history');
+    var hist = res ? JSON.parse(res.value) : [];
+    strmRenderHistory(hist);
+  } catch(e) {}
+}
+
+function strmRenderHistory(hist) {
+  var list = document.getElementById('strm-history-list');
+  if (!list) return;
+  if (!hist || !hist.length) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:#475569;font-size:12px">No watch history yet.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  hist.forEach(function(item) {
+    var timeStr = '';
+    var diff = Date.now() - (item.time || 0);
+    if (diff < 3600000) timeStr = Math.floor(diff/60000) + ' min ago';
+    else if (diff < 86400000) timeStr = Math.floor(diff/3600000) + 'h ago';
+    else timeStr = Math.floor(diff/86400000) + 'd ago';
+
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer';
+    div.onclick = (function(m){ return function(){ strmOpenHistory(m); }; })(item.mid);
+    div.innerHTML =
+      '<div style="width:56px;height:38px;background:rgba(108,99,255,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">🎬</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(item.fname||'Video')+'</div>'+
+        '<div style="font-size:10px;color:#64748b;margin-top:2px">'+(item.sz||'')+(item.dur?' • '+item.dur:'')+' • '+timeStr+'</div>'+
+      '</div>'+
+      '<button onclick="event.stopPropagation();strmRemoveHistory(\''+item.mid+'\')" style="background:none;border:none;color:#475569;font-size:14px;padding:4px;cursor:pointer;flex-shrink:0">✕</button>';
+    list.appendChild(div);
+  });
+}
+
+function strmOpenHistory(mid) {
+  var uid = new URLSearchParams(window.location.search).get('uid') || '';
+  var su  = BASE + '/stream_file/' + mid + (uid ? '?uid='+uid : '');
+  var du  = BASE + '/download/' + mid + (uid ? '?uid='+uid : '');
+  loadVid(su, du, mid);
+  go('pg-stream');
+  window.scrollTo(0, 0);
+}
+
+async function strmRemoveHistory(mid) {
+  try {
+    var res = await window.storage.get('watch_history');
+    var hist = res ? JSON.parse(res.value) : [];
+    hist = hist.filter(function(h){ return h.mid !== mid; });
+    await window.storage.set('watch_history', JSON.stringify(hist));
+    strmRenderHistory(hist);
+  } catch(e) {}
+}
+
+async function strmClearHistory() {
+  try {
+    await window.storage.delete('watch_history');
+    strmRenderHistory([]);
+    toast('🗑 History cleared!');
+  } catch(e) {}
+}
+
 function copyStreamLink(){
   if(!curMid){toast('❌ Koi file load nahi hai');return;}
   var uid=new URLSearchParams(window.location.search).get('uid')||UID;
