@@ -437,7 +437,7 @@ async def start_handler(client, message: Message):
                             reply_markup=kb
                         )
                     else:
-                        wait = await message.reply("📥 File aa rahi hai... ⏳")
+                        wait = await message.reply("⚡ File prepare ho rahi hai... ⏳\n_Thodi der mein PM mein milegi!_")
                         success, info = await send_file_to_pm(client, message.from_user, pending_file_id, prem_user)
                         await wait.delete()
                         if success:
@@ -529,7 +529,7 @@ async def start_handler(client, message: Message):
                             kb = await build_fsub_keyboard(not_joined, uid)
                             await message.reply("✅ Verify ho gaya!\n📢 Ab channel join karo — file milegi!", reply_markup=kb)
                         else:
-                            wait = await message.reply("📥 File aa rahi hai... ⏳")
+                            wait = await message.reply("⚡ File prepare ho rahi hai... ⏳\n_Thodi der mein PM mein milegi!_")
                             success, info = await send_file_to_pm(client, message.from_user, pending_file_id, prem_user)
                             await wait.delete()
                             if not success:
@@ -742,7 +742,7 @@ async def start_handler(client, message: Message):
                 return
 
         # STEP 4: File Send
-        wait = await message.reply("📥 File aa rahi hai... ⏳")
+        wait = await message.reply("⚡ File prepare ho rahi hai... ⏳\n_Thodi der mein PM mein milegi!_")
         success, info = await send_file_to_pm(client, message.from_user, msg_id, prem)
         await wait.delete()
         if not success:
@@ -895,7 +895,7 @@ async def start_handler(client, message: Message):
                 return
 
         # STEP 4: Send file
-        wait = await message.reply("📥 File aa rahi hai... ⏳")
+        wait = await message.reply("⚡ File prepare ho rahi hai... ⏳\n_Thodi der mein PM mein milegi!_")
         success, info = await send_file_to_pm(client, message.from_user, msg_id, prem)
         await wait.delete()
         if not success:
@@ -1206,7 +1206,7 @@ async def search_handler(client, message: Message):
                 return
 
         try:
-            wait_msg = await message.reply(f"🔍 **'{query}'** dhundh raha hoon... ⏳")
+            wait_msg = await message.reply(f"⏳ **Searching...** `{query}`\n🔍 _Database check ho rahi hai..._")
             if isinstance(wait_msg, (list, tuple)):
                 wait_msg = wait_msg[0] if wait_msg else None
             if not wait_msg:
@@ -1236,14 +1236,15 @@ async def search_handler(client, message: Message):
             fixed_query = _fix_query_spelling(query)
             spelling_note = ""
             if fixed_query.lower() != query.lower():
-                spelling_note = f"\n💡 **Spelling fix:** `{query}` → **{fixed_query}** — ye try karo!"
+                spelling_note = f"\n\n💡 **Spelling fix try karo:** **{fixed_query}**"
             edited = await wait_msg.edit(
-                f"😕 **'{query}' nahi mila!**\n\n"
-                f"**Kya karna hai:**\n"
-                f"1️⃣ Spelling check karo (ek galti bhi ho to nahi milta)\n"
-                f"2️⃣ Sirf movie ka naam likho — year/quality mat likho\n"
-                f"3️⃣ Neeche buttons try karo"
-                f"{spelling_note}",
+                f"❌ **'{query}' nahi mila!**\n\n"
+                f"**Tips:**\n"
+                f"• 🔤 Spelling check karo — ek galti = no result\n"
+                f"• ✂️ Sirf naam likho — year/quality/language mat likho\n"
+                f"• 🔁 Alag spelling try karo (e.g. `Bahubali` ya `Baahubali`)"
+                f"{spelling_note}\n\n"
+                f"👇 Ya yahan dhundho:",
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("🔍 @asfilter_bot mein dhundho", url=filter_url),
                 ],[
@@ -1257,10 +1258,11 @@ async def search_handler(client, message: Message):
         await wait_msg.delete()
         me = await client.get_me()
 
-        # ✅ FIX: page_size = settings se lo, hardcoded 5 nahi
-        page_size = limit  # Admin ne setresults se jo set kiya wahi show karo
-        total_pages = max(1, (len(found) + page_size - 1) // page_size)
-        page_found = found[:page_size]
+        # ✅ FIX: page_size = 5 (ek page pe 5 results) — total limit se alag
+        # Agar 10 results hain to 2 pages banenge (5+5), Prev/Next buttons aayenge
+        PAGE_SIZE = 5
+        total_pages = max(1, (len(found) + PAGE_SIZE - 1) // PAGE_SIZE)
+        page_found = found[:PAGE_SIZE]
 
         qkey = re.sub(r'[^a-zA-Z0-9_]', '_', query)[:18]
         _result_cache[f"{uid}_{qkey}"] = found
@@ -1270,7 +1272,7 @@ async def search_handler(client, message: Message):
         t = gs.get("auto_delete_time", 300)
         mins = t // 60
         count_text = len(found)
-        page_info = f" (1/{total_pages})" if total_pages > 1 else ""
+        page_info = f" • Page 1/{total_pages}" if total_pages > 1 else ""
 
         # ── TMDb Movie Info fetch (settings se ON/OFF) ──
         tmdb_info = None
@@ -1299,9 +1301,10 @@ async def search_handler(client, message: Message):
                 f"{title_line}  {type_line}\n"
                 f"{rating_line}\n"
                 f"{overview_line}\n\n"
-                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** mili!\n"
-                f"👇 File ka button dabao — PM mein aayegi! 📥\n"
-                f"⏳ {mins} min baad gayab!"
+                f"📂 **{count_text} file{'s' if count_text > 1 else ''} mili!**"
+                + (f"  _(Page 1/{total_pages})_" if total_pages > 1 else "") + "\n"
+                f"👇 Button dabao — file seedha PM mein aayegi! 📥\n"
+                f"⏳ _{mins} min baad message delete ho jaayega — save kar lo!_"
             )
             # Send poster + results
             if tmdb_info.get('poster_url'):
@@ -1316,32 +1319,33 @@ async def search_handler(client, message: Message):
             else:
                 result_msg = await message.reply(result_text, reply_markup=kb, disable_web_page_preview=True)
         else:
-            # Fallback — original funny messages (TMDb nahi mila)
+            # Fallback — funny messages (TMDb nahi mila)
             p_emoji = random.choice(["🌍","🌎","🌏","🪐","🌕","⭐","🌟","💫","✨","🔥","💥","⚡"])
+            page_nav_hint = f"\n📄 _Page 1/{total_pages} — Next ke liye neeche ▶️ button dabao_" if total_pages > 1 else ""
             result_msgs = [
-                f"{p_emoji} **{message.from_user.mention}**, le bhai! Bot ki jaan nikal gayi dhoondne mein! 😤\n\n"
-                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** mili!\n\n"
-                f"👇 Button daba — PM mein file seedha aayegi! 📥\n"
-                f"⏳ {mins} min baad gayab — jaldi kar! 🏃‍♂️",
+                f"{p_emoji} **{message.from_user.mention}**, mil gaya! 😎\n\n"
+                f"📂 **{count_text} file{'s' if count_text > 1 else ''} mili!**{page_nav_hint}\n\n"
+                f"👇 Button dabao — file PM mein seedha delivery! 📥\n"
+                f"⏳ _{mins} min baad gayab — jaldi save karo!_ 🏃‍♂️",
 
-                f"{p_emoji} Arre **{message.from_user.mention}**! Mil gaya tera maal bhai! 🎬\n\n"
-                f"🎯 **{count_text} result{'s' if count_text > 1 else ''}{page_info}** ready!\n\n"
-                f"👇 Jis file chahiye — button daba, file PM mein!\n"
-                f"⏳ {mins} min hai tere paas — BC save kar le! ⏰",
+                f"{p_emoji} Arre **{message.from_user.mention}**! Maal hazir hai bhai! 🎬\n\n"
+                f"📂 **{count_text} result{'s' if count_text > 1 else ''} ready!**{page_nav_hint}\n\n"
+                f"👇 Jis file chahiye — button dabao, file PM mein!\n"
+                f"⏳ _{mins} min hai — save karo! ⏰_",
 
-                f"💥 **{message.from_user.mention}**, dhundh liya! 🔍 Bot ne jhand maar di tere liye!\n\n"
-                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** tere liye!\n\n"
-                f"👇 Button daba = PM mein delivery! 📦\n"
-                f"⏳ {mins} min mein delete — jaldi kar varna rona mat! 😂",
+                f"💥 **{message.from_user.mention}**, dhundh liya! 🔍\n\n"
+                f"📂 **{count_text} file{'s' if count_text > 1 else ''} tere liye!**{page_nav_hint}\n\n"
+                f"👇 Button dabao = PM mein delivery! 📦\n"
+                f"⏳ _{mins} min mein delete — jaldi! 😂_",
 
                 f"🤖 **{message.from_user.mention}**, maang tha — de diya! 😎\n\n"
-                f"🎯 **{count_text} file{'s' if count_text > 1 else ''}{page_info}** hazir hai!\n\n"
-                f"👇 Neeche wala button daba — seedha PM mein pakad!\n"
-                f"⏳ {mins} min baad ye bhi bhool jaayega tujhe! 👻",
+                f"📂 **{count_text} file{'s' if count_text > 1 else ''} hazir!**{page_nav_hint}\n\n"
+                f"👇 Button dabao — seedha PM mein pakad!\n"
+                f"⏳ _{mins} min baad gayab! 👻_",
             ]
             result_text = random.choice(result_msgs)
             if not prem:
-                result_text += f"\n\n💎 _Premium lo = 10 results + Stream + No verify!_"
+                result_text += f"\n\n💎 _Premium lo = {s.get('premium_results', 10)} results + No verify + Stream!_"
             result_msg = await message.reply(result_text, reply_markup=kb)
 
         # Search log removed
@@ -1428,7 +1432,7 @@ async def pm_search_handler(client, message: Message):
     if s.get("maintenance") and uid not in ADMINS:
         await message.reply("🔧 Maintenance chal raha hai."); return
 
-    wait_msg = await message.reply(f"🔍 **'{query_text}'** dhundh raha hoon... ⏳")
+    wait_msg = await message.reply(f"⏳ **Searching...** `{query_text}`\n🔍 _Database check ho rahi hai..._")
     doc = await users_col.find_one({"user_id": uid})
     limit = doc.get("prem_results_pref", 10) if doc else 10
     found = await do_search(query_text, limit=limit)
@@ -1605,7 +1609,7 @@ async def cb_handler(client, query: CallbackQuery):
                     {"user_id": uid},
                     {"$unset": {"pending_file_id": "", "pending_file_chat": ""}}
                 )
-                wait = await client.send_message(uid, "📥 File aa rahi hai... ⏳")
+                wait = await client.send_message(uid, "⚡ File prepare ho rahi hai... ⏳\n_Thodi der mein PM mein milegi!_")
                 success, info = await send_file_to_pm(client, query.from_user, int(pending_file_id), prem)
                 try:
                     await wait.delete()
@@ -1986,14 +1990,15 @@ async def cb_handler(client, query: CallbackQuery):
         try:
             await query.message.edit_text(
                 f"🔍 **{len(found)} file mili** — `{search_q_display}`\n"
-                f"📄 Page {page+1}/{total_pages}\n\n"
-                f"👇 Button daba — PM mein seedha delivery! 📦",
+                f"📄 Page **{page+1}/{total_pages}**"
+                + (f" {'◀️' if page > 0 else ''}{'▶️' if page < total_pages-1 else ''}" if total_pages > 1 else "") + "\n\n"
+                f"👇 Button dabao — file PM mein seedha delivery! 📦",
                 reply_markup=InlineKeyboardMarkup(btns)
             )
         except Exception as e:
             if "message is not modified" not in str(e).lower():
                 logger.warning(f"rpage edit error: {e}")
-        await query.answer(f"Page {page+1}/{total_pages}")
+        await query.answer(f"✅ Page {page+1}/{total_pages}")
         return
 
     # ── Language filter ──
@@ -2484,9 +2489,11 @@ async def cb_handler(client, query: CallbackQuery):
         page_size = 5
         total_pages = max(1, (len(found) + page_size - 1) // page_size)
         btns = _build_result_buttons(found[:page_size], r_uid, me.username, qkey, 0, total_pages)
+        page_hint = f"\n📄 Page **1/{total_pages}** — Next ke liye ▶️ dabao" if total_pages > 1 else ""
         try:
             await query.message.edit_text(
-                f"🔍 **{len(found)} file mili** — `{search_q}`\n\n👇 Button daba, PM mein pakad! 😎",
+                f"📂 **{len(found)} file mili** — `{search_q}`{page_hint}\n\n"
+                f"👇 Button dabao — PM mein seedha delivery! 📦",
                 reply_markup=InlineKeyboardMarkup(btns)
             )
         except: pass
@@ -4286,71 +4293,95 @@ def start_bot():
 
     Thread(target=_start_scheduler_thread, daemon=True).start()
 
-    # ── VJ Style: Chat Join Request Handler ──
+    # ── Chat Join Request Handler ──
     @bot.on_chat_join_request()
     async def auto_approve_join_request(client, request):
         """
-        Join request handler:
-        1. MongoDB mein save karo (3-layer check ke liye)
-        2. req_only channels pe NEVER auto-approve — admin manually approve karega
-        3. Normal join channels pe auto-approve karo
+        Join request handler — FIXED:
+        • req_only channels: KABHI auto-approve NAHI — admin manually karega
+        • Force sub channel (verification-only): KABHI auto-approve NAHI
+        • Normal public channels (join_by_request=False): auto-approve karo
+        
+        Agar koi bhi channel force-sub ke liye use ho raha hai,
+        usse req_only=True mark karo /fsub add -100xxx Title req se.
         """
         try:
             from database import jr_add_user, get_fsub_list
             uid   = request.from_user.id
             ch_id = request.chat.id
 
-            # Step 1: MongoDB mein save karo
+            # Step 1: MongoDB mein save karo (har request track hogi)
             await jr_add_user(uid, ch_id)
             logger.info(f"📝 Join request tracked: {uid} → {ch_id}")
 
-            # Step 2: Check if this is a req_only channel in our fsub list
+            # Step 2: Fsub list check karo
             fsub_list = await get_fsub_list()
+            channel_in_fsub = False
             is_req_only = False
+
             for ch in fsub_list:
-                if ch.get("id") == ch_id and ch.get("req_only", False):
-                    is_req_only = True
+                if ch.get("id") == ch_id:
+                    channel_in_fsub = True
+                    # req_only flag check
+                    if ch.get("req_only", False):
+                        is_req_only = True
                     break
 
-            if is_req_only:
-                # ✅ FIX: req_only channel — NEVER auto-approve, admin karega
-                # User ko message bhejo — request received
+            # ✅ MAIN FIX: Agar channel force-sub list mein hai
+            # → KABHI auto-approve mat karo, chahe req_only ho ya na ho
+            # → Force sub channel sirf verification ke liye hota hai
+            # → Admin khud approve karega
+            if channel_in_fsub:
                 try:
-                    chat = await client.get_chat(ch_id)
+                    chat_obj = await client.get_chat(ch_id)
+                    chat_title = getattr(chat_obj, "title", "Channel")
+                    mode_msg = (
+                        "📨 **Request Mode Channel**" if is_req_only
+                        else "🔐 **Verification Channel**"
+                    )
                     await client.send_message(
                         uid,
-                        f"📨 **{chat.title}** mein request bhej di!\n\n"
-                        f"Admin approve karenge. Tab tak wapas bot mein aao — **Verify** karo aur apni file lo! ✅"
+                        f"✅ **{chat_title}** mein request submit ho gayi!\n\n"
+                        f"{mode_msg}\n"
+                        f"Admin review karenge aur approve karenge.\n\n"
+                        f"⏳ Tab tak bot use karte raho — group mein search karo! 🔍\n"
+                        f"💎 Premium lo — kisi bhi channel join ki zaroorat nahi!"
                     )
-                except: pass
-                return  # ← IMPORTANT: auto-approve mat karo
+                except Exception as _me:
+                    logger.warning(f"JR msg send fail uid={uid}: {_me}")
+                # ← CRITICAL: return karo — auto-approve mat karo
+                logger.info(f"🚫 Auto-approve skipped (fsub channel): {uid} → {ch_id}")
+                return
 
-            # Normal channel — check Telegram's join_by_request setting
+            # Step 3: Channel fsub list mein NAHI hai
+            # Normal channel — Telegram setting check karo
             try:
-                chat = await client.get_chat(ch_id)
-                join_by_req = getattr(chat, "join_by_request", False)
-            except:
-                join_by_req = False
+                chat_obj = await client.get_chat(ch_id)
+                join_by_req = getattr(chat_obj, "join_by_request", False)
+                chat_title  = getattr(chat_obj, "title", "Channel")
+            except Exception:
+                join_by_req = True   # Safe default — approve mat karo
+                chat_title  = "Channel"
 
             if not join_by_req:
-                # Auto-approve (private_open channel)
-                await client.approve_chat_join_request(ch_id, uid)
-                logger.info(f"✅ Auto-approved: {uid} → {ch_id}")
+                # ✅ Auto-approve (public/private-open channel)
                 try:
-                    chat = await client.get_chat(ch_id)
+                    await client.approve_chat_join_request(ch_id, uid)
+                    logger.info(f"✅ Auto-approved (non-fsub): {uid} → {ch_id}")
                     await client.send_message(
                         uid,
-                        f"✅ **{chat.title}** mein join ho gaye!\n\nAb wapas bot mein aao aur file lo! 🎬"
+                        f"🎉 **{chat_title}** mein join ho gaye!\n\n"
+                        f"Ab wapas group mein aao aur movie search karo! 🎬"
                     )
-                except: pass
+                except Exception as _ae:
+                    logger.warning(f"Auto-approve failed {uid}→{ch_id}: {_ae}")
             else:
                 # join_by_request=True — admin approve karega
                 try:
-                    chat = await client.get_chat(ch_id)
                     await client.send_message(
                         uid,
-                        f"📨 **{chat.title}** mein request bhej di!\n\n"
-                        f"Admin approve karenge. Wapas bot mein aao — **Verify** karo! ✅"
+                        f"📨 **{chat_title}** mein request bhej di!\n\n"
+                        f"Admin approve karenge — thodi der mein join ho jaoge. ✅"
                     )
                 except: pass
 
