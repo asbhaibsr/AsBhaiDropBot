@@ -331,7 +331,8 @@ body.rotated-mode-active{overflow:hidden !important;}
 .foot a{color:var(--acc2);text-decoration:none;font-size:11px;font-weight:600}
 .foot p{font-size:9px;color:var(--t3);margin-top:4px}
 </style>
-<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css"><script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 </head>
 <body>
 <!-- Rotate Exit Button — fullscreen landscape mode mein dikhta hai -->
@@ -563,158 +564,112 @@ body.rotated-mode-active{overflow:hidden !important;}
 
 <!-- ════ STREAM PAGE — ULTRA HD PLAYER ════ -->
 <div class="pg" id="pg-stream">
-<style>
-/* ── VJ-Style Stream Page ── */
-#strm-wrap { background:#000; min-height:100vh; padding-bottom:80px; }
-#strm-prem-gate { padding:40px 20px; text-align:center; }
-#strm-prem-gate h3 { font-size:22px; font-weight:900; color:#f59e0b; margin-bottom:10px; }
-#strm-prem-gate p  { font-size:13px; color:#94a3b8; line-height:1.8; margin-bottom:20px; }
-
-/* Navbar */
-#strm-navbar { background:#111; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #1e293b; }
-#strm-navbar .strm-brand { font-size:18px; font-weight:900; background:linear-gradient(90deg,#f59e0b,#ef4444); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-
-/* File title */
-#strm-title-bar { padding:10px 14px 6px; }
-#strm-title-bar .strm-ftitle { font-size:13px; font-weight:700; color:#f1f5f9; line-height:1.5; word-break:break-word; }
-#strm-title-bar .strm-fmeta  { font-size:10px; color:#475569; margin-top:3px; }
-
-/* Video player — full width, black bg */
-#strm-video-wrap { position:relative; width:100%; background:#000; }
-#strm-video-wrap video { width:100%; max-height:55vw; display:block; background:#000; }
-#strm-video-wrap.fullheight video { max-height:none; height:100vh; }
-
-/* Plyr overrides */
-.plyr { --plyr-color-main:#ef4444; --plyr-video-background:#000; font-family:inherit; }
-.plyr__control--overlaid { background:rgba(239,68,68,.85)!important; }
-
-/* Error overlay */
-#strm-err { display:none; position:absolute; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; flex-direction:column; gap:10px; z-index:10; }
-#strm-err p { color:#fca5a5; font-size:13px; text-align:center; padding:0 20px; }
-
-/* Loading overlay */
-#strm-loading { display:none; position:absolute; inset:0; background:rgba(0,0,0,.7); align-items:center; justify-content:center; z-index:9; flex-direction:column; gap:8px; }
-#strm-loading .ld-spin { width:40px; height:40px; border:3px solid rgba(255,255,255,.1); border-top-color:#ef4444; border-radius:50%; animation:spin .8s linear infinite; }
-
-/* Play-with buttons */
-#strm-players { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:10px 14px; }
-.sp-btn { background:#111; border:1px solid #1e293b; border-radius:10px; padding:10px 6px; text-align:center; cursor:pointer; transition:background .15s,border-color .15s; }
-.sp-btn:active { background:#1e293b; }
-.sp-btn .sp-icon { font-size:24px; display:block; margin-bottom:4px; }
-.sp-btn .sp-name { font-size:10px; color:#64748b; font-weight:700; }
-
-/* Action row */
-#strm-actions { display:flex; gap:8px; padding:0 14px 10px; }
-.sa-btn { flex:1; padding:11px 6px; border-radius:10px; border:none; font-size:12px; font-weight:800; cursor:pointer; }
-.sa-dl  { background:linear-gradient(135deg,#6c63ff,#7c3aed); color:#fff; }
-.sa-cp  { background:#1e293b; color:#94a3b8; border:1px solid #334155; }
-
-/* Notice bar */
-#strm-notice { background:rgba(239,68,68,.1); border-top:1px solid rgba(239,68,68,.2); padding:8px 14px; font-size:10px; color:#fca5a5; text-align:center; line-height:1.6; }
-
-/* Watch history */
-#strm-hist-section { padding:12px 14px; }
-#strm-hist-section h4 { font-size:12px; font-weight:800; color:#475569; letter-spacing:.05em; margin-bottom:8px; display:flex; justify-content:space-between; }
-#strm-hist-section h4 button { background:none; border:none; color:#334155; font-size:10px; cursor:pointer; }
-.sh-item { display:flex; align-items:center; gap:10px; padding:8px 10px; background:#111; border-radius:9px; margin-bottom:6px; cursor:pointer; border:1px solid #1e293b; }
-.sh-item:active { background:#1e293b; }
-.sh-thumb { width:36px; height:36px; border-radius:6px; background:#1e293b; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
-.sh-info  { flex:1; min-width:0; }
-.sh-name  { font-size:11px; color:#f1f5f9; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.sh-meta  { font-size:9px; color:#475569; margin-top:2px; }
-
-@keyframes spin { to { transform:rotate(360deg); } }
-</style>
-
-<div id="strm-wrap">
 
   <!-- Premium Gate -->
-  <div id="strm-prem-gate" style="display:none">
-    <div style="font-size:48px;margin-bottom:12px">🔒</div>
+  <div class="strm-prem" id="strm-prem">
     <h3>💎 Premium Feature</h3>
-    <p>HD Streaming sirf Premium users ke liye!<br>Stream + Download + Multiple Players sab ek jagah!</p>
-    <button onclick="go('pg-premium')" style="width:100%;max-width:260px;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:12px;color:#000;font-size:14px;font-weight:900;cursor:pointer">💎 Premium Lo →</button>
+    <p>HD streaming sirf Premium users ke liye hai!<br>Premium lo — stream + download + multiple players!</p>
+    <button class="bf bfp" style="max-width:280px;margin:16px auto" onclick="go('pg-premium')">💎 Premium Plans Dekho →</button>
   </div>
 
-  <!-- Player section (shown for premium) -->
-  <div id="strm-content" style="display:none">
+  <!-- Player Area (YouTube-style) -->
+  <div id="strm-player" style="display:none">
 
-    <!-- Navbar -->
-    <div id="strm-navbar">
-      <span class="strm-brand">🎬 AsBhai Player</span>
-      <button onclick="go('pg-home')" style="background:none;border:none;color:#475569;font-size:20px;cursor:pointer">✕</button>
+    <!-- Engine Selector -->
+    <div class="engine-bar" id="engine-bar">
+      <button class="eng-btn on" onclick="switchEngine('html5')">🎬 HTML5</button>
+      <button class="eng-btn" onclick="switchEngine('mx')">📱 MX</button>
+      <button class="eng-btn" onclick="switchEngine('vlc')">🔶 VLC</button>
+      <button class="eng-btn" onclick="switchEngine('mini')">⚡ Mini</button>
     </div>
 
-    <!-- File title bar -->
-    <div id="strm-title-bar">
-      <div class="strm-ftitle" id="strm-ftitle">Loading...</div>
-      <div class="strm-fmeta"  id="strm-fmeta"></div>
-    </div>
-
-    <!-- Video player -->
-    <div id="strm-video-wrap">
-      <video id="strm-vid" playsinline preload="metadata" crossorigin="anonymous"
-        style="width:100%;max-height:56vw;display:block;background:#000"></video>
-      <!-- Loading overlay -->
-      <div id="strm-loading" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:9">
-        <div class="ld-spin"></div>
-        <p style="font-size:12px;color:#94a3b8">Loading stream...</p>
+    <!-- Player -->
+    <div class="player-wrap" id="player-wrap" onclick="togCtrl()">
+      <div class="player-inner" id="player-inner">
+        <video id="vid" playsinline preload="auto" crossorigin="anonymous"></video>
+        <div class="player-loading" id="pld" style="display:none">
+          <div class="pl-spin"></div><p>Loading stream... ⏳</p>
+        </div>
+        <div class="player-placeholder" id="pph">
+          <div class="pp-icon">🎬</div>
+          <p>Koi video select nahi hai<br>Bot se stream link bhejo!</p>
+        </div>
+        <div class="ctrl-bar" id="ctrl-bar">
+          <input type="range" class="ctrl-seek" id="ctrl-seek" min="0" max="100" value="0" oninput="seekV(this.value)">
+          <div class="ctrl-row">
+            <span class="ctrl-time" id="ct-cur">0:00</span>
+            <button class="ctrl-btn sm" onclick="skip(-10)">⏪</button>
+            <button class="ctrl-btn" id="ctrl-play" onclick="playPause()" style="font-size:22px">▶</button>
+            <button class="ctrl-btn sm" onclick="skip(10)">⏩</button>
+            <span class="ctrl-time" id="ct-dur">0:00</span>
+            <div class="ctrl-spacer"></div>
+            <button class="ctrl-spd" onclick="cycSpd()" id="ctrl-spd">1×</button>
+            <button class="ctrl-btn sm" onclick="togMute()">🔊</button>
+            <input type="range" class="ctrl-vol" id="ctrl-vol" min="0" max="100" value="100" oninput="setVol(this.value)">
+            <button class="ctrl-btn sm" onclick="doPiP()">🖼</button>
+            <button class="ctrl-btn sm" onclick="doFull()">⛶</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- "Play with" section — VJ style -->
-    <div style="padding:12px 14px 4px">
-      <p style="font-size:11px;font-weight:800;color:#475569;letter-spacing:.06em;margin-bottom:8px">▶ PLAY WITH EXTERNAL APP</p>
-    </div>
-    <div id="strm-players">
-      <div class="sp-btn" onclick="strmVLC()">
-        <span class="sp-icon">🔶</span>
-        <span class="sp-name">VLC Player</span>
+    <!-- YouTube-style Info Section -->
+    <div style="padding:12px 14px 0">
+      <!-- Title -->
+      <div id="strm-yt-title" style="font-size:15px;font-weight:800;color:#f1f5f9;line-height:1.4;margin-bottom:6px">No file loaded</div>
+      <!-- Quality + Size badge -->
+      <div id="strm-yt-meta" style="font-size:11px;color:#64748b;margin-bottom:10px"></div>
+
+      <!-- Like / Dislike / Share / Download row -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px">
+        <button id="strm-like-btn" onclick="strmLike()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#f1f5f9;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          👍 <span id="strm-like-count">0</span>
+        </button>
+        <button id="strm-dislike-btn" onclick="strmDislike()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#f1f5f9;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          👎 <span id="strm-dislike-count">0</span>
+        </button>
+        <button onclick="copyStreamLink()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#f1f5f9;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          🔗 Share
+        </button>
+        <button onclick="doDl()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(108,99,255,.2);border:1px solid rgba(108,99,255,.35);border-radius:20px;color:#a5b4fc;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          ⬇ Download
+        </button>
+        <button onclick="openQuality()"
+          style="display:flex;align-items:center;gap:5px;padding:8px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;color:#64748b;font-size:12px;cursor:pointer;white-space:nowrap">
+          ⚙️
+        </button>
       </div>
-      <div class="sp-btn" onclick="strmMX()">
-        <span class="sp-icon">📱</span>
-        <span class="sp-name">MX Player</span>
-      </div>
-      <div class="sp-btn" onclick="strmPlayIt()">
-        <span class="sp-icon">▶️</span>
-        <span class="sp-name">Play-It</span>
-      </div>
-      <div class="sp-btn" onclick="strmKM()">
-        <span class="sp-icon">🎵</span>
-        <span class="sp-name">KM Player</span>
-      </div>
-      <div class="sp-btn" onclick="strmS()">
-        <span class="sp-icon">⚡</span>
-        <span class="sp-name">S Player</span>
-      </div>
-      <div class="sp-btn" onclick="strmHD()">
-        <span class="sp-icon">🔴</span>
-        <span class="sp-name">HD Player 4K</span>
+
+      <!-- Expandable description / info -->
+      <div id="strm-desc-box" style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px;margin-bottom:12px;cursor:pointer" onclick="strmToggleDesc()">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;font-weight:700;color:#94a3b8">📋 File Info</span>
+          <span id="strm-desc-arrow" style="font-size:11px;color:#64748b">▼</span>
+        </div>
+        <div id="strm-desc-content" style="display:none;margin-top:8px;font-size:11px;color:#94a3b8;line-height:1.8">
+          <div id="strm-fname-full" style="color:#cbd5e1;font-weight:600;margin-bottom:4px"></div>
+          <div id="strm-file-size"></div>
+          <div id="strm-file-dur"></div>
+          <div style="margin-top:6px;color:#475569;font-size:10px">⚠️ For personal use only. Do not share or distribute.</div>
+        </div>
       </div>
     </div>
 
-    <!-- Download + Copy buttons -->
-    <div id="strm-actions">
-      <button class="sa-btn sa-dl" onclick="strmDownload()">⬇ Download</button>
-      <button class="sa-btn sa-cp" onclick="strmCopyLink()">🔗 Copy Link</button>
-    </div>
-
-    <!-- Notice -->
-    <div id="strm-notice">
-      ⚠️ Video not playing? Browser codec support nahi — external player use karo!<br>
-      🔒 Personal use only — share mat karo.
-    </div>
-
-    <!-- Watch History -->
-    <div id="strm-hist-section">
-      <h4>📺 WATCH HISTORY <button onclick="strmClearHistory()">Clear All</button></h4>
-      <div id="strm-hist-list">
-        <div style="text-align:center;padding:20px;color:#334155;font-size:12px">Abhi koi history nahi hai.</div>
+    <!-- Watch History (YouTube-style) -->
+    <div style="padding:0 14px 80px">
+      <div style="font-size:13px;font-weight:800;color:#94a3b8;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+        <span>📺 Watch History</span>
+        <button onclick="strmClearHistory()" style="background:none;border:none;color:#475569;font-size:10px;cursor:pointer">Clear All</button>
+      </div>
+      <div id="strm-history-list">
+        <div style="text-align:center;padding:20px;color:#475569;font-size:12px">No watch history yet.</div>
       </div>
     </div>
-
   </div>
-</div>
 </div>
 
 <!-- ════ PREMIUM PANEL PAGE ════ -->
@@ -899,57 +854,50 @@ body.rotated-mode-active{overflow:hidden !important;}
   </div>
 </div>
 
-<!-- ════ AD VERIFY PAGE (User) — v4.0 2-AD SYSTEM ════ -->
+<!-- ════ AD VERIFY PAGE (User) — v4.0 ════ -->
 <div class="pg" id="pg-adverify">
 <div style="max-width:480px;margin:0 auto;padding:10px 14px 80px">
 
-  <!-- Top action buttons -->
   <div style="display:flex;gap:8px;margin-bottom:10px">
     <button onclick="go('pg-advertise')" style="flex:1;padding:11px 6px;background:linear-gradient(135deg,#6c63ff,#7c3aed);border:none;border-radius:11px;color:#fff;font-size:12px;font-weight:800;cursor:pointer">📢 Apna Ad Lagwao</button>
     <button onclick="go('pg-premium')" style="flex:1;padding:11px 6px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:11px;color:#000;font-size:12px;font-weight:800;cursor:pointer">💎 Premium Lo</button>
   </div>
 
-  <!-- Overall step indicator: Step X of 3 -->
-  <div id="adv-step-bar" style="margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+  <!-- Overall progress -->
+  <div style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
       <span id="adv-step-label" style="font-size:11px;font-weight:800;color:#a78bfa">📍 Step 1 of 3</span>
       <span id="adv-step-hint" style="font-size:10px;color:#64748b">Ad 1 dekho</span>
     </div>
     <div style="height:5px;background:rgba(255,255,255,.08);border-radius:10px;overflow:hidden">
-      <div id="adv-overall-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#6c63ff,#a78bfa);border-radius:10px;transition:width .6s ease"></div>
+      <div id="adv-overall-bar" style="height:100%;width:5%;background:linear-gradient(90deg,#6c63ff,#a78bfa);border-radius:10px;transition:width .6s ease"></div>
     </div>
     <div style="display:flex;justify-content:space-between;margin-top:5px">
-      <span id="adv-dot-1" style="font-size:9px;color:#6c63ff;font-weight:700">● Ad 1</span>
+      <span id="adv-dot-1" style="font-size:9px;color:#22c55e;font-weight:700">● Ad 1</span>
       <span id="adv-dot-2" style="font-size:9px;color:#475569;font-weight:700">○ Ad 2</span>
       <span id="adv-dot-3" style="font-size:9px;color:#475569;font-weight:700">○ Link</span>
     </div>
   </div>
 
-  <!-- ═══ AD CARD (reused for ad1 + ad2) ═══ -->
+  <!-- Ad Card -->
   <div id="adv-card" style="background:linear-gradient(135deg,#0d0d1a,#131320);border:1px solid #2d2d50;border-radius:14px;padding:14px;margin-bottom:10px">
-
-    <!-- Card header: #AD badge + step label -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:7px">
-        <div style="width:8px;height:8px;border-radius:50%;background:#6c63ff;animation:pulse 1.5s infinite;flex-shrink:0"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:#6c63ff;animation:pulse 1.5s infinite"></div>
         <span id="adv-card-badge" style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:1px">#AD 1 of 2</span>
       </div>
       <span id="adv-card-step-tag" style="font-size:9px;font-weight:800;padding:2px 9px;background:rgba(108,99,255,.2);border:1px solid rgba(108,99,255,.3);border-radius:20px;color:#a78bfa">STEP 1</span>
     </div>
-
-    <!-- Ad image -->
     <div id="adv-image-wrap" style="display:none;margin-bottom:10px;border-radius:10px;overflow:hidden;max-height:160px">
-      <img id="adv-image" src="" alt="Ad" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px;display:block" onerror="document.getElementById('adv-image-wrap').style.display='none'">
+      <img id="adv-image" src="" alt="Ad" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px;display:block">
     </div>
-
-    <!-- Ad title + desc -->
     <div id="adv-title" style="font-size:15px;font-weight:800;color:#f1f5f9;margin-bottom:5px">Loading...</div>
     <div id="adv-desc" style="font-size:12px;color:#94a3b8;line-height:1.6;margin-bottom:12px"></div>
 
-    <!-- Countdown + progress bar (visible AFTER click) -->
+    <!-- Timer (shown after click) -->
     <div id="adv-timer-section" style="display:none;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-        <span id="adv-timer-label" style="font-size:11px;color:#94a3b8">⏳ Processing...</span>
+        <span id="adv-timer-label" style="font-size:11px;color:#94a3b8">Processing...</span>
         <span id="adv-timer-count" style="font-size:13px;font-weight:900;color:#a78bfa">60s</span>
       </div>
       <div style="height:6px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden">
@@ -957,71 +905,61 @@ body.rotated-mode-active{overflow:hidden !important;}
       </div>
     </div>
 
-    <!-- Fake nudge message box (shown at half-timer) -->
-    <div id="adv-nudge" style="display:none;padding:9px 11px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:9px;margin-bottom:10px;animation:fadeIn .4s ease">
-      <span id="adv-nudge-txt" style="font-size:11px;color:#fbbf24;font-weight:700">⚡ Verification processing... aapka ad register ho raha hai!</span>
+    <!-- Fake nudge -->
+    <div id="adv-nudge" style="display:none;padding:9px 11px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:9px;margin-bottom:10px">
+      <span id="adv-nudge-txt" style="font-size:11px;color:#fbbf24;font-weight:700">Verification processing...</span>
     </div>
 
-    <!-- Processing animation (visible during timer) -->
+    <!-- Processing animation -->
     <div id="adv-processing" style="display:none;text-align:center;padding:8px 0;margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px">
-        <span class="spi"></span>
-        <span id="adv-process-txt" style="font-size:12px;color:#6c63ff;font-weight:700">Ad verify ho raha hai...</span>
-      </div>
+      <span class="spi"></span>
+      <span id="adv-process-txt" style="font-size:12px;color:#6c63ff;font-weight:700;margin-left:8px">Ad verify ho raha hai...</span>
     </div>
 
-    <!-- Visit button (before click) -->
+    <!-- Visit button -->
     <a id="adv-link" href="#" target="_blank" rel="noopener" onclick="advLinkClicked(event)"
-      style="display:block;padding:14px;background:linear-gradient(135deg,#6c63ff,#7c3aed);border-radius:10px;color:#fff;text-align:center;font-size:14px;font-weight:800;text-decoration:none;cursor:pointer;margin-bottom:6px;letter-spacing:.3px">
+      style="display:block;padding:14px;background:linear-gradient(135deg,#6c63ff,#7c3aed);border-radius:10px;color:#fff;text-align:center;font-size:14px;font-weight:800;text-decoration:none;cursor:pointer;margin-bottom:6px">
       🔗 Visit Karo — Ad Dekho
     </a>
-
-    <!-- Instruction -->
-    <div id="adv-instruction" style="font-size:10px;color:#64748b;text-align:center;line-height:1.6;padding:4px 0">
-      👆 Button dabao → Sponsor page explore karo → Wapas aao
+    <div id="adv-instruction" style="font-size:10px;color:#64748b;text-align:center;line-height:1.6">
+      👆 Button dabao → page explore karo → wapas aao
     </div>
   </div>
 
-  <!-- Notice strip (blinking) -->
+  <!-- Notice -->
   <div id="adv-notice" style="margin-bottom:10px;padding:9px 13px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:9px;text-align:center">
-    <span id="adv-notice-txt" style="font-size:11px;color:#fca5a5;font-weight:700;animation:blink 1.2s infinite;display:inline-block">👆 Pehle Ad pe click karo — uske baad verify hoga!</span>
+    <span id="adv-notice-txt" style="font-size:11px;color:#fca5a5;font-weight:700">👆 Pehle Ad pe click karo — uske baad verify hoga!</span>
   </div>
 
-  <!-- ═══ STEP 2 — SHORTLINK SECTION ═══ -->
+  <!-- Shortlink section (step 3) -->
   <div id="adv-shortlink-section" style="display:none;background:linear-gradient(135deg,#050e1a,#091526);border:1.5px solid rgba(14,165,233,.35);border-radius:14px;padding:16px;margin-bottom:10px">
-
-    <!-- Step indicator -->
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
       <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#0369a1);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0">3</div>
       <div>
         <div style="font-size:13px;font-weight:800;color:#38bdf8">Shortlink Verify — Last Step!</div>
-        <div style="font-size:10px;color:#475569">Neeche ka link kholo → wapas aao → file lo</div>
+        <div style="font-size:10px;color:#475569">Link kholo → thodi der raho → wapas aao → file lo</div>
       </div>
     </div>
-
-    <!-- SL timer section -->
     <div id="adv-sl-timer-section" style="display:none;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-        <span style="font-size:10px;color:#475569">⏳ Link verify ho raha hai...</span>
+        <span style="font-size:10px;color:#475569">Link verify ho raha hai...</span>
         <span id="adv-sl-countdown" style="font-size:14px;font-weight:900;color:#38bdf8">30</span>
       </div>
       <div style="height:5px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden">
         <div id="adv-sl-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#0ea5e9,#22c55e);border-radius:10px;transition:width .8s linear"></div>
       </div>
-      <!-- Fake nudge for shortlink too -->
-      <div id="adv-sl-nudge" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.25);border-radius:8px;font-size:10px;color:#67e8f9;font-weight:700;animation:fadeIn .4s ease">
+      <div id="adv-sl-nudge" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.25);border-radius:8px;font-size:10px;color:#67e8f9;font-weight:700">
         🔗 Link register ho raha hai... thodi der aur raho!
       </div>
     </div>
-
     <button id="adv-sl-btn" onclick="advShortlinkClicked()"
-      style="width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#0369a1);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;letter-spacing:.3px">
+      style="width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#0369a1);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">
       🔗 Shortlink Kholo — Step 3
     </button>
-    <div style="font-size:10px;color:#475569;text-align:center;line-height:1.6">Link pe jao → thodi der raho → wapas aao — file milegi!</div>
+    <div style="font-size:10px;color:#475569;text-align:center">Link pe jao → wapas aao — file milegi!</div>
   </div>
 
-  <!-- Verify button (round 1 — no shortlink flow) -->
+  <!-- Verify button (no-shortlink flow) -->
   <button id="adv-verify-btn" onclick="advVerifyClick()"
     style="display:none;width:100%;padding:14px;background:linear-gradient(135deg,#22c55e,#059669);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">
     ✅ Verify Karo
@@ -1030,20 +968,19 @@ body.rotated-mode-active{overflow:hidden !important;}
   <!-- Checking spinner -->
   <div id="adv-checking" style="display:none;text-align:center;padding:14px;background:#0d0d1a;border:1px solid #2d2d50;border-radius:12px;margin-bottom:8px">
     <span class="spi"></span>
-    <span id="adv-check-txt" style="font-size:13px;color:#a78bfa;font-weight:700">Verify ho raha hai...</span>
+    <span id="adv-check-txt" style="font-size:13px;color:#a78bfa;font-weight:700;margin-left:8px">Verify ho raha hai...</span>
   </div>
 
-  <!-- GET FILE final button -->
+  <!-- GET FILE button -->
   <button id="adv-getlink-btn" onclick="advGetLink()"
-    style="display:none;width:100%;padding:16px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:12px;color:#000;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;letter-spacing:.3px;animation:glow 2s infinite">
+    style="display:none;width:100%;padding:16px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:12px;color:#000;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px">
     🎬 Get My File — Free!
   </button>
 
-  <!-- Info bar + help -->
   <div style="padding:10px 12px;background:rgba(15,23,42,.9);border-radius:9px;border:1px solid rgba(100,116,139,.2);margin-top:6px">
     <div style="font-size:10px;color:#64748b;line-height:1.8;text-align:center">
-      🔓 Ad 1 dekho → Ad 2 dekho → Shortlink verify karo → File FREE!<br>
-      💎 <span style="color:#a78bfa">Premium users</span> — yeh sab skip, seedha file!
+      🔓 Ad 1 → Ad 2 → Shortlink → File FREE!<br>
+      💎 <span style="color:#a78bfa">Premium users</span> — yeh sab skip!
     </div>
     <div style="display:flex;gap:6px;margin-top:8px">
       <button onclick="advOpenSupport()" style="flex:1;padding:7px 4px;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);border-radius:7px;color:#67e8f9;font-size:10px;font-weight:700;cursor:pointer">💬 Help</button>
@@ -1051,11 +988,9 @@ body.rotated-mode-active{overflow:hidden !important;}
       <button onclick="go('pg-howto')" style="flex:1;padding:7px 4px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:7px;color:#c7d2fe;font-size:10px;font-weight:700;cursor:pointer">❓ Guide</button>
     </div>
   </div>
-
 </div>
 </div>
 
-<!-- ══ HOW TO VERIFY PAGE ══ -->
 <div class="pg" id="pg-howto">
   <div style="max-width:480px;margin:0 auto;padding:16px 16px 80px">
 
@@ -1687,594 +1622,216 @@ function go(id){
 }
 
 /* ══ AD VERIFY SYSTEM ══ */
-/* ════════════════════════════════════════════
-   AD VERIFY SYSTEM v4.0 — 2-AD SEQUENTIAL
-   Flow: Ad1 → Ad2 → Shortlink → Get File
-   ════════════════════════════════════════════ */
-
-var _advState = {
-  token: null,
-  ads: [],           // Array of 2 ad objects from URL params
-  adIdx: 0,          // Current ad index (0=first, 1=second)
-  adUrl: null,       // Current ad URL
-  adShortlink: null, // Shortlink URL
-  howToUrl: 'https://astoolswala.online',
-  timer1: 60,        // Timer for each ad (seconds)
-  timer2: 30,        // Timer for shortlink
-  step: 0,
-  /* step values:
-     0 = waiting for ad1 click
-     1 = ad1 timer running
-     2 = ad1 done — showing ad2
-     3 = waiting for ad2 click
-     4 = ad2 timer running
-     5 = ad2 done — showing shortlink (if any) OR verify
-     6 = shortlink clicked, timer running
-     7 = shortlink done — get file
-     8 = verifying
-     9 = done
-  */
-  timerInterval: null,
-  nudgeFired: false,
-  slNudgeFired: false
+/* ════ AD VERIFY SYSTEM v4.0 — 2-AD SEQUENTIAL ════ */
+var _advState={
+  token:null,ads:[],adIdx:0,adUrl:null,adShortlink:null,botUsername:'',
+  howToUrl:'https://t.me/asbhaibsr',timer1:60,timer2:30,step:0,
+  timerInterval:null,nudgeFired:false,slNudgeFired:false,ptInt:null
 };
+var _nudgeMsgs=['Verification processing... thodi der aur raho!','Ad register ho raha hai — wapas mat jao!','Server se connect ho raha hai...','Ad impression record ho raha hai!','Identity verify ho rahi hai...','Analytics update ho raha hai — bas!','Almost done! Thodi der aur raho...','Secure verification chal rahi hai...'];
+var _processTxts=['Ad verify ho raha hai...','Server se confirm ho raha hai...','Visit record ho raha hai...','Impression register ho raha hai...','Verification chal rahi hai...'];
+function _advRand(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
-/* ── NUDGE MESSAGES (fake "processing" shown at half-timer) ── */
-var _nudgeMsgs = [
-  '⚡ Verification processing... thodi der aur raho!',
-  '🔄 Ad register ho raha hai — wapas mat jao!',
-  '📡 Server se connect ho raha hai...',
-  '✅ Ad impression record ho raha hai!',
-  '🔐 Identity verify ho rahi hai...',
-  '📊 Analytics update ho raha hai — bas!',
-  '💡 Almost done! 1 minute aur raho...',
-  '🛡️ Secure verification chal rahi hai...'
-];
-var _slNudgeMsgs = [
-  '🔗 Shortlink server check kar raha hai...',
-  '📡 Link visit register ho raha hai!',
-  '✅ Verification almost complete!',
-  '🔐 Secure token generate ho raha hai...'
-];
-
-/* ── PROCESS TEXTS (rotating during timer) ── */
-var _processTxts = [
-  'Ad verify ho raha hai...',
-  'Server se confirm ho raha hai...',
-  'Visit record ho raha hai...',
-  'Impression register ho raha hai...',
-  'Verification chal rahi hai...'
-];
-
-function _randItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
-/* ────────────────────────────────────────────
-   INIT — parse URL params, set up ads array
-──────────────────────────────────────────── */
-function advInit() {
-  var p = new URLSearchParams(window.location.search);
-  var token   = p.get('avt');
-  var adUrl   = p.get('adu');
-  var adTitle = p.get('adl');
-  var adDesc  = p.get('add');
-  var adBtn   = p.get('adbn');
-  var adImg   = p.get('adimg');
-  var adSl    = p.get('adsl');
-  var howto   = p.get('howto');
-  var t1      = parseInt(p.get('t1')||'60');
-  var t2      = parseInt(p.get('t2')||'30');
-
-  /* Admin panel direct open */
-  var page    = p.get('page');
-  var adminId = p.get('admin_id');
-  if (page === 'admanager' && adminId) {
-    _adpUnlocked = true;
-    var lock = document.getElementById('adp-lock');
-    var cont = document.getElementById('adp-content');
-    var tab  = document.getElementById('tab-adpanel');
-    if (lock) lock.style.display = 'none';
-    if (cont) cont.style.display = 'block';
-    if (tab)  tab.style.display  = '';
-    go('pg-adpanel');
-    setTimeout(function(){ adpLoadAds(); }, 400);
-    return;
+function advInit(){
+  var p=new URLSearchParams(window.location.search);
+  var token=p.get('avt');
+  var adUrl=p.get('adu'),adTitle=p.get('adl'),adDesc=p.get('add'),adBtn=p.get('adbn'),adImg=p.get('adimg'),adSl=p.get('adsl');
+  var howto=p.get('howto'),t1=parseInt(p.get('t1')||'60'),t2=parseInt(p.get('t2')||'30');
+  var page=p.get('page'),adminId=p.get('admin_id');
+  if(page==='admanager'&&adminId){
+    _adpUnlocked=true;
+    var lk=document.getElementById('adp-lock'),ct=document.getElementById('adp-content'),tb=document.getElementById('tab-adpanel');
+    if(lk)lk.style.display='none';if(ct)ct.style.display='block';if(tb)tb.style.display='';
+    go('pg-adpanel');setTimeout(function(){adpLoadAds();},400);return;
   }
-
-  if (!token || !adUrl) return;
-
-  /* Build 2-ad system:
-     Ad 2 params: adu2, adl2, add2, adbn2, adimg2
-     If adu2 not set — use same ad again (repeat) */
-  var adUrl2   = p.get('adu2')  || adUrl;
-  var adTitle2 = p.get('adl2')  || adTitle;
-  var adDesc2  = p.get('add2')  || adDesc;
-  var adBtn2   = p.get('adbn2') || adBtn;
-  var adImg2   = p.get('adimg2')|| adImg;
-
-  function dec(s){ try{ return s ? decodeURIComponent(s) : ''; }catch(e){return s||'';} }
-
-  _advState.token      = token;
-  _advState.timer1     = Math.max(20, t1);
-  _advState.timer2     = Math.max(15, t2);
-  _advState.adShortlink = adSl ? dec(adSl) : null;
-  _advState.howToUrl   = howto ? dec(howto) : 'https://astoolswala.online';
-  _advState.botUsername = p.get('bot') ? decodeURIComponent(p.get('bot')) : '';
-
-  /* Ad objects array */
-  _advState.ads = [
-    {
-      url:   dec(adUrl),
-      title: dec(adTitle)  || 'Sponsored Content',
-      desc:  dec(adDesc)   || 'Explore this sponsor — movie bilkul free milegi!',
-      btn:   dec(adBtn)    || 'Visit Karo',
-      img:   _fixImgUrl(dec(adImg))
-    },
-    {
-      url:   dec(adUrl2),
-      title: dec(adTitle2) || 'Partner Content',
-      desc:  dec(adDesc2)  || 'Ek aur sponsor — last step!',
-      btn:   dec(adBtn2)   || 'Visit Karo',
-      img:   _fixImgUrl(dec(adImg2))
-    }
+  if(!token||!adUrl)return;
+  var adUrl2=p.get('adu2')||adUrl,adTitle2=p.get('adl2')||adTitle,adDesc2=p.get('add2')||adDesc,adBtn2=p.get('adbn2')||adBtn,adImg2=p.get('adimg2')||adImg;
+  function dec(s){try{return s?decodeURIComponent(s):'';}catch(e){return s||'';}}
+  _advState.token=token;
+  _advState.timer1=Math.max(20,t1);
+  _advState.timer2=Math.max(15,t2);
+  _advState.adShortlink=adSl?dec(adSl):null;
+  _advState.howToUrl=howto?dec(howto):'https://t.me/asbhaibsr';
+  _advState.botUsername=p.get('bot')?decodeURIComponent(p.get('bot')):'';
+  _advState.ads=[
+    {url:dec(adUrl),title:dec(adTitle)||'Sponsored Content',desc:dec(adDesc)||'Explore this sponsor — movie bilkul free milegi!',btn:dec(adBtn)||'Visit Karo',img:dec(adImg)},
+    {url:dec(adUrl2),title:dec(adTitle2)||'Partner Content',desc:dec(adDesc2)||'Ek aur sponsor — last step!',btn:dec(adBtn2)||'Visit Karo',img:dec(adImg2)}
   ];
-
-  /* Show first ad */
-  _advState.adIdx = 0;
-  _advState.step  = 0;
-  _advLoadAd(0);
-  go('pg-adverify');
+  _advState.adIdx=0;_advState.step=0;
+  _advLoadAd(0);go('pg-adverify');
 }
 
-function _fixImgUrl(url){
-  if(!url) return '';
-  if(url.match(/^https?:\/\/ibb\.co\//)){
-    return url.replace('://ibb.co/','://i.ibb.co/')+'/img.jpg';
-  }
-  return url;
-}
-
-/* ── Load ad data into the card ── */
-function _advLoadAd(idx) {
-  var ad = _advState.ads[idx];
-  if(!ad) return;
-  _advState.adUrl = ad.url;
-
-  /* Badge + step tag */
-  var badge = document.getElementById('adv-card-badge');
-  var stag  = document.getElementById('adv-card-step-tag');
-  if(badge) badge.textContent = '#AD ' + (idx+1) + ' of 2';
-  if(stag)  stag.textContent  = 'STEP ' + (idx+1);
-
-  /* Image */
-  var imgWrap = document.getElementById('adv-image-wrap');
-  var imgEl   = document.getElementById('adv-image');
-  if(ad.img && imgWrap && imgEl){
-    imgEl.src = ad.img;
-    imgWrap.style.display = 'block';
-    imgEl.onerror = function(){
-      imgEl.crossOrigin='';
-      imgEl.onerror = function(){ try{imgWrap.style.display='none';}catch(e){} };
-      imgEl.src = ad.img + (ad.img.indexOf('?')>=0 ? '&' : '?') + '_t='+Date.now();
-    };
-  } else if(imgWrap) {
-    imgWrap.style.display = 'none';
-  }
-
-  /* Title + desc */
-  var titleEl = document.getElementById('adv-title');
-  var descEl  = document.getElementById('adv-desc');
-  if(titleEl) titleEl.textContent = ad.title;
-  if(descEl)  descEl.textContent  = ad.desc;
-
-  /* Visit button */
-  var linkEl = document.getElementById('adv-link');
-  if(linkEl){
-    linkEl.href = ad.url;
-    linkEl.textContent = '🔗 ' + ad.btn + (idx===0 ? ' — Ad Dekho' : ' — Last Ad!');
-    linkEl.style.display = 'block';
-  }
-
-  /* Reset timer section, nudge, processing */
-  _advHide('adv-timer-section');
-  _advHide('adv-nudge');
-  _advHide('adv-processing');
-  _advHide('adv-verify-btn');
-  _advHide('adv-getlink-btn');
-  _advHide('adv-shortlink-section');
-  _advHide('adv-checking');
-
-  /* Notice */
-  var nt = document.getElementById('adv-notice-txt');
-  if(nt) nt.textContent = idx===0
-    ? '👆 Pehle Ad pe click karo — uske baad verify hoga!'
-    : '👆 Dusra Ad bhi dekho — last step hai yeh!';
+function _advLoadAd(idx){
+  var ad=_advState.ads[idx];if(!ad)return;
+  _advState.adUrl=ad.url;
+  var badge=document.getElementById('adv-card-badge'),stag=document.getElementById('adv-card-step-tag');
+  if(badge)badge.textContent='#AD '+(idx+1)+' of 2';
+  if(stag)stag.textContent='STEP '+(idx+1);
+  var iw=document.getElementById('adv-image-wrap'),ie=document.getElementById('adv-image');
+  if(ad.img&&iw&&ie){ie.src=ad.img;iw.style.display='block';ie.onerror=function(){iw.style.display='none';};}
+  else if(iw)iw.style.display='none';
+  var te=document.getElementById('adv-title'),de=document.getElementById('adv-desc');
+  if(te)te.textContent=ad.title;if(de)de.textContent=ad.desc;
+  var lk=document.getElementById('adv-link');
+  if(lk){lk.href=ad.url;lk.textContent='🔗 '+(ad.btn||'Visit Karo')+(idx===0?' — Ad Dekho':' — Last Ad!');}
+  _advHide('adv-timer-section');_advHide('adv-nudge');_advHide('adv-processing');
+  _advHide('adv-verify-btn');_advHide('adv-getlink-btn');_advHide('adv-shortlink-section');_advHide('adv-checking');
+  var nt=document.getElementById('adv-notice-txt');
+  if(nt)nt.textContent=idx===0?'👆 Pehle Ad pe click karo — uske baad verify hoga!':'👆 Dusra Ad bhi dekho — last step hai!';
   _advShow('adv-notice');
-
-  /* Instruction */
-  var instr = document.getElementById('adv-instruction');
-  if(instr) instr.textContent = idx===0
-    ? '👆 Button dabao → Sponsor page explore karo → Wapas aao'
-    : '👆 Last Ad! Ek baar aur → phir file milegi!';
-
-  /* Overall progress bar */
-  _advUpdateOverallBar(idx===0 ? 5 : 38);
-
-  /* Step label */
-  var sl = document.getElementById('adv-step-label');
-  var sh = document.getElementById('adv-step-hint');
-  if(sl) sl.textContent = 'Step ' + (idx+1) + ' of 3';
-  if(sh) sh.textContent = idx===0 ? 'Ad 1 dekho' : 'Ad 2 dekho';
-
-  /* Dot indicators */
-  _advUpdateDots(idx===0 ? 0 : 1);
-
-  _advState.nudgeFired   = false;
-  _advState.slNudgeFired = false;
+  var instr=document.getElementById('adv-instruction');
+  if(instr)instr.textContent=idx===0?'👆 Button dabao → page explore karo → wapas aao':'👆 Last Ad! Ek baar aur → phir file milegi!';
+  _advUpdateBar(idx===0?5:38);_advUpdateDots(idx===0?0:1);
+  var sl=document.getElementById('adv-step-label'),sh=document.getElementById('adv-step-hint');
+  if(sl)sl.textContent='Step '+(idx+1)+' of 3';if(sh)sh.textContent=idx===0?'Ad 1 dekho':'Ad 2 dekho';
+  _advState.nudgeFired=false;_advState.slNudgeFired=false;
 }
 
-/* ── Visit button clicked ── */
-function advLinkClicked(e) {
-  var step = _advState.step;
-
-  /* Ad 1 click */
-  if(step === 0){
-    _advState.step = 1;
-    _advStartAdTimer(0);
-    return;
-  }
-  /* Ad 2 click */
-  if(step === 3){
-    _advState.step = 4;
-    _advStartAdTimer(1);
-    return;
-  }
-  /* Already clicked — just let the link open */
+function advLinkClicked(e){
+  var step=_advState.step;
+  if(step===0){_advState.step=1;_advStartAdTimer(0);}
+  else if(step===3){_advState.step=4;_advStartAdTimer(1);}
 }
 
-/* ── Start timer for ad at index idx ── */
-function _advStartAdTimer(idx) {
-  clearInterval(_advState.timerInterval);
-
-  var totalSecs = _advState.timer1;
-  var elapsed   = 0;
-
-  /* Hide visit button link feel but keep for re-clicks */
-  var linkEl = document.getElementById('adv-link');
-  if(linkEl) linkEl.style.opacity = '0.6';
-
-  /* Show timer section + processing */
-  _advShow('adv-timer-section');
-  _advShow('adv-processing');
-
-  /* Update notice */
-  var nt = document.getElementById('adv-notice-txt');
-  if(nt) nt.textContent = '⏳ Sponsor page pe raho — verification chal rahi hai!';
-
-  /* Rotating process text every 5s */
-  var ptEl = document.getElementById('adv-process-txt');
-  var ptIdx = 0;
-  if(ptEl) ptEl.textContent = _processTxts[0];
-  var ptInt = setInterval(function(){
-    ptIdx = (ptIdx+1) % _processTxts.length;
-    if(ptEl) ptEl.textContent = _processTxts[ptIdx];
-  }, 5000);
-
-  _advState.timerInterval = setInterval(function(){
+function _advStartAdTimer(idx){
+  clearInterval(_advState.timerInterval);if(_advState.ptInt)clearInterval(_advState.ptInt);
+  var total=_advState.timer1,elapsed=0;
+  var lk=document.getElementById('adv-link');if(lk)lk.style.opacity='0.6';
+  _advShow('adv-timer-section');_advShow('adv-processing');
+  var nt=document.getElementById('adv-notice-txt');
+  if(nt)nt.textContent='Sponsor page pe raho — verification chal rahi hai!';
+  var ptEl=document.getElementById('adv-process-txt'),ptIdx=0;
+  if(ptEl)ptEl.textContent=_processTxts[0];
+  _advState.ptInt=setInterval(function(){ptIdx=(ptIdx+1)%_processTxts.length;if(ptEl)ptEl.textContent=_processTxts[ptIdx];},5000);
+  _advState.timerInterval=setInterval(function(){
     elapsed++;
-    var pct = Math.min((elapsed/totalSecs)*100, 100);
-
-    /* Update progress bar */
-    var bar = document.getElementById('adv-timer-bar');
-    if(bar) bar.style.width = pct + '%';
-
-    /* Countdown */
-    var left = Math.max(0, totalSecs - elapsed);
-    var cnt  = document.getElementById('adv-timer-count');
-    if(cnt) cnt.textContent = left + 's';
-
-    /* Timer label */
-    var lbl = document.getElementById('adv-timer-label');
-    if(lbl) lbl.textContent = '⏳ ' + Math.floor(pct) + '% complete — page pe raho!';
-
-    /* FAKE NUDGE at half-time (if user may not have clicked — we always show it) */
-    if(!_advState.nudgeFired && elapsed >= Math.floor(totalSecs/2)){
-      _advState.nudgeFired = true;
-      var nudge  = document.getElementById('adv-nudge');
-      var nudgeTxt = document.getElementById('adv-nudge-txt');
-      if(nudge)    nudge.style.display = 'block';
-      if(nudgeTxt) nudgeTxt.textContent = _randItem(_nudgeMsgs);
-      /* Overall bar progress */
-      _advUpdateOverallBar(idx===0 ? 22 : 58);
+    var pct=Math.min((elapsed/total)*100,100);
+    var bar=document.getElementById('adv-timer-bar');if(bar)bar.style.width=pct+'%';
+    var left=Math.max(0,total-elapsed);
+    var cnt=document.getElementById('adv-timer-count');if(cnt)cnt.textContent=left+'s';
+    var lbl=document.getElementById('adv-timer-label');if(lbl)lbl.textContent=Math.floor(pct)+'% complete — page pe raho!';
+    if(!_advState.nudgeFired&&elapsed>=Math.floor(total/2)){
+      _advState.nudgeFired=true;
+      var nd=document.getElementById('adv-nudge'),nt2=document.getElementById('adv-nudge-txt');
+      if(nd)nd.style.display='block';if(nt2)nt2.textContent=_advRand(_nudgeMsgs);
+      _advUpdateBar(idx===0?22:58);
     }
-
-    /* Timer done */
-    if(elapsed >= totalSecs){
-      clearInterval(_advState.timerInterval);
-      clearInterval(ptInt);
-
-      /* Hide processing + timer section */
-      _advHide('adv-processing');
-      _advHide('adv-nudge');
-
-      /* Restore link button */
-      if(linkEl) linkEl.style.opacity = '1';
-
-      if(idx === 0){
-        /* Ad 1 done — load ad 2 */
-        _advState.step = 2;
-        _advUpdateOverallBar(35);
-        _advShowAd2Toast();
-        setTimeout(function(){
-          _advState.step = 3;
-          _advLoadAd(1);
-        }, 1200);
+    if(elapsed>=total){
+      clearInterval(_advState.timerInterval);clearInterval(_advState.ptInt);
+      _advHide('adv-processing');_advHide('adv-nudge');
+      if(lk)lk.style.opacity='1';
+      if(idx===0){
+        _advState.step=2;_advUpdateBar(35);
+        toast('Ad 1 complete! Ab dusra ad dekho!');
+        var nt3=document.getElementById('adv-notice-txt');if(nt3)nt3.textContent='✅ Ad 1 ho gaya! Ab dusra ad dekho — sirf ek aur!';
+        setTimeout(function(){_advState.step=3;_advLoadAd(1);},1200);
       } else {
-        /* Ad 2 done */
-        _advState.step = 5;
-        _advUpdateOverallBar(70);
-        _advHide('adv-timer-section');
-
-        if(_advState.adShortlink){
-          /* Show shortlink step */
-          _advShowShortlinkSection();
-        } else {
-          /* No shortlink — show verify button */
-          _advShow('adv-verify-btn');
-          _advHide('adv-notice');
-          var nt2 = document.getElementById('adv-notice-txt');
-          if(nt2) nt2.textContent = '';
-        }
-
-        /* Hide visit link */
-        if(linkEl) linkEl.style.display = 'none';
+        _advState.step=5;_advUpdateBar(70);_advHide('adv-timer-section');
+        if(lk)lk.style.display='none';
+        if(_advState.adShortlink){_advShowShortlinkSec();}
+        else{_advShow('adv-verify-btn');_advHide('adv-notice');}
       }
     }
-
-  }, 1000);
+  },1000);
 }
 
-/* ── Toast between Ad 1 and Ad 2 ── */
-function _advShowAd2Toast(){
-  toast('✅ Ad 1 complete! Ab Ad 2 dekho — last ad hai!');
-  /* Notice update */
-  var nt = document.getElementById('adv-notice-txt');
-  if(nt) nt.textContent = '✅ Ad 1 ho gaya! Ab dusra ad dekho — sirf ek aur!';
+function _advShowShortlinkSec(){
+  _advShow('adv-shortlink-section');_advHide('adv-notice');_advUpdateBar(72);_advUpdateDots(2);
+  var sl=document.getElementById('adv-step-label'),sh=document.getElementById('adv-step-hint');
+  if(sl)sl.textContent='Step 3 of 3';if(sh)sh.textContent='Shortlink verify karo';
 }
 
-/* ── Show shortlink section ── */
-function _advShowShortlinkSection(){
-  _advShow('adv-shortlink-section');
-  _advHide('adv-notice');
-  _advUpdateOverallBar(72);
-  _advUpdateDots(2);
-  var sl = document.getElementById('adv-step-label');
-  var sh = document.getElementById('adv-step-hint');
-  if(sl) sl.textContent = 'Step 3 of 3';
-  if(sh) sh.textContent = 'Shortlink verify karo';
-}
-
-/* ── Shortlink button clicked ── */
 function advShortlinkClicked(){
-  if(!_advState.adShortlink) return;
-  if(_advState.step >= 6) return; /* Already clicked */
-
-  window.open(_advState.adShortlink, '_blank');
-  _advState.step = 6;
-
-  /* Show countdown */
-  var slTimer = document.getElementById('adv-sl-timer-section');
-  var slBtn   = document.getElementById('adv-sl-btn');
-  if(slTimer) slTimer.style.display = 'block';
-  if(slBtn)   slBtn.style.opacity   = '0.6';
-
-  var totalSl  = _advState.timer2;
-  var elapsedSl = 0;
-  _advState.slNudgeFired = false;
-
-  var slInt = setInterval(function(){
-    elapsedSl++;
-    var pct = Math.min((elapsedSl/totalSl)*100, 100);
-
-    var bar = document.getElementById('adv-sl-bar');
-    var cnt = document.getElementById('adv-sl-countdown');
-    if(bar) bar.style.width = pct + '%';
-    if(cnt) cnt.textContent = Math.max(0, totalSl-elapsedSl);
-
-    /* Overall bar */
-    _advUpdateOverallBar(72 + Math.floor(pct*0.25));
-
-    /* Fake nudge at half shortlink timer */
-    if(!_advState.slNudgeFired && elapsedSl >= Math.floor(totalSl/2)){
-      _advState.slNudgeFired = true;
-      var slNudge = document.getElementById('adv-sl-nudge');
-      if(slNudge) slNudge.style.display = 'block';
+  if(!_advState.adShortlink||_advState.step>=6)return;
+  window.open(_advState.adShortlink,'_blank');
+  _advState.step=6;
+  var slBtn=document.getElementById('adv-sl-btn');if(slBtn)slBtn.style.opacity='0.6';
+  _advShow('adv-sl-timer-section');
+  var total=_advState.timer2,elapsed=0;
+  var slInt=setInterval(function(){
+    elapsed++;var pct=Math.min((elapsed/total)*100,100);
+    var bar=document.getElementById('adv-sl-bar');if(bar)bar.style.width=pct+'%';
+    var cnt=document.getElementById('adv-sl-countdown');if(cnt)cnt.textContent=Math.max(0,total-elapsed);
+    _advUpdateBar(72+Math.floor(pct*0.25));
+    if(!_advState.slNudgeFired&&elapsed>=Math.floor(total/2)){
+      _advState.slNudgeFired=true;var nd=document.getElementById('adv-sl-nudge');if(nd)nd.style.display='block';
     }
-
-    if(elapsedSl >= totalSl){
-      clearInterval(slInt);
-      _advState.step = 7;
-
-      /* Hide shortlink section, show Get File button */
-      _advHide('adv-shortlink-section');
-      _advHide('adv-sl-nudge');
-      _advUpdateOverallBar(98);
-      _advUpdateDots(3);
-
-      var getBtn = document.getElementById('adv-getlink-btn');
-      if(getBtn) getBtn.style.display = 'block';
-
-      var sl2 = document.getElementById('adv-step-label');
-      var sh2 = document.getElementById('adv-step-hint');
-      if(sl2) sl2.textContent = '🎉 Done!';
-      if(sh2) sh2.textContent = 'File lene ke liye button dabao!';
-
-      toast('🎉 Verification complete! File lo!');
+    if(elapsed>=total){
+      clearInterval(slInt);_advState.step=7;
+      _advHide('adv-shortlink-section');_advUpdateBar(98);_advUpdateDots(3);
+      var gb=document.getElementById('adv-getlink-btn');if(gb)gb.style.display='block';
+      var sl2=document.getElementById('adv-step-label'),sh2=document.getElementById('adv-step-hint');
+      if(sl2)sl2.textContent='Done!';if(sh2)sh2.textContent='File lene ke liye button dabao!';
+      toast('Verification complete! File lo!');
     }
-  }, 1000);
+  },1000);
 }
 
-/* ── Verify click (no-shortlink flow — after ad2) ── */
 function advVerifyClick(){
-  if(_advState.step !== 5) return;
-  _advState.step = 8;
-  _advHide('adv-verify-btn');
-  _advShow('adv-checking');
-  var ct = document.getElementById('adv-check-txt');
-  if(ct) ct.textContent = 'Verify ho raha hai...';
-
+  if(_advState.step!==5)return;
+  _advState.step=8;_advHide('adv-verify-btn');_advShow('adv-checking');
+  var ct=document.getElementById('adv-check-txt');if(ct)ct.textContent='Verify ho raha hai...';
   setTimeout(function(){
-    _advHide('adv-checking');
-    _advState.step = 7;
-    _advUpdateOverallBar(98);
-    var getBtn = document.getElementById('adv-getlink-btn');
-    if(getBtn) getBtn.style.display = 'block';
-    toast('🎉 Done! Ab file lo!');
-  }, 3000);
+    _advHide('adv-checking');_advState.step=7;_advUpdateBar(98);
+    var gb=document.getElementById('adv-getlink-btn');if(gb)gb.style.display='block';
+    toast('Done! Ab file lo!');
+  },3000);
 }
 
-/* ── GET LINK — final step ── */
 function advGetLink(){
-  if(_advState.step < 7 || !_advState.token){
-    toast('❌ Pehle sab steps complete karo!');
-    return;
-  }
-  _advState.step = 9;
-  var btn = document.getElementById('adv-getlink-btn');
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Bot pe bhej raha hoon...'; }
-
+  if(_advState.step<7||!_advState.token){toast('Pehle sab steps complete karo!');return;}
+  _advState.step=9;
+  var btn=document.getElementById('adv-getlink-btn');
+  if(btn){btn.disabled=true;btn.textContent='Bot pe bhej raha hoon...';}
   _advShow('adv-checking');
-  var ct = document.getElementById('adv-check-txt');
-  if(ct) ct.textContent = '🔗 Bot pe redirect ho raha hoon...';
-
-  /* ══════════════════════════════════════════════════════
-     FLOW:
-     1. Miniapp mein Ads complete ✅
-     2. Ab user ko bot pe deep link se bhejte hain
-     3. Bot pe jaake shortlink process hoga
-     4. Shortlink complete → file milegi
-     ══════════════════════════════════════════════════════ */
-
-  // First verify ads completion with server
-  fetch(BASE+'/api/ad_verify', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({token:_advState.token, user_id: UID ? parseInt(UID) : 0})
-  })
-  .then(function(r){ return r.json(); })
+  var ct=document.getElementById('adv-check-txt');if(ct)ct.textContent='Bot pe redirect ho raha hoon...';
+  fetch(BASE+'/api/ad_verify',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({token:_advState.token,user_id:UID?parseInt(UID):0})})
+  .then(function(r){return r.json();})
   .then(function(d){
     _advHide('adv-checking');
     if(d.ok){
-      _advUpdateOverallBar(100);
-
-      // ✅ MAIN CHANGE: Ab bot pe wapas bhejo — wahan shortlink process hoga
-      // Bot /start?verify=TOKEN se shortlink generate karega
-      var botUsername = _advState.botUsername || '';
-      var deepLink    = '';
-
-      if(botUsername){
-        // Telegram deep link — bot pe jaao, shortlink milega
-        deepLink = 'https://t.me/' + botUsername + '?start=getfile_' + _advState.token;
+      _advUpdateBar(100);
+      if(btn){btn.disabled=false;btn.textContent='File Lo — Bot pe Jao!';btn.style.background='linear-gradient(135deg,#22c55e,#059669)';}
+      toast('Ads complete! Ab bot pe jao — file milegi!');
+      var bu=_advState.botUsername;
+      var dl=bu?('https://t.me/'+bu+'?start=getfile_'+_advState.token):'';
+      if(dl){
+        if(btn){btn.onclick=function(){if(tg){try{tg.openLink(dl);}catch(er){window.open(dl,'_blank');}}else{window.open(dl,'_blank');}};}
+        setTimeout(function(){if(tg){try{tg.openLink(dl);}catch(er){window.open(dl,'_blank');}}else{window.open(dl,'_blank');}},2000);
+      } else {
+        setTimeout(function(){if(tg){try{tg.close();}catch(er){go('pg-home');}}else{go('pg-home');}},2500);
       }
-
-      if(btn){
-        btn.disabled   = false;
-        btn.textContent= '🎬 File Lo — Bot pe Jao!';
-        btn.style.background = 'linear-gradient(135deg,#22c55e,#059669)';
-        btn.onclick = function(){
-          if(deepLink){
-            // Telegram app mein khole
-            if(tg){ try{ tg.openLink(deepLink); }catch(e){ window.open(deepLink,'_blank'); } }
-            else{ window.open(deepLink,'_blank'); }
-          } else {
-            // Fallback: tg.close() — bot pe wapas
-            if(tg){ try{ tg.close(); }catch(e){} }
-          }
-        };
-      }
-
-      toast('✅ Ads complete! Ab bot pe jao — file milegi!');
-
-      // Auto redirect after 2 seconds
-      setTimeout(function(){
-        if(deepLink){
-          if(tg){ try{ tg.openLink(deepLink); }catch(e){ window.open(deepLink,'_blank'); } }
-          else{ window.open(deepLink,'_blank'); }
-        } else {
-          if(tg){ try{ tg.close(); }catch(e){ go('pg-home'); } }
-          else{ go('pg-home'); }
-        }
-      }, 2000);
-
     } else {
-      if(btn){ btn.disabled=false; btn.textContent='🎬 Get My File — Free!'; btn.onclick=advGetLink; }
-      toast('❌ '+(d.error||'Error! Bot pe /start karo'));
+      if(btn){btn.disabled=false;btn.textContent='Get My File — Free!';btn.onclick=advGetLink;}
+      toast((d.error||'Error! Bot pe /start karo'));
     }
   })
   .catch(function(){
     _advHide('adv-checking');
-    if(btn){ btn.disabled=false; btn.textContent='🎬 Get My File — Free!'; btn.onclick=advGetLink; }
-    toast('❌ Network error! Bot pe /start karo');
+    if(btn){btn.disabled=false;btn.textContent='Get My File — Free!';btn.onclick=advGetLink;}
+    toast('Network error! Bot pe /start karo');
   });
 }
 
-/* ── Overall progress bar update ── */
-function _advUpdateOverallBar(pct){
-  var bar = document.getElementById('adv-overall-bar');
-  if(bar) bar.style.width = Math.min(100,pct) + '%';
-}
-
-/* ── Dot indicators update (0-based step) ── */
+function _advUpdateBar(pct){var b=document.getElementById('adv-overall-bar');if(b)b.style.width=Math.min(100,pct)+'%';}
 function _advUpdateDots(step){
-  var d1 = document.getElementById('adv-dot-1');
-  var d2 = document.getElementById('adv-dot-2');
-  var d3 = document.getElementById('adv-dot-3');
-  var active = 'font-size:9px;color:#22c55e;font-weight:700';
-  var done   = 'font-size:9px;color:#6c63ff;font-weight:700';
-  var idle   = 'font-size:9px;color:#475569;font-weight:700';
-  if(step===0){ if(d1)d1.style.cssText=active; if(d2)d2.style.cssText=idle;   if(d3)d3.style.cssText=idle;   }
-  if(step===1){ if(d1)d1.style.cssText=done;   if(d2)d2.style.cssText=active; if(d3)d3.style.cssText=idle;   }
-  if(step===2){ if(d1)d1.style.cssText=done;   if(d2)d2.style.cssText=done;   if(d3)d3.style.cssText=active; }
-  if(step===3){ if(d1)d1.style.cssText=done;   if(d2)d2.style.cssText=done;   if(d3)d3.style.cssText=done;   }
+  var d1=document.getElementById('adv-dot-1'),d2=document.getElementById('adv-dot-2'),d3=document.getElementById('adv-dot-3');
+  var a='font-size:9px;color:#22c55e;font-weight:700',dn='font-size:9px;color:#6c63ff;font-weight:700',id='font-size:9px;color:#475569;font-weight:700';
+  if(step===0){if(d1)d1.style.cssText=a;if(d2)d2.style.cssText=id;if(d3)d3.style.cssText=id;}
+  if(step===1){if(d1)d1.style.cssText=dn;if(d2)d2.style.cssText=a;if(d3)d3.style.cssText=id;}
+  if(step===2){if(d1)d1.style.cssText=dn;if(d2)d2.style.cssText=dn;if(d3)d3.style.cssText=a;}
+  if(step===3){if(d1)d1.style.cssText=dn;if(d2)d2.style.cssText=dn;if(d3)d3.style.cssText=dn;}
 }
-
-/* ── Show/hide helpers ── */
-function _advShow(id){ var e=document.getElementById(id); if(e) e.style.display='block'; }
-function _advHide(id){ var e=document.getElementById(id); if(e) e.style.display='none'; }
-
-/* ── Lang toggle ── */
-var _advLang = 'en';
+function _advShow(id){var e=document.getElementById(id);if(e)e.style.display='block';}
+function _advHide(id){var e=document.getElementById(id);if(e)e.style.display='none';}
+var _advLang='en';
 function advToggleLang(){
-  _advLang = _advLang==='en' ? 'hi' : 'en';
-  var btn = document.getElementById('adv-lang-btn');
-  if(btn) btn.textContent = _advLang==='en' ? '🇮🇳 Hindi' : '🇬🇧 English';
-  var instr = document.getElementById('adv-instruction');
-  if(instr){
-    if(_advLang==='hi'){
-      instr.textContent = '👆 Button dabao → Sponsor page pe jao → Wapas aao → File lo!';
-    } else {
-      instr.textContent = '👆 Button dabao → Sponsor page explore karo → Wapas aao';
-    }
-  }
+  _advLang=_advLang==='en'?'hi':'en';
+  var btn=document.getElementById('adv-lang-btn');if(btn)btn.textContent=_advLang==='en'?'Hindi':'English';
 }
+function advOpenSupport(){var u='https://t.me/asbhaibsr';if(tg){try{tg.openLink(u);return;}catch(e){}}window.open(u,'_blank');}
 
-function advHowToLang(lang){
-  var enC=document.getElementById('howto-content-en');
-  var hiC=document.getElementById('howto-content-hi');
-  var enB=document.getElementById('howto-en-btn');
-  var hiB=document.getElementById('howto-hi-btn');
-  var act='background:linear-gradient(135deg,#6c63ff,#7c3aed);border:none;color:#fff;';
-  var ina='background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;';
-  if(lang==='en'){if(enC)enC.style.display='block';if(hiC)hiC.style.display='none';if(enB)enB.style.cssText+=act;if(hiB)hiB.style.cssText+=ina;}
-  else{if(enC)enC.style.display='none';if(hiC)hiC.style.display='block';if(enB)enB.style.cssText+=ina;if(hiB)hiB.style.cssText+=act;}
-}
-
-function advOpenSupport(){
-  var url='https://t.me/asbhaibsr';
-  if(tg){try{tg.openLink(url);return;}catch(e){}}
-  window.open(url,'_blank');
-}
-
-/* ══ AD MANAGER (Admin) ══ */
 /* ══ AD MANAGER (Admin) ══ */
 var _admAds   = [];
 var _admAdminId = 0;
@@ -2599,280 +2156,368 @@ function checkStream(){
   switchTab('stream');
   
   if(!uid&&!isPrem){
-    var _gate0=document.getElementById('strm-prem-gate');if(_gate0)_gate0.style.display='block';
-    var _cont0=document.getElementById('strm-content');  if(_cont0)_cont0.style.display='none';
+    var _strmP=document.getElementById('strm-prem'); if(_strmP) _strmP.style.display='block';
+    var _strmPl=document.getElementById('strm-player'); if(_strmPl) _strmPl.style.display='none';
+    // Also support new IDs
+    var _g0=document.getElementById('strm-prem-gate');if(_g0)_g0.style.display='block';
+    var _c0=document.getElementById('strm-content');if(_c0)_c0.style.display='none';
     return;
   }
   
-  // ── VJ Style: Show premium content, hide gate
-  var _gate = document.getElementById('strm-prem-gate');
-  var _cont = document.getElementById('strm-content');
-  if(_gate) _gate.style.display='none';
-  if(_cont) _cont.style.display='block';
-
-  curMid = mid;
-  var streamUrl = BASE+'/stream_file/'+mid+'?uid='+(uid||UID||'');
-  var dlUrl     = BASE+'/download/'+mid+'?uid='+(uid||UID||'');
-  vjLoadVideo(streamUrl, dlUrl, mid);
+  var _strmP2=document.getElementById('strm-prem'); if(_strmP2) _strmP2.style.display='none';
+  var _strmPl2=document.getElementById('strm-player'); if(_strmPl2) _strmPl2.style.display='block';
+  // Also support new IDs
+  var _g2=document.getElementById('strm-prem-gate');if(_g2)_g2.style.display='none';
+  var _c2=document.getElementById('strm-content');if(_c2)_c2.style.display='block';
+  
+  curMid=mid;
+  var streamUrl=BASE+'/stream_file/'+mid+'?uid='+(uid||UID||'');
+  var dlUrl=BASE+'/download/'+mid+'?uid='+(uid||UID||'');
+  loadVid(streamUrl,dlUrl,mid);
 }
 
-/* ══════════════════════════════════════
-   VJ-STYLE VIDEO LOADER
-   Uses Plyr.js for professional controls
-   + External player support
-══════════════════════════════════════ */
-var _vjPlyr   = null;
-var _vjStream = null;
-var _vjDl     = null;
+function loadVid(su,du,mid){
+  curVid=su;curDl=du||su;curMid=mid;
+  var v=document.getElementById('vid'),pld=document.getElementById('pld'),pph=document.getElementById('pph');
+  if(v)v.style.display='none';
+  if(pph)pph.style.display='none';
+  if(pld){pld.style.display='flex';var pt=pld.querySelector('p');if(pt)pt.textContent='Loading stream... ⏳';}
+  
+  // Load file info + populate YouTube-style fields
+  if(mid){
+    fetch(BASE+'/file_info/'+mid)
+    .then(function(r){return r.json();})
+    .then(function(info){
+      var fname = info.file_name||'Video';
+      var sz = info.file_size||0;
+      var szTxt = sz>1073741824?(sz/1073741824).toFixed(1)+' GB':sz>1048576?(sz/1048576).toFixed(1)+' MB':sz>1024?(sz/1024).toFixed(0)+' KB':'—';
+      var durTxt = info.duration?fmt(info.duration):'';
 
-function vjLoadVideo(streamUrl, dlUrl, mid) {
-  _vjStream = streamUrl;
-  _vjDl     = dlUrl || streamUrl;
-  curVid    = streamUrl;
-  curDl     = dlUrl || streamUrl;
-  curMid    = mid;
+      // Old fib elements (compatibility)
+      setEl('fib-name', fname);
+      setEl('ctrl-fname', fname);
+      setEl('fib-detail', (szTxt||'—')+(durTxt?' • '+durTxt:'')+(info.mime_type?' • '+info.mime_type:''));
 
-  var vid = document.getElementById('strm-vid');
-  if (!vid) return;
+      // ✅ YouTube-style fields
+      setEl('strm-yt-title', fname);
+      setEl('strm-yt-meta', (szTxt?szTxt+' • ':'') + (durTxt?durTxt+' • ':'') + '📡 Streaming');
+      setEl('strm-fname-full', fname);
+      setEl('strm-file-size', szTxt ? '📦 Size: ' + szTxt : '');
+      setEl('strm-file-dur', durTxt ? '⏱ Duration: ' + durTxt : '');
 
-  // Show loading
-  var ldEl = document.getElementById('strm-loading');
-  if (ldEl) { ldEl.style.display = 'flex'; ldEl.style.alignItems = 'center'; ldEl.style.justifyContent = 'center'; ldEl.style.flexDirection = 'column'; }
-
-  // Destroy old Plyr instance
-  if (_vjPlyr) {
-    try { _vjPlyr.destroy(); } catch(e) {}
-    _vjPlyr = null;
-  }
-
-  // Set video source
-  vid.src = streamUrl;
-  vid.load();
-
-  // File info fetch — title + size + duration
-  if (mid) {
-    fetch(BASE + '/file_info/' + mid)
-    .then(function(r){ return r.json(); })
-    .then(function(info) {
-      var fname  = info.file_name || 'Video';
-      var sz     = info.file_size || 0;
-      var szTxt  = sz > 1073741824 ? (sz/1073741824).toFixed(1)+' GB'
-                 : sz > 1048576    ? (sz/1048576).toFixed(1)+' MB'
-                 : sz > 1024       ? (sz/1024).toFixed(0)+' KB' : '';
-      var durTxt = info.duration ? vjFmt(info.duration) : '';
-
-      // Truncate long filename for display
-      var shortName = fname.length > 55 ? fname.slice(0,52)+'...' : fname;
-      setEl('strm-ftitle', shortName);
-      setEl('strm-fmeta',  (szTxt ? '📦 '+szTxt : '') + (durTxt ? ' • ⏱ '+durTxt : '') + (info.mime_type ? ' • '+info.mime_type : ''));
-
-      // Watch history add
-      vjAddHistory(mid, fname, szTxt, durTxt);
-    })
-    .catch(function() {
-      setEl('strm-ftitle', 'Video #'+mid);
+      // ✅ Load like/dislike counts + add to history
+      strmLoadLikeState(mid);
+      strmAddHistory(mid, fname, szTxt, durTxt);
+    }).catch(function(){
+      setEl('strm-yt-title', 'Video');
     });
   }
+  
+  if(!v)return;
+  v.preload='auto';v.playsInline=true;
+  v.src=su;
+  
+  // Clear any previous stall timeout
+  if(window._stall_t){clearTimeout(window._stall_t);}
 
-  // Init Plyr AFTER source is set
-  setTimeout(function() {
-    try {
-      if (typeof Plyr !== 'undefined') {
-        _vjPlyr = new Plyr('#strm-vid', {
-          controls: [
-            'play-large','rewind','play','fast-forward',
-            'progress','current-time','duration',
-            'mute','volume','captions','settings',
-            'pip','airplay','download','fullscreen'
-          ],
-          speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] },
-          fullscreen: { enabled: true, fallback: true, iosNative: true },
-          keyboard: { focused: true, global: false },
-          tooltips: { controls: true, seek: true },
-          autoplay: true,
-        });
-        _vjPlyr.on('ready', function() {
-          var ldEl2 = document.getElementById('strm-loading');
-          if (ldEl2) ldEl2.style.display = 'none';
-          toast('▶️ Stream ready!');
-        });
-        _vjPlyr.on('error', function() {
-          var ldEl2 = document.getElementById('strm-loading');
-          if (ldEl2) ldEl2.style.display = 'none';
-          toast('❌ HTML5 stream error — external player use karo!');
-        });
-        // Fullscreen landscape lock on mobile
-        _vjPlyr.on('enterfullscreen', function() {
-          try {
-            if (screen.orientation && screen.orientation.lock) {
-              screen.orientation.lock('landscape').catch(function(){});
-            }
-          } catch(e) {}
-        });
-        _vjPlyr.on('exitfullscreen', function() {
-          try {
-            if (screen.orientation && screen.orientation.unlock) {
-              screen.orientation.unlock();
-            }
-          } catch(e) {}
-        });
-      } else {
-        // No Plyr — fallback to plain HTML5 controls
-        vid.controls = true;
-        vid.play().catch(function(){});
-        var ldEl2 = document.getElementById('strm-loading');
-        if (ldEl2) ldEl2.style.display = 'none';
-      }
-    } catch(err) {
-      console.warn('Plyr init error:', err);
-      vid.controls = true;
-      var ldEl2 = document.getElementById('strm-loading');
-      if (ldEl2) ldEl2.style.display = 'none';
+  v.onloadstart=function(){if(v)v.style.display='block';if(pld){pld.style.display='flex';pld.querySelector('p').textContent='Connecting... ⏳';}showCtrl();};
+  v.onprogress=function(){
+    // Data aayi — loading hide karo
+    if(v&&v.buffered&&v.buffered.length>0){if(pld)pld.style.display='none';}
+    if(window._stall_t){clearTimeout(window._stall_t);window._stall_t=null;}
+  };
+  v.onloadedmetadata=function(){
+    if(pld){pld.style.display='none';}
+    if(v)v.style.display='block';
+    updPl();
+  };
+  v.onloadeddata=function(){
+    if(pld)pld.style.display='none';
+    if(v)v.style.display='block';
+    // Volume slider sync
+    var vb=document.getElementById('ctrl-vol');
+    if(vb) vb.value=Math.round(v.volume*100);
+  };
+  v.oncanplay=function(){
+    if(pld)pld.style.display='none';
+    if(window._stall_t){clearTimeout(window._stall_t);window._stall_t=null;}
+    if(v){v.style.display='block';v.play().catch(function(){toast('▶ Play button dabao');updPl();});}
+    updPl();
+  };
+  v.ontimeupdate=function(){updSeek();updPl();if(pld)pld.style.display='none';};
+  v.onwaiting=function(){if(pld){pld.style.display='flex';pld.querySelector('p').textContent='Buffering... ⏳';}};
+  v.onstalled=function(){if(pld){pld.style.display='flex';pld.querySelector('p').textContent='Connection slow... ⏳';}};
+  v.onplaying=function(){if(pld)pld.style.display='none';if(window._stall_t){clearTimeout(window._stall_t);window._stall_t=null;}updPl();};
+  v.onended=function(){updPl();toast('🎬 Video khatam!');};
+  v.onerror=function(){
+    if(window._stall_t){clearTimeout(window._stall_t);window._stall_t=null;}
+    if(v)v.style.display='none';if(pld)pld.style.display='none';
+    if(pph){
+      pph.style.display='flex';
+      var m=pph.querySelector('p');
+      if(m)m.innerHTML='❌ Stream error<br><br><button onclick="retryStream()" style="background:var(--acc);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;margin:4px">🔄 Retry</button><button onclick="doDl()" style="background:var(--grn);color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;margin:4px">⬇ Download</button><br><button onclick="openExtPlayer()" style="background:var(--sky);color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;margin:4px">📱 External Player</button>';
     }
-  }, 200);
+  };
 
-  // Scroll to top
-  window.scrollTo(0, 0);
+  // Safety timeout — agar 15 second mein kuch nahi aaya
+  window._stall_t = setTimeout(function(){
+    if(v && v.readyState < 2){
+      if(pld){pld.style.display='flex';pld.querySelector('p').innerHTML='Slow connection... ⏳<br><small>Retry karo ya download karo</small>';}
+    }
+  }, 15000);
+
+  v.load();
 }
 
-/* ── External Players — VJ Style ── */
-function _vjExtUrl() {
-  return _vjStream || curVid || '';
+function retryStream(){
+  if(curMid){
+    toast('🔄 Retrying...');
+    var uid=new URLSearchParams(window.location.search).get('uid')||UID;
+    var su=BASE+'/stream_file/'+curMid+'?uid='+(uid||'')+'&t='+Date.now();
+    var du=BASE+'/download/'+curMid+'?uid='+(uid||'');
+    loadVid(su,du,curMid);
+  }
 }
 
-function strmVLC() {
-  var u = _vjExtUrl(); if (!u) { toast('❌ Video load karo pehle'); return; }
-  window.location.href = 'vlc://' + u;
-  setTimeout(function(){ toast('🔶 VLC nahi hai? Install karo Play Store se'); }, 1200);
+/* ── Player Engine Switcher ── */
+function switchEngine(eng){
+  curEngine=eng;
+  document.querySelectorAll('.eng-btn').forEach(function(b){b.classList.remove('on');});
+  event.target.classList.add('on');
+  
+  var v=document.getElementById('vid'),wrap=document.getElementById('player-wrap');
+  if(!v)return;
+  
+  // Reset styles
+  v.style.filter='';wrap.style.background='#000';
+  
+  switch(eng){
+    case 'html5':
+      toast('🎬 HTML5 Player — Standard');break;
+    case 'mx':
+      v.style.filter='contrast(1.05) saturate(1.1)';
+      toast('📱 MX Style — Enhanced colors');break;
+    case 'vlc':
+      v.style.filter='brightness(1.05) contrast(1.02)';
+      wrap.style.background='#1a1a2e';
+      toast('🔶 VLC Style — Cinema mode');break;
+    case 'mini':
+      toast('⚡ Mini Player — Lightweight');break;
+  }
 }
 
-function strmMX() {
-  var u = _vjExtUrl(); if (!u) { toast('❌ Video load karo pehle'); return; }
-  window.location.href = 'intent:' + u + '#Intent;package=com.mxtech.videoplayer.ad;end';
-  setTimeout(function(){ toast('📱 MX Player nahi hai? Install karo'); }, 1200);
+/* ── Player Controls ── */
+function togCtrl(){
+  var bar=document.getElementById('ctrl-bar');if(!bar)return;
+  if(bar.classList.contains('hide')){showCtrl();}
+  else{clearTimeout(ctlT);bar.classList.add('hide');}
+}
+function showCtrl(){
+  var bar=document.getElementById('ctrl-bar');if(!bar)return;
+  bar.classList.remove('hide');clearTimeout(ctlT);
+  var v=document.getElementById('vid');
+  if(curVid&&v&&!v.paused)ctlT=setTimeout(function(){bar.classList.add('hide');},4000);
+}
+function updPl(){var v=document.getElementById('vid'),b=document.getElementById('ctrl-play');if(b&&v)b.textContent=v.paused?'▶':'⏸';}
+function updSeek(){
+  var v=document.getElementById('vid'),s=document.getElementById('ctrl-seek');
+  if(!v||!s||!v.duration)return;
+  s.max=v.duration;s.value=v.currentTime;
+  setEl('ct-cur',fmt(v.currentTime));setEl('ct-dur',fmt(v.duration));
+}
+function fmt(s){if(isNaN(s))return'0:00';var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=Math.floor(s%60);return(h?h+':':'')+(h&&m<10?'0':'')+m+':'+(ss<10?'0':'')+ss;}
+function playPause(){
+  var v=document.getElementById('vid');if(!curVid){toast('❌ Koi video nahi');return;}
+  if(v.paused)v.play().catch(function(){toast('❌ Play failed');});else v.pause();
+  updPl();showCtrl();
+}
+function seekV(val){var v=document.getElementById('vid');if(v&&v.duration)v.currentTime=parseFloat(val);showCtrl();}
+function skip(s){var v=document.getElementById('vid');if(!curVid||!v)return;v.currentTime=Math.max(0,Math.min(v.currentTime+s,v.duration||0));showCtrl();toast((s>0?'⏩':'⏪')+' '+Math.abs(s)+'s');}
+function setVol(val){
+  var v=document.getElementById('vid');
+  if(!v)return;
+  var vol=parseFloat(val)/100;
+  v.volume=vol;
+  v.muted=(vol===0);
+  // Volume button icon update
+  var btn=document.querySelector('.ctrl-btn[onclick="togMute()"]');
+  if(btn){
+    if(vol===0||v.muted) btn.textContent='🔇';
+    else if(vol<0.5) btn.textContent='🔉';
+    else btn.textContent='🔊';
+  }
+}
+function togMute(){
+  var v=document.getElementById('vid');
+  var vb=document.getElementById('ctrl-vol');
+  if(!v)return;
+  v.muted=!v.muted;
+  if(vb){
+    vb.value=v.muted?0:Math.round(v.volume*100);
+  }
+  var btn=document.querySelector('.ctrl-btn[onclick="togMute()"]');
+  if(btn) btn.textContent=v.muted?'🔇':'🔊';
+  toast(v.muted?'🔇 Muted':'🔊 Unmuted');
+}
+function cycSpd(){
+  spIdx=(spIdx+1)%SPDS.length;
+  var v=document.getElementById('vid');
+  if(v) v.playbackRate=SPDS[spIdx];
+  var label=SPDS[spIdx]+'×';
+  var btn=document.getElementById('ctrl-spd');
+  if(btn) btn.textContent=label;
+  toast('⚡ Speed: '+label);
+  showCtrl();
 }
 
-function strmPlayIt() {
-  var u = _vjExtUrl(); if (!u) { toast('❌ Video load karo pehle'); return; }
-  window.location.href = 'playit://playerv2/video?url=' + encodeURIComponent(u);
-  setTimeout(function(){ toast('▶️ PlayIt nahi hai? Install karo'); }, 1200);
-}
+/* ── Fullscreen Landscape Rotate ── */
+var isRotated=false;
+var rotDir=90;
 
-function strmKM() {
-  var u = _vjExtUrl(); if (!u) { toast('❌ Video load karo pehle'); return; }
-  window.location.href = 'intent:' + u + '#Intent;package=com.kmplayer;end';
-  setTimeout(function(){ toast('🎵 KM Player nahi hai? Install karo'); }, 1200);
-}
+function doRotate(){
+  curRotation=(curRotation+90)%360;
+  var wrap=document.getElementById('player-wrap');
+  var inner=document.getElementById('player-inner');
+  var v=document.getElementById('vid');
+  if(!wrap||!inner||!v)return;
 
-function strmS() {
-  var u = _vjExtUrl(); if (!u) { toast('❌ Video load karo pehle'); return; }
-  window.location.href = 'intent:' + u + '#Intent;action=com.young.simple.player.playback_online;package=com.young.simple.player;end';
-  setTimeout(function(){ toast('⚡ S Player nahi hai? Install karo'); }, 1200);
-}
+  // Sab classes remove pehle
+  wrap.classList.remove('rotated-mode','rot270');
+  inner.classList.remove('rot180');
+  document.body.classList.remove('rotated-mode-active');
+  v.style.transform='';
 
-function strmHD() {
-  var u = _vjExtUrl(); if (!u) { toast('❌ Video load karo pehle'); return; }
-  window.location.href = 'intent:' + u + '#Intent;package=uplayer.video.player;end';
-  setTimeout(function(){ toast('🔴 HD Player nahi hai? Install karo'); }, 1200);
-}
-
-function strmDownload() {
-  var u = _vjDl || _vjStream; if (!u) { toast('❌ Video load karo pehle'); return; }
-  window.open(u, '_blank');
-  toast('⬇ Download start ho gaya!');
-}
-
-function strmCopyLink() {
-  var u = _vjStream; if (!u) { toast('❌ Koi video nahi'); return; }
-  cp(u, '🔗 Stream link copied!');
-}
-
-/* ── Time formatter ── */
-function vjFmt(s) {
-  if (isNaN(s)) return '0:00';
-  var h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = Math.floor(s%60);
-  return (h ? h+':' : '') + (h && m < 10 ? '0' : '') + m + ':' + (ss < 10 ? '0' : '') + ss;
-}
-
-/* ── Watch History ── */
-async function vjAddHistory(mid, fname, szTxt, durTxt) {
-  try {
-    var res  = await window.storage.get('watch_history');
-    var hist = res ? JSON.parse(res.value) : [];
-    hist     = hist.filter(function(h){ return h.mid !== mid; });
-    hist.unshift({ mid: mid, fname: fname, sz: szTxt, dur: durTxt, time: Date.now() });
-    if (hist.length > 10) hist = hist.slice(0, 10);
-    await window.storage.set('watch_history', JSON.stringify(hist));
-    vjRenderHistory(hist);
-  } catch(e) {}
-}
-
-async function strmLoadHistory() {
-  try {
-    var res  = await window.storage.get('watch_history');
-    var hist = res ? JSON.parse(res.value) : [];
-    vjRenderHistory(hist);
-  } catch(e) {}
-}
-
-function vjRenderHistory(hist) {
-  var list = document.getElementById('strm-hist-list');
-  if (!list) return;
-  if (!hist || !hist.length) {
-    list.innerHTML = '<div style="text-align:center;padding:20px;color:#334155;font-size:12px">Abhi koi history nahi hai.</div>';
+  if(curRotation===0){
+    // Normal — exit karo
+    isRotated=false;
+    // Player normal size wapas
+    wrap.style.width='';
+    wrap.style.height='';
+    wrap.style.margin='';
+    wrap.style.borderRadius='';
+    inner.style.paddingTop='';
+    toast('🔄 Normal');
     return;
   }
-  list.innerHTML = '';
-  hist.forEach(function(item) {
-    var diff    = Date.now() - (item.time || 0);
-    var timeStr = diff < 3600000 ? Math.floor(diff/60000)+' min ago'
-                : diff < 86400000 ? Math.floor(diff/3600000)+'h ago'
-                : Math.floor(diff/86400000)+'d ago';
-    var d = document.createElement('div');
-    d.className = 'sh-item';
-    d.onclick   = (function(m){ return function(){ vjOpenHistory(m); }; })(item.mid);
-    d.innerHTML =
-      '<div class="sh-thumb">🎬</div>'+
-      '<div class="sh-info">'+
-        '<div class="sh-name">'+(escHtml(item.fname||'Video'))+'</div>'+
-        '<div class="sh-meta">'+(item.sz||'')+' '+(item.dur?'• '+item.dur:'')+' • '+timeStr+'</div>'+
-      '</div>'+
-      '<button onclick="event.stopPropagation();vjRemoveHistory(''+item.mid+'')" style="background:none;border:none;color:#334155;font-size:14px;cursor:pointer;padding:4px;flex-shrink:0">✕</button>';
-    list.appendChild(d);
-  });
+
+  if(curRotation===90||curRotation===270){
+    isRotated=true;
+    // Player ko screen width ke barabar karo — height = vw (square)
+    wrap.classList.add('rotated-mode');
+    document.body.classList.add('rotated-mode-active');
+    if(curRotation===270) wrap.classList.add('rot270');
+    // Screen orientation lock — mobile mein kaam karta hai
+    try{
+      if(screen.orientation&&screen.orientation.lock){
+        screen.orientation.lock(curRotation===90?'landscape-primary':'landscape-secondary').catch(function(){});
+      }
+    }catch(e){}
+    toast('🔄 Landscape ON — ✕ se exit');
+  } else if(curRotation===180){
+    // 180 = seedha flip, box mein hi
+    inner.classList.add('rot180');
+    toast('🔄 180° Rotated');
+  }
+  closeQuality();
 }
 
-function vjOpenHistory(mid) {
-  var uid = new URLSearchParams(window.location.search).get('uid') || '';
-  var su  = BASE + '/stream_file/' + mid + (uid ? '?uid='+uid : '');
-  var du  = BASE + '/download/'    + mid + (uid ? '?uid='+uid : '');
-  vjLoadVideo(su, du, mid);
-  go('pg-stream');
-  window.scrollTo(0, 0);
+function exitRotate(){
+  curRotation=0;
+  isRotated=false;
+  var wrap=document.getElementById('player-wrap');
+  var inner=document.getElementById('player-inner');
+  var v=document.getElementById('vid');
+  if(wrap){
+    wrap.classList.remove('rotated-mode','rot270');
+    wrap.style.width='';
+    wrap.style.height='';
+    wrap.style.margin='';
+    wrap.style.borderRadius='';
+  }
+  if(inner){
+    inner.classList.remove('rot180');
+    inner.style.paddingTop='';
+  }
+  if(v) v.style.transform='';
+  document.body.classList.remove('rotated-mode-active');
+  try{
+    if(screen.orientation&&screen.orientation.unlock) screen.orientation.unlock();
+  }catch(e){}
+  toast('🔄 Normal Mode');
 }
 
-async function vjRemoveHistory(mid) {
-  try {
-    var res  = await window.storage.get('watch_history');
-    var hist = res ? JSON.parse(res.value) : [];
-    hist     = hist.filter(function(h){ return h.mid !== mid; });
-    await window.storage.set('watch_history', JSON.stringify(hist));
-    vjRenderHistory(hist);
-  } catch(e) {}
+/* ── Fullscreen ── */
+function doFull(){
+  var v=document.getElementById('vid');
+  var wrap=document.getElementById('player-wrap');
+  if(!wrap)return;
+  // Video element ka fullscreen prefer karo — native landscape
+  var el=v||wrap;
+  if(document.fullscreenElement||document.webkitFullscreenElement){
+    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+  } else {
+    var fn=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;
+    if(fn){
+      fn.call(el).then(function(){
+        // Fullscreen ke baad landscape lock karo
+        try{
+          if(screen.orientation&&screen.orientation.lock){
+            screen.orientation.lock('landscape').catch(function(){});
+          }
+        }catch(e){}
+      }).catch(function(){});
+    }
+  }
+  closeQuality();
 }
 
-async function strmClearHistory() {
-  try {
-    await window.storage.delete('watch_history');
-    vjRenderHistory([]);
-    toast('🗑 History cleared!');
-  } catch(e) {}
+/* ── PiP ── */
+function doPiP(){
+  var v=document.getElementById('vid');if(!curVid||!v){toast('❌ Video load karo pehle');return;}
+  if(document.pictureInPictureElement){document.exitPictureInPicture();}
+  else if(document.pictureInPictureEnabled&&v.requestPictureInPicture){
+    v.requestPictureInPicture().then(function(){toast('🖼 PiP ON!');}).catch(function(){toast('❌ PiP not supported');});
+  } else toast('❌ PiP not supported');
+  closeQuality();
 }
 
-/* ── Legacy compat stubs ── */
-function loadVid(su,du,mid){ vjLoadVideo(su,du,mid); }
-function doDl(){ strmDownload(); }
-function copyStreamLink(){ strmCopyLink(); }
+/* ── Zoom ── */
+function doZoom(){
+  curZoom=curZoom>=2?1:curZoom+0.5;
+  var v=document.getElementById('vid');if(!v)return;
+  if(!isRotated){
+    v.style.transform=curZoom!==1?'scale('+curZoom+')':'none';
+  }
+  toast('🔍 Zoom: '+curZoom+'×');
+  closeQuality();
+}
+function setAspect(fit){
+  var v=document.getElementById('vid');if(!v)return;
+  v.style.objectFit=fit;toast('📐 Aspect: '+fit);
+  closeQuality();
+}
+function openQuality(){var m=document.getElementById('quality-modal');if(m)m.classList.add('on');}
+function closeQuality(){var m=document.getElementById('quality-modal');if(m)m.classList.remove('on');}
+
+/* ── External Player ── */
+function openExtPlayer(){
+  if(!curVid){toast('❌ Koi video nahi');return;}
+  // Try intent for Android MX Player / VLC
+  var intentUrl='intent:'+curVid+'#Intent;type=video/*;end';
+  var vlcUrl='vlc://'+curVid;
+  // Try MX Player first
+  try{window.location.href=intentUrl;}catch(e){}
+  // Fallback: open stream URL directly
+  setTimeout(function(){window.open(curVid,'_blank');},1000);
+  toast('📱 External player mein khol raha...');
+  closeQuality();
+}
+
+/* ── Download ── */
+function doDl(){
+  var u=curDl||curVid;if(!u){toast('❌ Koi video nahi');return;}
+  window.open(u,'_blank');toast('⬇ Download starting...');
+}
 
 /* ── Stream Link Copy ── */
 /* ══ YouTube-style: Like/Dislike + History ══ */
@@ -3323,6 +2968,18 @@ function showAdvertisePage() { go('pg-advertise'); }
 
 
 // DOM ready hone ke baad sab run karo
+
+/* ── VJ External Players ── */
+function _vjUrl(){return curVid||'';}
+function strmVLC(){var u=_vjUrl();if(!u){toast('Video load karo pehle');return;}window.location.href='vlc://'+u;}
+function strmMX(){var u=_vjUrl();if(!u){toast('Video load karo pehle');return;}window.location.href='intent:'+u+'#Intent;package=com.mxtech.videoplayer.ad;end';}
+function strmPlayIt(){var u=_vjUrl();if(!u){toast('Video load karo pehle');return;}window.location.href='playit://playerv2/video?url='+encodeURIComponent(u);}
+function strmKM(){var u=_vjUrl();if(!u){toast('Video load karo pehle');return;}window.location.href='intent:'+u+'#Intent;package=com.kmplayer;end';}
+function strmS(){var u=_vjUrl();if(!u){toast('Video load karo pehle');return;}window.location.href='intent:'+u+'#Intent;action=com.young.simple.player.playback_online;package=com.young.simple.player;end';}
+function strmHD(){var u=_vjUrl();if(!u){toast('Video load karo pehle');return;}window.location.href='intent:'+u+'#Intent;package=uplayer.video.player;end';}
+function strmDownload(){var u=curDl||curVid;if(!u){toast('Video load karo pehle');return;}window.open(u,'_blank');toast('Download start!');}
+function strmCopyLink(){var u=curVid;if(!u){toast('Koi video nahi');return;}cp(u,'Stream link copied!');}
+
 document.addEventListener('DOMContentLoaded', function() {
   advInit();
   adpInitFromUrl();
