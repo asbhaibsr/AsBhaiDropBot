@@ -1354,6 +1354,33 @@ async def blogger_verify_check(client, message, prem=False):
     return False
 
 
+async def sync_blogger_posts_from_sheet():
+    """Stub — Google Sheets se blogger posts sync karo."""
+    from config import GOOGLE_SHEET_CSV_URL
+    try:
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(GOOGLE_SHEET_CSV_URL, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                if r.status != 200:
+                    return {"ok": False, "error": f"HTTP {r.status}"}
+                text = await r.text()
+        import csv, io
+        reader = csv.DictReader(io.StringIO(text))
+        count = 0
+        for row in reader:
+            url = (row.get("url") or row.get("URL") or "").strip()
+            if url and url.startswith("http"):
+                await blogger_posts_col.update_one(
+                    {"url": url},
+                    {"$set": {"url": url, "active": True, "synced_at": now()}},
+                    upsert=True
+                )
+                count += 1
+        return {"ok": True, "count": count}
+    except Exception as e:
+        logger.error(f"sync_blogger_posts_from_sheet error: {e}")
+        return {"ok": False, "error": str(e)}
+
+
 # ═══════════════════════════════════════
 #  AD MANAGER — CRUD
 # ═══════════════════════════════════════
