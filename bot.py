@@ -749,10 +749,79 @@ async def start_handler(client, message: Message):
             await message.reply(f"❌ File nahi aayi.\n`{info}`")
         return
 
-    # ── getfile_ — file PM mein bhejo ──
+    # ── getfile_ — miniapp ad verify ke baad bot pe wapas aata hai ──
     if args.startswith("getfile_"):
-        # Legacy URL-based links — same flow as getf_ callback
-        parts = args[8:].split("_", 1)
+        token_or_uid = args[8:]
+        
+        # Format A: getfile_TOKEN (miniapp redirect — naya system)
+        # Format B: getfile_uid_msgid (legacy deep link)
+        parts = token_or_uid.split("_", 1)
+        
+        # Check if it's a token (alphanumeric, length 20) or uid_msgid
+        is_token_format = len(parts) == 1 or not parts[0].isdigit()
+        
+        if is_token_format:
+            # ── Format A: getfile_TOKEN ──
+            # Miniapp mein ads dekhe → bot pe wapas aaya → pending file bhejo
+            token = token_or_uid
+            valid, token_uid = await check_token(token)
+            if not valid or token_uid != uid:
+                await message.reply(
+                    "❌ **Invalid ya Expired Link!**\n\n"
+                    "Miniapp se dobara try karo ya group mein file button dabao."
+                )
+                return
+            
+            if await is_banned(uid):
+                await message.reply("🚫 Aap banned hain!")
+                return
+            
+            # Mark ad as verified
+            await mark_ad_verified(uid)
+            
+            # Pending file fetch karo
+            user_doc = await users_col.find_one({"user_id": uid})
+            pending_id = user_doc.get("pending_file_id") if user_doc else None
+            pending_chat = user_doc.get("pending_file_chat", 0) if user_doc else 0
+            
+            if not pending_id:
+                await message.reply(
+                    "✅ **Ad Verify Ho Gaya!**\n\n"
+                    "Ab wapas group mein jao aur file button dobara dabao — "
+                    "ab seedha milegi! 🎬"
+                )
+                return
+            
+            prem = await is_premium(uid)
+            s = await get_settings()
+            
+            # Daily limit check (premium skip)
+            if not prem:
+                count = await get_daily_count(uid)
+                if count >= s.get("daily_limit", 10):
+                    await message.reply(
+                        f"⚠️ **Daily Limit Khatam!**\n"
+                        f"💎 /premium lo unlimited ke liye!"
+                    )
+                    return
+            
+            # File bhejo
+            wait = await message.reply("⚡ **File aa rahi hai...** ⏳")
+            success, info = await send_file_to_pm(client, message.from_user, int(pending_id), prem)
+            await wait.delete()
+            
+            # Clear pending
+            await users_col.update_one(
+                {"user_id": uid},
+                {"$unset": {"pending_file_id": "", "pending_file_chat": ""}}
+            )
+            
+            if not success:
+                await message.reply(f"❌ File nahi aayi.\n`{info}`")
+
+            return
+        
+        # ── Format B: getfile_uid_msgid (legacy) ──
         if len(parts) != 2:
             await message.reply("❌ Invalid link.")
             return
@@ -3272,6 +3341,85 @@ async def file_request(client, message: Message):
             InlineKeyboardButton("❌ Skip", callback_data=f"req_skip_{uid}"),
         ]])
     )
+
+
+# ═══════════════════════════════════════
+#  _process_streamlink — CORE FUNCTION
+#  Video message leke stream + download link banata hai
+# ═══════════════════════════════════════
+async def _process_streamlink(client, orig_msg: Message, media_msg: Message, uid: int):
+    """
+    Video/document message se stream link banao.
+    - media_msg: woh message jisme video hai
+    - orig_msg:  jahan reply karna hai
+    """
+    try:
+        wait = await orig_msg.reply(
+            "⚡ **Stream Link Ban Raha Hai...**\n"
+            "🔄 _File process ho rahi hai..._"
+        )
+
+        # Step 1: File FILE_CHANNEL mein copy karo fresh file_id ke liye
+        try:
+            if media_msg.video or media_msg.document or media_msg.audio:
+                forwarded = await media_msg.copy(FILE_CHANNEL)
+                msg_id = forwarded.id
+            else:
+                await wait.edit("❌ **Valid video/document nahi hai!**")
+                return
+        except Exception as e:
+            logger.error(f"_process_streamlink forward error uid={uid}: {e}")
+            await wait.edit(f"❌ **Error:** `{e}`\n\nBot ke paas FILE_CHANNEL access chahiye.")
+            return
+
+        # Step 2: URLs banao
+        if not KOYEB_URL:
+            await wait.edit(
+                "⚠️ **KOYEB_URL config mein set nahi hai!**\n\n"
+                "Admin se contact karo — stream server configure nahi hua."
+            )
+            return
+
+        base = KOYEB_URL.rstrip("/")
+        stream_url   = f"{base}/?uid={uid}&mid={msg_id}"
+        download_url = f"{base}/download/{msg_id}?uid={uid}"
+        player_url   = f"{base}/stream_file/{msg_id}?uid={uid}"
+
+        # Step 3: File info
+        fname = get_file_name(media_msg) or "video"
+        fsize = get_file_size(media_msg) or ""
+
+        # Step 4: Result bhejo
+        kb = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("▶️ Stream (WebApp)", web_app=WebAppInfo(url=stream_url)),
+            ],
+            [
+                InlineKeyboardButton("⬇️ Download", url=download_url),
+                InlineKeyboardButton("🔗 Direct Link", url=player_url),
+            ]
+        ])
+
+        await wait.edit(
+            f"✅ **Stream Link Ready!**\n\n"
+            f"📁 **File:** `{fname}`\n"
+            f"{'📦 **Size:** ' + fsize + chr(10) if fsize else ''}"
+            f"\n"
+            f"▶️ **Stream URL:**\n`{stream_url}`\n\n"
+            f"⬇️ **Download URL:**\n`{download_url}`\n\n"
+            f"⚠️ _Link 60 min tak valid hai. Share mat karo._",
+            reply_markup=kb
+        )
+        logger.info(f"✅ Stream link generated uid={uid} msg_id={msg_id}")
+
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        logger.warning(f"_process_streamlink FloodWait {e.value}s")
+    except Exception as e:
+        logger.error(f"_process_streamlink error uid={uid}: {e}")
+        try:
+            await orig_msg.reply(f"❌ **Stream link banana failed!**\n`{e}`")
+        except: pass
 
 
 # ═══════════════════════════════════════
